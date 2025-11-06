@@ -44,6 +44,8 @@ export default function App() {
       if (tg) {
         tg.expand?.()
         tg.ready?.()
+        tg.setHeaderColor('#0f172a');
+tg.setBackgroundColor('#0b1220');
         const uname =
           tg.initDataUnsafe?.user?.first_name ||
           tg.initDataUnsafe?.user?.username ||
