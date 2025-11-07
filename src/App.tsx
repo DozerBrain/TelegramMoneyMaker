@@ -152,7 +152,7 @@ tg.setBackgroundColor('#0b1220');
     <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 to-slate-800 text-slate-100 p-4 flex flex-col items-center">
       <div className="w-full max-w-md flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">HyperTap 🐹</h1>
+          <h1 className="text-2xl font-bold">MoneyMaker 💸</h1>
           <p className="text-slate-300 text-sm">Welcome, {username}</p>
         </div>
         <div className="text-right">
