@@ -1,13 +1,6 @@
 // src/App.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 
-// Telegram Mini App: Idle Tapper Starter
-// - Works inside Telegram WebApp
-// - Tailwind styling
-// - LocalStorage persistence (replace with your backend later)
-// - Referral support via ?startapp=ref_<code> or ?ref=<code>
-// - TON payment placeholder
-
 type ShopItem = {
   id: string
   name: string
@@ -30,16 +23,15 @@ export default function App() {
   const [energy, setEnergy] = useState<number>(() => lsGetNumber('energy', 50))
   const [maxEnergy, setMaxEnergy] = useState<number>(() => lsGetNumber('maxEnergy', 50))
   const [tapPower, setTapPower] = useState<number>(() => lsGetNumber('tapPower', 1))
-  const [autoRate, setAutoRate] = useState<number>(() => lsGetNumber('autoRate', 0)) // points/sec
-  const [regenRate, setRegenRate] = useState<number>(() => lsGetNumber('regenRate', 5)) // energy per minute
-  const [coins, setCoins] = useState<number>(() => lsGetNumber('coins', 0)) // soft currency
+  const [autoRate, setAutoRate] = useState<number>(() => lsGetNumber('autoRate', 0))
+  const [regenRate, setRegenRate] = useState<number>(() => lsGetNumber('regenRate', 5))
+  const [coins, setCoins] = useState<number>(() => lsGetNumber('coins', 0))
   const [refCode, setRefCode] = useState<string>('')
   const [streak, setStreak] = useState<number>(() => lsGetNumber('streak', 0))
   const [lastLogin, setLastLogin] = useState<number>(() => lsGetNumber('lastLogin', 0))
   const [showShop, setShowShop] = useState<boolean>(false)
   const [showQuests, setShowQuests] = useState<boolean>(true)
 
-  // 👇 Mr.T image element for animations
   const mascotRef = useRef<HTMLImageElement | null>(null)
 
   // INIT
@@ -48,7 +40,6 @@ export default function App() {
       if (tg) {
         tg.expand?.()
         tg.ready?.()
-        // Optional theming (you already set this)
         tg.setHeaderColor?.('#0f172a')
         tg.setBackgroundColor?.('#0b1220')
 
@@ -58,7 +49,6 @@ export default function App() {
           'Player'
         setUsername(uname)
 
-        // Referral param
         const startParam: string | undefined = tg.initDataUnsafe?.start_param
         const urlParam: string | null = new URLSearchParams(window.location.search).get('ref')
         const ref = (startParam || urlParam || '').replace(/^ref_/i, '')
@@ -70,7 +60,6 @@ export default function App() {
           })
         }
 
-        // Streak logic
         const now = Date.now()
         const last = lastLogin || 0
         const days = Math.floor((now - last) / 86400000)
@@ -87,7 +76,6 @@ export default function App() {
         setLastLogin(now)
       }
     } catch {}
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Persist state
@@ -102,37 +90,27 @@ export default function App() {
   useEffect(() => { lsSet('streak', streak) }, [streak])
   useEffect(() => { lsSet('lastLogin', lastLogin) }, [lastLogin])
 
-  // Ticks
-  useInterval(() => {
-    if (autoRate > 0) setScore((s) => s + autoRate)
-  }, 1000)
-
+  useInterval(() => { if (autoRate > 0) setScore((s) => s + autoRate) }, 1000)
   useInterval(() => {
     const perSec = regenRate / 60
     setEnergy((e) => Math.min(maxEnergy, e + perSec))
   }, 1000)
 
-  // 👉 TAP handler: add score, spend energy, animate Mr.T, haptic
   const onTap = () => {
     if (energy >= 1) {
       setScore((s) => s + tapPower)
       setEnergy((e) => Math.max(0, e - 1))
 
-      // Mr.T bounce (pop)
       const el = mascotRef.current
       if (el) {
         el.classList.remove('mrT-pop')
-        void el.offsetWidth // restart animation
+        void el.offsetWidth
         el.classList.add('mrT-pop')
       }
-      // Telegram haptic (if available)
       tg?.HapticFeedback?.impactOccurred?.('medium')
-    } else {
-      toast('No energy. Wait a bit ⏳')
-    }
+    } else toast('No energy. Wait a bit ⏳')
   }
 
-  // 👉 Milestone celebration: shake + success haptic every 1000 score
   useEffect(() => {
     if (score > 0 && score % 1000 === 0) {
       const el = mascotRef.current
@@ -142,9 +120,8 @@ export default function App() {
       }
       tg?.HapticFeedback?.notificationOccurred?.('success')
     }
-  }, [score]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [score])
 
-  // Shop items
   const shop = useMemo<ShopItem[]>(() => [
     { id: 'tap1', name: '+1 Tap Power', kind: 'upgrade', cost: 100, apply: () => setTapPower((x) => x + 1) },
     { id: 'energy10', name: '+10 Max Energy', kind: 'upgrade', cost: 150, apply: () => setMaxEnergy((x) => x + 10) },
@@ -160,7 +137,6 @@ export default function App() {
     toast(`Purchased ${item.name} ✅`)
   }
 
-  // Booster (client-side demo)
   const booster = (minutes: number) => {
     const oldTap = tapPower
     const oldAuto = autoRate
@@ -173,9 +149,7 @@ export default function App() {
     }, minutes * 60 * 1000)
   }
 
-  const buyWithTON = async () => {
-    toast('TON payment coming soon. Use coins for now.')
-  }
+  const buyWithTON = async () => toast('TON payment coming soon. Use coins for now.')
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 to-slate-800 text-slate-100 p-4 flex flex-col items-center">
@@ -203,21 +177,27 @@ export default function App() {
         </div>
       </div>
 
-      {/* === Mr.T + Tap button block === */}
-      <div className="mt-6 flex flex-col items-center">
-        {/* Mr.T mascot */}
-        <img
-          ref={mascotRef}
-          src="/mr-t.png"
-          alt="Mr.T"
-          draggable={false}
-          className="w-[46vw] max-w-[360px] md:w-[30vw] drop-shadow-xl mrT-idle select-none pointer-events-none"
-        />
+      {/* Mr.T and Tap Button */}
+      <div className="mt-4 flex flex-col items-center">
+        <div className="w-full flex justify-center">
+          <img
+            ref={mascotRef}
+            src="/mr-t.png"
+            alt="Mr.T"
+            draggable={false}
+            className="
+              mrT-idle select-none pointer-events-none drop-shadow-xl
+              w-[52vw] max-w-[220px]
+              sm:max-w-[260px]
+              md:w-[28vw] md:max-w-[320px]
+              max-h-[45vh] h-auto
+            "
+          />
+        </div>
 
-        {/* Tap button */}
         <button
           onClick={onTap}
-          className="mt-4 w-56 h-56 rounded-full shadow-xl bg-sky-500 active:scale-95 transition grid place-items-center text-3xl font-extrabold"
+          className="mt-3 w-44 h-44 md:w-56 md:h-56 rounded-full shadow-xl bg-sky-500 active:scale-95 transition grid place-items-center text-3xl font-extrabold"
         >
           TAP
           <span className="block text-xs font-normal opacity-80">+{tapPower} / tap</span>
@@ -321,7 +301,6 @@ function toast(msg: string) {
   if (typeof window !== 'undefined' && window.Telegram?.WebApp?.showPopup) {
     window.Telegram.WebApp.showPopup({ title: '', message: msg, buttons: [{ type: 'ok', text: 'OK' }] })
   } else {
-    // eslint-disable-next-line no-console
     console.log('[toast]', msg)
   }
 }
