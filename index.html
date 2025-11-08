@@ -2,13 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="icon" href="/icon.png" />
-<link rel="apple-touch-icon" href="/icon.png" />
-<meta name="theme-color" content="#0f172a" />
-<title>MoneyMaker 💸</title>
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <title>MoneyMaker 💸</title>
+
+    <!-- Telegram SDK for WebApp -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
   </head>
-  <body>
+  <body class="min-h-[100dvh] bg-[color:var(--tg-theme-bg-color)] text-[color:var(--tg-theme-text-color)]">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
