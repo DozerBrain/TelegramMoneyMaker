@@ -1,4 +1,3 @@
-// src/App.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 type ShopItem = {
@@ -64,7 +63,6 @@ export default function App() {
         const last = lastLogin || 0
         const days = Math.floor((now - last) / 86400000)
         if (last === 0 || days === 0) {
-          // same-day login
         } else if (days === 1) {
           setStreak((s) => s + 1)
           setCoins((c) => c + 20 * Math.min(7, (streak || 0) + 1))
@@ -185,13 +183,12 @@ export default function App() {
             src="/mr-t.png"
             alt="Mr.T"
             draggable={false}
-            className="
-              mrT-idle select-none pointer-events-none drop-shadow-xl
-              w-[52vw] max-w-[220px]
-              sm:max-w-[260px]
-              md:w-[28vw] md:max-w-[320px]
-              max-h-[45vh] h-auto
-            "
+            className="mx-auto drop-shadow-xl select-none pointer-events-none mrT-idle"
+            style={{
+              height: '38vh',      // adjust mascot height
+              maxHeight: '38vh',
+              width: 'auto',
+            }}
           />
         </div>
 
