@@ -1,0 +1,7 @@
+@keyframes floaty { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+@keyframes pop { 0%{transform:scale(1)} 40%{transform:scale(1.08)} 100%{transform:scale(1)} }
+@keyframes shake { 0%,100%{transform:rotate(0)} 20%{transform:rotate(-3deg)} 60%{transform:rotate(3deg)} }
+
+.mrT-idle { animation: floaty 2.8s ease-in-out infinite; }
+.mrT-pop  { animation: pop 220ms ease-out; }
+.mrT-shake{ animation: shake 650ms ease-in-out; }
