@@ -176,7 +176,7 @@ export default function App() {
       </div>
 
       {/* Mr.T and Tap Button */}
-      <div className="mt-4 flex flex-col items-center">
+      <div className="mt-6 flex flex-col items-center space-y-4">
         <div className="w-full flex justify-center">
           <img
             ref={mascotRef}
@@ -215,7 +215,7 @@ export default function App() {
       </div>
 
       {/* Panels */}
-      <div className="w-full max-w-md mt-3">
+      <div className="w-full max-w-md mt-3 text-center">
         {showQuests && (
           <div className="space-y-2">
             <Quest title="Daily Login" reward={20} onClaim={() => setCoins((c) => c + 20)} />
