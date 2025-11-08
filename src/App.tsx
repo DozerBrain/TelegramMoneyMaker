@@ -1,3 +1,4 @@
+// src/App.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 // Telegram Mini App: Idle Tapper Starter
@@ -38,14 +39,19 @@ export default function App() {
   const [showShop, setShowShop] = useState<boolean>(false)
   const [showQuests, setShowQuests] = useState<boolean>(true)
 
+  // 👇 Mr.T image element for animations
+  const mascotRef = useRef<HTMLImageElement | null>(null)
+
   // INIT
   useEffect(() => {
     try {
       if (tg) {
         tg.expand?.()
         tg.ready?.()
-        tg.setHeaderColor('#0f172a');
-tg.setBackgroundColor('#0b1220');
+        // Optional theming (you already set this)
+        tg.setHeaderColor?.('#0f172a')
+        tg.setBackgroundColor?.('#0b1220')
+
         const uname =
           tg.initDataUnsafe?.user?.first_name ||
           tg.initDataUnsafe?.user?.username ||
@@ -106,14 +112,37 @@ tg.setBackgroundColor('#0b1220');
     setEnergy((e) => Math.min(maxEnergy, e + perSec))
   }, 1000)
 
+  // 👉 TAP handler: add score, spend energy, animate Mr.T, haptic
   const onTap = () => {
     if (energy >= 1) {
       setScore((s) => s + tapPower)
       setEnergy((e) => Math.max(0, e - 1))
+
+      // Mr.T bounce (pop)
+      const el = mascotRef.current
+      if (el) {
+        el.classList.remove('mrT-pop')
+        void el.offsetWidth // restart animation
+        el.classList.add('mrT-pop')
+      }
+      // Telegram haptic (if available)
+      tg?.HapticFeedback?.impactOccurred?.('medium')
     } else {
       toast('No energy. Wait a bit ⏳')
     }
   }
+
+  // 👉 Milestone celebration: shake + success haptic every 1000 score
+  useEffect(() => {
+    if (score > 0 && score % 1000 === 0) {
+      const el = mascotRef.current
+      if (el) {
+        el.classList.add('mrT-shake')
+        setTimeout(() => el.classList.remove('mrT-shake'), 900)
+      }
+      tg?.HapticFeedback?.notificationOccurred?.('success')
+    }
+  }, [score]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Shop items
   const shop = useMemo<ShopItem[]>(() => [
@@ -150,6 +179,8 @@ tg.setBackgroundColor('#0b1220');
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-slate-900 to-slate-800 text-slate-100 p-4 flex flex-col items-center">
+
+      {/* Header */}
       <div className="w-full max-w-md flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">MoneyMaker 💸</h1>
@@ -161,6 +192,7 @@ tg.setBackgroundColor('#0b1220');
         </div>
       </div>
 
+      {/* Energy bar */}
       <div className="w-full max-w-md mt-4">
         <div className="flex justify-between text-xs text-slate-300 mb-1">
           <span>Energy</span>
@@ -171,22 +203,41 @@ tg.setBackgroundColor('#0b1220');
         </div>
       </div>
 
-      <button onClick={onTap} className="mt-6 w-56 h-56 rounded-full shadow-xl bg-sky-500 active:scale-95 transition grid place-items-center text-3xl font-extrabold">
-        TAP
-        <span className="block text-xs font-normal opacity-80">+{tapPower} / tap</span>
-      </button>
+      {/* === Mr.T + Tap button block === */}
+      <div className="mt-6 flex flex-col items-center">
+        {/* Mr.T mascot */}
+        <img
+          ref={mascotRef}
+          src="/mr-t.png"
+          alt="Mr.T"
+          draggable={false}
+          className="w-[46vw] max-w-[360px] md:w-[30vw] drop-shadow-xl mrT-idle select-none pointer-events-none"
+        />
 
+        {/* Tap button */}
+        <button
+          onClick={onTap}
+          className="mt-4 w-56 h-56 rounded-full shadow-xl bg-sky-500 active:scale-95 transition grid place-items-center text-3xl font-extrabold"
+        >
+          TAP
+          <span className="block text-xs font-normal opacity-80">+{tapPower} / tap</span>
+        </button>
+      </div>
+
+      {/* Stats */}
       <div className="mt-6 grid grid-cols-3 gap-3 w-full max-w-md">
         <Stat label="Coins" value={format(coins)} />
         <Stat label="Auto/sec" value={autoRate} />
         <Stat label="Regen/min" value={regenRate} />
       </div>
 
+      {/* Tabs */}
       <div className="mt-6 flex gap-2">
         <TabButton active={showQuests} onClick={() => { setShowQuests(true); setShowShop(false) }}>Quests</TabButton>
         <TabButton active={showShop} onClick={() => { setShowShop(true); setShowQuests(false) }}>Shop</TabButton>
       </div>
 
+      {/* Panels */}
       <div className="w-full max-w-md mt-3">
         {showQuests && (
           <div className="space-y-2">
