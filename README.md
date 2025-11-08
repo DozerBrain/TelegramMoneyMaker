@@ -1,4 +1,4 @@
-# HyperTap (Telegram Mini App)
+# MoneyMaker 💸 (Telegram Mini App)
 
 Vite + React + TypeScript + Tailwind starter for a Telegram WebApp (idle tapper).
 
