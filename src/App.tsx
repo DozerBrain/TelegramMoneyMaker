@@ -8,14 +8,12 @@ type ShopItem = {
   cost: number;
   apply: () => void;
 };
-
 type Particle = { id: number; x: number; y: number; value: number };
 type Ripple = { id: number };
+type LBRow = { id: string; name: string; score: number; you?: boolean };
 
 /* ---------- Telegram global ---------- */
-declare global {
-  interface Window { Telegram?: any }
-}
+declare global { interface Window { Telegram?: any } }
 
 /* ============================================================
    App
@@ -158,6 +156,34 @@ export default function App() {
     toast(`Purchased ${item.name} ✅`);
   };
 
+  /* ---------- Leaderboard data ---------- */
+  const [leaderboard, setLeaderboard] = useState<LBRow[]>(() => ensureWeekBoard(username, score));
+  // keep your row updated when score changes
+  useEffect(() => { setLeaderboard(ensureWeekBoard(username, score)) }, [score, username]);
+
+  /* ---------- Lucky Spin cooldown ---------- */
+  const [nextSpinAt, setNextSpinAt] = useState<number>(() => lsGetNumber("nextSpinAt", 0));
+  const [spinCountdown, setSpinCountdown] = useState<string>("");
+  useInterval(() => {
+    const left = Math.max(0, nextSpinAt - Date.now());
+    setSpinCountdown(left > 0 ? formatDuration(left) : "");
+  }, 1000);
+
+  const applyReward = (r: Reward) => {
+    switch (r.kind) {
+      case "coins": setCoins((c) => c + r.amount); toast(`+${r.amount} coins 💰`); break;
+      case "energy": setEnergy((e) => Math.min(maxEnergy, e + r.amount)); toast(`+${r.amount} energy ⚡`); break;
+      case "tap": setTapPower((p) => p + r.amount); toast(`Tap Power +${r.amount} 💥`); break;
+      case "auto": setAutoRate((a) => a + r.amount); toast(`Auto/sec +${r.amount} 🤖`); break;
+      case "booster":
+        toast("Booster x2 (5m) activated!");
+        const oldTap = tapPower, oldAuto = autoRate;
+        setTapPower((p) => p * 2); setAutoRate((a) => a * 2);
+        setTimeout(() => { setTapPower(oldTap); setAutoRate(oldAuto); toast("Booster ended"); }, r.minutes * 60 * 1000);
+        break;
+    }
+  };
+
   /* ---------- UI ---------- */
   return (
     <div className="min-h-screen w-full text-slate-100 relative overflow-hidden">
@@ -181,29 +207,12 @@ export default function App() {
           </div>
         </div>
 
-        {/* Energy */}
-        <Bar
-          className="mt-4 w-full"
-          label="Energy"
-          percent={(energy / maxEnergy) * 100}
-          right={`${Math.floor(energy)}/${maxEnergy}`}
-          color="emerald"
-        />
-
-        {/* Combo / Fever */}
-        <Bar
-          className="mt-2 w-full"
-          label={feverActive ? "Fever" : "Combo"}
-          percent={feverActive ? 100 : combo}
-          right={feverActive ? "x2 BOOST" : `x${multiplier.toFixed(2)}`}
-          color={feverActive ? "amber" : "sky"}
-        />
+        {/* Energy + Combo */}
+        <Bar className="mt-4 w-full" label="Energy" percent={(energy / maxEnergy) * 100} right={`${Math.floor(energy)}/${maxEnergy}`} color="emerald" />
+        <Bar className="mt-2 w-full" label={feverActive ? "Fever" : "Combo"} percent={feverActive ? 100 : combo} right={feverActive ? "x2 BOOST" : `x${multiplier.toFixed(2)}`} color={feverActive ? "amber" : "sky"} />
 
         {/* Mascot + Tap card */}
-        <div
-          ref={tapCardRef}
-          className="relative mt-4 w-full rounded-3xl border border-white/10 bg-white/5 p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] overflow-hidden"
-        >
+        <div ref={tapCardRef} className="relative mt-4 w-full rounded-3xl border border-white/10 bg-white/5 p-5 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.03)] overflow-hidden">
           {/* soft mascot glow */}
           <div className="pointer-events-none absolute left-1/2 top-28 -translate-x-1/2 -translate-y-1/2 h-64 w-64 rounded-full bg-emerald-400/15 blur-2xl"></div>
 
@@ -218,29 +227,17 @@ export default function App() {
 
           {/* floating +cash */}
           {particles.map((p) => (
-            <span
-              key={p.id}
-              className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-sm font-extrabold text-emerald-300 drop-shadow"
-              style={{ left: `${p.x}%`, top: `${p.y}%`, animation: "floatUp 850ms ease-out forwards" }}
-            >
+            <span key={p.id} className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-sm font-extrabold text-emerald-300 drop-shadow" style={{ left: `${p.x}%`, top: `${p.y}%`, animation: "floatUp 850ms ease-out forwards" }}>
               +{p.value}
             </span>
           ))}
 
           {/* TAP Button + ripples */}
           <div className="relative flex justify-center mt-4">
-            {/* ripples under button */}
             {ripples.map((r) => (
-              <span
-                key={r.id}
-                className="absolute h-44 w-44 rounded-full bg-emerald-400/20 blur-[2px]"
-                style={{ animation: "ripple 450ms ease-out forwards" }}
-              />
+              <span key={r.id} className="absolute h-44 w-44 rounded-full bg-emerald-400/20 blur-[2px]" style={{ animation: "ripple 450ms ease-out forwards" }} />
             ))}
-            <button
-              onClick={(e) => onTap(e)}
-              className="relative z-[1] grid h-44 w-44 place-items-center rounded-full bg-gradient-to-b from-emerald-400 to-emerald-500 text-emerald-950 text-3xl font-extrabold shadow-[0_18px_40px_rgba(16,185,129,0.35)] active:scale-[0.98] transition"
-            >
+            <button onClick={(e) => onTap(e)} className="relative z-[1] grid h-44 w-44 place-items-center rounded-full bg-gradient-to-b from-emerald-400 to-emerald-500 text-emerald-950 text-3xl font-extrabold shadow-[0_18px_40px_rgba(16,185,129,0.35)] active:scale-[0.98] transition">
               TAP
               <span className="block text-xs font-semibold opacity-80">
                 +{tapPower} / tap {multiplier > 1 ? `• x${multiplier.toFixed(2)}` : ""}
@@ -262,6 +259,8 @@ export default function App() {
               <Quest title="Daily Login" reward={20} onClaim={() => setCoins((c) => c + 20)} />
               <Quest title="Follow Channel" reward={50} onClaim={() => setCoins((c) => c + 50)} />
               <Quest title="Invite a Friend" reward={150} onClaim={() => setCoins((c) => c + 150)} />
+              {/* Lucky Spin */}
+              <LuckySpin nextSpinAt={nextSpinAt} setNextSpinAt={setNextSpinAt} onReward={applyReward} countdown={spinCountdown} />
             </Card>
           )}
 
@@ -284,6 +283,25 @@ export default function App() {
           )}
         </div>
 
+        {/* Weekly Leaderboard */}
+        <Card className="mt-4 w-full">
+          <div className="mb-2 flex items-center justify-between">
+            <h3 className="font-bold">Weekly Leaderboard 🏆</h3>
+            <span className="text-xs text-slate-400">Resets Monday 00:00</span>
+          </div>
+          <ol className="divide-y divide-white/10">
+            {leaderboard.slice(0, 10).map((row, i) => (
+              <li key={row.id} className="flex items-center justify-between py-2">
+                <div className="flex items-center gap-3">
+                  <span className={"w-6 text-center font-semibold " + (i < 3 ? "text-amber-300" : "text-slate-400")}>{i + 1}</span>
+                  <span className={"font-medium " + (row.you ? "text-emerald-300" : "")}>{row.name}</span>
+                </div>
+                <span className="tabular-nums">{format(row.score)}</span>
+              </li>
+            ))}
+          </ol>
+        </Card>
+
         <div className="mt-6 text-center text-xs text-slate-400">
           Demo build. Replace localStorage with backend ⚠️
         </div>
@@ -292,16 +310,8 @@ export default function App() {
       {/* Animations */}
       <style>{`
         /* Animated emerald background */
-        @keyframes bgMove { 
-          0% { transform: translateY(0) translateX(0) scale(1); } 
-          50% { transform: translateY(30px) translateX(10px) scale(1.05); } 
-          100% { transform: translateY(0) translateX(0) scale(1); } 
-        }
-        @keyframes bgMove2 { 
-          0% { transform: translateY(0) translateX(0) scale(1); } 
-          50% { transform: translateY(-30px) translateX(-10px) scale(1.05); } 
-          100% { transform: translateY(0) translateX(0) scale(1); } 
-        }
+        @keyframes bgMove { 0%{transform:translateY(0) translateX(0) scale(1)} 50%{transform:translateY(30px) translateX(10px) scale(1.05)} 100%{transform:translateY(0) translateX(0) scale(1)} }
+        @keyframes bgMove2 { 0%{transform:translateY(0) translateX(0) scale(1)} 50%{transform:translateY(-30px) translateX(-10px) scale(1.05)} 100%{transform:translateY(0) translateX(0) scale(1)} }
         .animate-bgMove { animation: bgMove 9s ease-in-out infinite; }
         .animate-bgMove2 { animation: bgMove2 12s ease-in-out infinite; }
 
@@ -312,18 +322,144 @@ export default function App() {
         .mrT-pop { animation: pop 220ms ease-out; }
 
         /* Particles & ripple */
-        @keyframes floatUp {
-          0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
-          10% { opacity: 1; }
-          100% { transform: translate(-50%, -140%) scale(1.1); opacity: 0; }
-        }
-        @keyframes ripple {
-          0% { transform: scale(0.7); opacity: 0.7; }
-          100% { transform: scale(1.5); opacity: 0; }
-        }
+        @keyframes floatUp { 0%{transform: translate(-50%,-50%) scale(0.9); opacity:0} 10%{opacity:1} 100%{transform: translate(-50%,-140%) scale(1.1); opacity:0} }
+        @keyframes ripple { 0% { transform: scale(0.7); opacity: 0.7; } 100% { transform: scale(1.5); opacity: 0; } }
       `}</style>
     </div>
   );
+}
+
+/* ============================================================
+   Lucky Spin
+============================================================ */
+type Reward =
+  | { kind: "coins"; amount: number }
+  | { kind: "energy"; amount: number }
+  | { kind: "tap"; amount: number }
+  | { kind: "auto"; amount: number }
+  | { kind: "booster"; minutes: number };
+
+function LuckySpin({
+  nextSpinAt,
+  setNextSpinAt,
+  onReward,
+  countdown,
+}: {
+  nextSpinAt: number;
+  setNextSpinAt: (v: number) => void;
+  onReward: (r: Reward) => void;
+  countdown: string;
+}) {
+  const segments: Reward[] = [
+    { kind: "coins", amount: 100 },
+    { kind: "tap", amount: 1 },
+    { kind: "coins", amount: 250 },
+    { kind: "energy", amount: 20 },
+    { kind: "booster", minutes: 5 },
+    { kind: "coins", amount: 500 },
+    { kind: "auto", amount: 1 },
+    { kind: "coins", amount: 150 },
+  ];
+  const [angle, setAngle] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+
+  const canSpin = Date.now() >= nextSpinAt;
+  const spin = () => {
+    if (!canSpin || spinning) return;
+    const seg = segments.length;
+    // choose target index with slight bias to coins (simplify by selecting random angle)
+    const rndIndex = Math.floor(Math.random() * seg);
+    const slice = 360 / seg;
+    const offsetToIndexCenter = slice * rndIndex + slice / 2;
+    const spins = 5; // full rotations
+    const final = spins * 360 + (360 - offsetToIndexCenter); // pointer at 0deg (top)
+    setSpinning(true);
+    setAngle(final);
+    setTimeout(() => {
+      const reward = segments[rndIndex];
+      onReward(reward);
+      setSpinning(false);
+      const next = Date.now() + 24 * 60 * 60 * 1000; // 24h
+      setNextSpinAt(next);
+      lsSet("nextSpinAt", next);
+    }, 2600);
+  };
+
+  return (
+    <div className="py-3">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="font-semibold">Lucky Spin 🎰</div>
+        {!canSpin ? (
+          <span className="text-xs text-slate-400">Next in {countdown}</span>
+        ) : (
+          <span className="text-xs text-emerald-300">Free spin ready!</span>
+        )}
+      </div>
+
+      <div className="flex items-center justify-center py-2">
+        <div className="relative">
+          {/* pointer */}
+          <div className="absolute left-1/2 top-[-10px] h-0 w-0 -translate-x-1/2 border-l-[8px] border-r-[8px] border-b-[12px] border-l-transparent border-r-transparent border-b-emerald-300 drop-shadow" />
+          {/* wheel */}
+          <div
+            className="h-40 w-40 rounded-full border border-white/10 shadow-inner"
+            style={{
+              background:
+                "conic-gradient(#10b981 0 45deg,#0ea5e9 45deg 90deg,#10b981 90deg 135deg,#f59e0b 135deg 180deg,#10b981 180deg 225deg,#0ea5e9 225deg 270deg,#10b981 270deg 315deg,#f59e0b 315deg 360deg)",
+              transform: `rotate(${angle}deg)`,
+              transition: spinning ? "transform 2.6s cubic-bezier(0.12, 0.68, 0, 1.02)" : "none",
+            }}
+          />
+        </div>
+      </div>
+
+      <button
+        onClick={spin}
+        disabled={!canSpin || spinning}
+        className={`mt-2 w-full rounded-xl px-4 py-2 text-sm font-semibold ${canSpin && !spinning ? "bg-emerald-500 text-emerald-950" : "bg-white/10 text-slate-400 cursor-not-allowed"}`}
+      >
+        {canSpin ? (spinning ? "Spinning..." : "Spin (Free)") : `Come back in ${countdown}`}
+      </button>
+    </div>
+  );
+}
+
+/* ============================================================
+   Leaderboard helpers
+============================================================ */
+function ensureWeekBoard(name: string, myScore: number): LBRow[] {
+  const key = `lb_week_${weekKey()}`;
+  let rows: LBRow[] = [];
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) rows = JSON.parse(raw);
+  } catch {}
+  if (!rows || rows.length === 0) rows = seedBoard(); // new week -> seed
+
+  // ensure your row exists and update score
+  const youId = "you";
+  const idx = rows.findIndex((r) => r.id === youId);
+  if (idx === -1) rows.push({ id: youId, name, score: myScore, you: true });
+  else rows[idx] = { ...rows[idx], name, score: myScore, you: true };
+
+  rows.sort((a, b) => b.score - a.score);
+  try { localStorage.setItem(key, JSON.stringify(rows)); } catch {}
+  return rows;
+}
+
+function seedBoard(): LBRow[] {
+  const names = ["CryptoPrince", "TapMaster", "LuckyLuna", "TONWhale", "GreenStack", "CoinWolf", "Minty", "Blade", "Jet", "Kira"];
+  const rows: LBRow[] = names.map((n, i) => ({ id: `npc_${i}`, name: n, score: 500 + Math.floor(Math.random() * 5000) }));
+  rows.sort((a, b) => b.score - a.score);
+  return rows;
+}
+
+function weekKey() {
+  const d = new Date();
+  const first = new Date(d.getFullYear(), 0, 1);
+  const diff = (d.getTime() - first.getTime()) / 86400000 + first.getDay();
+  const week = Math.ceil(diff / 7);
+  return `${d.getFullYear()}_${week}`;
 }
 
 /* ============================================================
@@ -423,3 +559,10 @@ function getQuestClaimed(title: string) { try { return localStorage.getItem(`q_$
 function setQuestClaimed(title: string) { try { localStorage.setItem(`q_${slug(title)}`, "1") } catch {} }
 const slug = (s: string) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 const format = (n: number) => n.toLocaleString();
+function formatDuration(ms: number) {
+  const s = Math.ceil(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const ss = s % 60;
+  return h > 0 ? `${h}h ${m}m` : `${m}m ${ss}s`;
+}
