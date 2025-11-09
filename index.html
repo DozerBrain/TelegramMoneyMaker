@@ -1,19 +1,18 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#0b1220" />
     <title>MoneyMaker 💸</title>
 
-    <!-- Telegram WebApp SDK -->
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Font: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-    <!-- ✅ Updated favicon reference -->
-    <link rel="icon" type="image/png" href="/iconn.png" />
-
-    <meta name="theme-color" content="#0b1220" />
+    <!-- Tailwind styles (Vite will inject them) -->
   </head>
-  <body class="min-h-[100dvh] bg-[color:var(--tg-theme-bg-color)] text-[color:var(--tg-theme-text-color)]">
+  <body class="bg-[#0b1220] text-slate-100 font-[Inter]">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
