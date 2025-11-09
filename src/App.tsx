@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
+/* ========= Version tag (visible in header) ========= */
+const MM_VERSION = "ALLPACK v1.0";
+
 /* ---------------- Types ---------------- */
 type ShopItem = { id: string; name: string; kind: "upgrade"|"consumable"; cost: number; apply: () => void };
 type Particle = { id: number; x: number; y: number; value: number };
@@ -44,17 +47,17 @@ export default function App() {
   const [showMore, setShowMore] = useState(false);
 
   // prestige
-  const [shards, setShards] = useState(() => lsn("shards", 0));                  // permanent
+  const [shards, setShards] = useState(() => lsn("shards", 0));
   const [prestigeCount, setPrestigeCount] = useState(() => lsn("prestigeCount",0));
-  const globalMultiplier = useMemo(()=> 1 + shards*0.1, [shards]);               // +10% each shard
+  const globalMultiplier = useMemo(()=> 1 + shards*0.1, [shards]); // +10% each shard
 
   // skins & pets
   type SkinId = "default"|"emeraldSuit"|"goldSuit";
   type PetId  = "none"|"miniCoin"|"owl";
   const [skin, setSkin] = useState<SkinId>(()=> lsGet("skin","default") as SkinId);
   const [pet, setPet]   = useState<PetId>(()=> lsGet("pet","none") as PetId);
-  const skinBonus = skin==="emeraldSuit"?1.05: skin==="goldSuit"?1.08: 1;        // affects tap
-  const petAuto   = pet==="miniCoin"?1: pet==="owl"?2: 0;                         // +auto/sec
+  const skinBonus = skin==="emeraldSuit"?1.05: skin==="goldSuit"?1.08: 1;   // affects tap
+  const petAuto   = pet==="miniCoin"?1: pet==="owl"?2: 0;                    // +auto/sec
 
   // sounds
   const [sfxOn, setSfxOn] = useState(()=> lsGet("sfxOn","1")==="1");
@@ -84,11 +87,9 @@ export default function App() {
   const [feverUntil, setFeverUntil] = useState(0);
   const feverActive = Date.now() < feverUntil;
 
-  // spin
+  // spin & chest
   const [nextSpinAt, setNextSpinAt] = useState<number>(() => lsn("nextSpinAt", 0));
   const [spinCountdown, setSpinCountdown] = useState("");
-
-  // daily chest
   const [nextChestAt, setNextChestAt] = useState<number>(()=> lsn("nextChestAt",0));
   const [chestCountdown, setChestCountdown] = useState("");
 
@@ -121,14 +122,16 @@ export default function App() {
         setUsername(uname); lsSet("username", uname);
       }
       const now = Date.now(), last = lastLogin || 0, days = Math.floor((now - last)/86400000);
-      if (last===0 || days===0) {} else if (days===1) { setStreak(s=>s+1); setCoins(c=>c+20*Math.min(7,(streak||0)+1)); toast("Daily streak +1 ⭐") }
+      if (last===0 || days===0) {} 
+      else if (days===1) { setStreak(s=>s+1); setCoins(c=>c+20*Math.min(7,(streak||0)+1)); toast("Daily streak +1 ⭐") }
       else { setStreak(1); toast("Streak reset") }
       setLastLogin(now);
     }catch{}
   },[]);
 
   /* -------- persist -------- */
-  useEffect(()=>{ lsSet("score",score); lsSet("taps",taps); lsSet("energy",energy); lsSet("maxEnergy",maxEnergy);
+  useEffect(()=>{ 
+    lsSet("score",score); lsSet("taps",taps); lsSet("energy",energy); lsSet("maxEnergy",maxEnergy);
     lsSet("tapPower",tapPower); lsSet("autoRate",autoRate); lsSet("regenRate",regenRate); lsSet("coins",coins);
     lsSet("streak",streak); lsSet("lastLogin",lastLogin); lsSet("upgradesBought",upgradesBought);
     lsSet("shards",shards); lsSet("prestigeCount",prestigeCount); lsSet("skin",skin); lsSet("pet",pet); lsSet("sfxOn",sfxOn?'1':'0');
@@ -183,7 +186,7 @@ export default function App() {
   const [leaderboard, setLeaderboard] = useState<LBRow[]>(()=> ensureWeekBoard(username, score));
   useEffect(()=>{ setLeaderboard(ensureWeekBoard(username, score)) },[score,username]);
 
-  /* -------- spin -------- */
+  /* -------- spin & chest handlers -------- */
   const onReward = (r:Reward)=>{
     switch(r.kind){
       case "coins": setCoins(c=>c+r.amount); toast(`+${r.amount} coins 💰`); break;
@@ -197,8 +200,6 @@ export default function App() {
         break;
     }
   };
-
-  /* -------- daily chest -------- */
   const openChest = ()=>{
     if(Date.now() < nextChestAt) return;
     const pool:Reward[] = [
@@ -217,7 +218,6 @@ export default function App() {
   const shardGain = useMemo(()=> Math.floor(score/10000), [score]); // 1 per 10k total
   const doPrestige = ()=>{
     if (shardGain<=0) return toast("Earn at least 10k to prestige.");
-    // reset progress but keep shards and cosmetics
     setShards(s=>s+shardGain); setPrestigeCount(p=>p+1);
     setScore(0); setTaps(0); setEnergy(50); setMaxEnergy(50);
     setTapPower(1); setAutoRate(0); setRegenRate(5); setCoins(0); setUpgradesBought(0);
@@ -237,7 +237,9 @@ export default function App() {
         {/* header */}
         <div className="w-full flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight">MoneyMaker 💸</h1>
+            <h1 className="text-2xl font-extrabold tracking-tight">
+              MoneyMaker 💸 <span className="ml-2 rounded-lg bg-white/10 px-2 py-0.5 text-xs align-middle">{MM_VERSION}</span>
+            </h1>
             <p className="text-xs text-slate-400">Welcome, {username}</p>
           </div>
           <div className="rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-right shadow-inner backdrop-blur-sm">
