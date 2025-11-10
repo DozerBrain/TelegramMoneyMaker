@@ -40,7 +40,6 @@ export default function BanknoteButton({
       className={`relative select-none ${className}`}
       style={{
         width: W,
-        // give a little extra space for the reflection but keep the note centered
         height: H + S * 0.14,
         perspective: 1000,
         display: "flex",
@@ -48,7 +47,7 @@ export default function BanknoteButton({
         justifyContent: "center",
       }}
     >
-      {/* ambient glow (behind the note) */}
+      {/* ambient glow behind */}
       <div
         className="absolute rounded-2xl blur-xl opacity-70 pointer-events-none"
         style={{
@@ -63,7 +62,6 @@ export default function BanknoteButton({
         }}
       />
 
-      {/* NOTE: no absolute positioning here — flex does the centering */}
       <button
         ref={btnRef}
         onClick={handlePress}
@@ -146,26 +144,61 @@ export default function BanknoteButton({
 
             <rect x={4} y={4} width={W - 8} height={H - 8} rx={R} ry={R} fill="#061A14" stroke="url(#g-emerald)" strokeWidth={2.5} filter="url(#f-glow)" />
             <rect x={S * 0.1} y={S * 0.12} width={W - S * 0.2} height={H - S * 0.24} rx={R * 0.6} fill="rgba(0,0,0,0.25)" stroke="rgba(16,255,176,.55)" strokeWidth={1} />
-
-            <g transform={`translate(${W / 2 - S * 0.14}, ${H / 2 - S * 0.14})`}>
-              <circle r={S * 0.14} cx={S * 0.14} cy={S * 0.14} fill="rgba(16,255,176,.08)" stroke="rgba(16,255,176,.6)" strokeWidth={1} />
-              <text x={S * 0.14} y={S * 0.175} textAnchor="middle" fontSize={S * 0.21} fontWeight={800} fill="#10FFB0">100</text>
-            </g>
-
-            <text x={S * 0.16} y={S * 0.2} fontSize={S * 0.12} fill="#10FFB0" fontWeight={700}>$</text>
-            <text x={W - S * 0.16} y={H - S * 0.12} fontSize={S * 0.12} fill="#10FFB0" fontWeight={700} textAnchor="end">$</text>
           </svg>
+
+          {/* 💸 rotating emoji center */}
+          <div
+            style={{
+              position: "absolute",
+              left: "50%",
+              top: "50%",
+              transform: "translate(-50%, -50%)",
+              fontSize: S * 0.35,
+              filter: "drop-shadow(0 0 8px rgba(16,255,176,.8)) drop-shadow(0 0 15px rgba(16,255,176,.4))",
+              animation: "spinBill 4s linear infinite",
+            }}
+          >
+            💸
+          </div>
+
+          {/* corner $ symbols */}
+          <div
+            style={{
+              position: "absolute",
+              left: S * 0.16,
+              top: S * 0.12,
+              fontSize: S * 0.12,
+              color: "#10FFB0",
+              textShadow: "0 0 6px rgba(16,255,176,.8)",
+              fontWeight: "700",
+            }}
+          >
+            $
+          </div>
+          <div
+            style={{
+              position: "absolute",
+              right: S * 0.16,
+              bottom: S * 0.12,
+              fontSize: S * 0.12,
+              color: "#10FFB0",
+              textShadow: "0 0 6px rgba(16,255,176,.8)",
+              fontWeight: "700",
+            }}
+          >
+            $
+          </div>
         </div>
       </button>
 
-      {/* tight neon reflection */}
+      {/* reflection */}
       <div
         className="bn-reflection animate"
         style={{
           position: "absolute",
           width: W * 0.9,
           height: Math.max(10, H * 0.1),
-          bottom: S * 0.02, // sits just under the note
+          bottom: S * 0.02,
         }}
       />
     </div>
