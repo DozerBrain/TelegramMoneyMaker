@@ -17,12 +17,21 @@ export default function BanknoteButton({
   const [boomKey, setBoomKey] = useState(0)
   const [burstKey, setBurstKey] = useState(0)
   const [textKey, setTextKey] = useState(0)
+  const [fastSpin, setFastSpin] = useState(false)
+  const [flashKey, setFlashKey] = useState(0)
   const btnRef = useRef<HTMLButtonElement>(null)
 
   const handlePress = () => {
     setBoomKey(k => k + 1)
     setBurstKey(k => k + 1)
     setTextKey(k => k + 1)
+
+    // speed-up spin + flash glow
+    setFastSpin(true)
+    setFlashKey(k => k + 1)
+    setTimeout(() => setFastSpin(false), 500)
+
+    // small press tilt
     if (btnRef.current) {
       btnRef.current.setAttribute("data-pressed", "1")
       setTimeout(() => btnRef.current?.removeAttribute("data-pressed"), 130)
@@ -86,7 +95,7 @@ export default function BanknoteButton({
           }}
         />
 
-        {/* Center pulse */}
+        {/* Center pulse ring */}
         <span
           key={"burst-" + burstKey}
           className="pointer-events-none absolute rounded-full"
@@ -118,7 +127,7 @@ export default function BanknoteButton({
           {floatText}
         </span>
 
-        {/* SVG banknote */}
+        {/* SVG banknote body */}
         <div
           className="relative h-full w-full rounded-2xl"
           style={{ transform: "translateZ(0)", transition: "transform 120ms cubic-bezier(.2,.9,.2,1)" }}
@@ -148,18 +157,37 @@ export default function BanknoteButton({
 
           {/* 💸 rotating emoji center */}
           <div
+            className={fastSpin ? "bill-emoji fast" : "bill-emoji"}
             style={{
-              position: "absolute",
               left: "50%",
               top: "50%",
-              transform: "translate(-50%, -50%)",
               fontSize: S * 0.35,
-              filter: "drop-shadow(0 0 8px rgba(16,255,176,.8)) drop-shadow(0 0 15px rgba(16,255,176,.4))",
-              animation: "spinBill 4s linear infinite",
             }}
           >
             💸
           </div>
+
+          {/* Flash glow on tap */}
+          <span
+            key={"flash-" + flashKey}
+            className="flash-ring"
+            style={{
+              left: "50%",
+              top: "50%",
+              width: S * 0.9,
+              height: S * 0.9,
+            }}
+          />
+          <span
+            key={"flash-2-" + flashKey}
+            className="flash-core"
+            style={{
+              left: "50%",
+              top: "50%",
+              width: S * 0.45,
+              height: S * 0.45,
+            }}
+          />
 
           {/* corner $ symbols */}
           <div
