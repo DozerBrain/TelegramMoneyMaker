@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Pack Reveal Auras (Epic+) ===== */
+@keyframes aura-pop {
+  0%   { opacity: 0; transform: scale(1.02); }
+  10%  { opacity: .95; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.02); }
+}
+.aura-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  animation: aura-pop 1200ms ease-out forwards;
+  mix-blend-mode: screen;
+  z-index: 60;
+}
+
+/* Color variants */
+.aura-epic {
+  background:
+    radial-gradient(50% 45% at 50% 50%, rgba(255,122,0,0.35), transparent 60%),
+    radial-gradient(65% 60% at 50% 50%, rgba(255,255,255,0.08), transparent 70%);
+  filter: blur(1px);
+}
+.aura-legendary {
+  background:
+    radial-gradient(50% 45% at 50% 50%, rgba(255,215,0,0.40), transparent 60%),
+    radial-gradient(65% 60% at 50% 50%, rgba(255,255,255,0.10), transparent 70%);
+  filter: blur(1px);
+}
+.aura-mythic {
+  background:
+    radial-gradient(50% 45% at 50% 50%, rgba(255,30,138,0.40), transparent 60%),
+    radial-gradient(65% 60% at 50% 50%, rgba(255,255,255,0.10), transparent 70%);
+  filter: blur(1px);
+}
+/* Ultimate = cosmic foil */
+@keyframes hue { from { filter: hue-rotate(0deg); } to { filter: hue-rotate(360deg); } }
+.aura-ultimate {
+  background:
+    radial-gradient(50% 45% at 50% 50%, rgba(255,255,255,0.65), transparent 60%),
+    radial-gradient(70% 65% at 50% 50%, rgba(0,255,209,0.25), transparent 75%),
+    radial-gradient(85% 75% at 50% 50%, rgba(122,161,255,0.20), transparent 80%),
+    radial-gradient(100% 90% at 50% 50%, rgba(255,122,230,0.18), transparent 85%);
+  filter: blur(1px);
+  animation: aura-pop 1200ms ease-out forwards, hue 6s linear infinite;
+}
