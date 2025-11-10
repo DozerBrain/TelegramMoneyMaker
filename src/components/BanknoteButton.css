@@ -1,0 +1,19 @@
+@keyframes banknoteRipple {
+  from { transform: scale(0.96); opacity: .6; }
+  to { transform: scale(1.06); opacity: 0; }
+}
+@keyframes pulseOut {
+  0% { transform: translate(-50%,-50%) scale(.6); opacity:.7; }
+  100% { transform: translate(-50%,-50%) scale(1.25); opacity:0; }
+}
+@keyframes noteFloat {
+  0%,100% { transform: translateZ(0) translateY(0) rotateX(0deg); }
+  50% { transform: translateZ(0) translateY(-4px) rotateX(1deg); }
+}
+@keyframes floatText {
+  0% { transform: translate(-50%,-50%) translateY(6px); opacity:.95; }
+  100% { transform: translate(-50%,-50%) translateY(-26px); opacity:0; }
+}
+button[data-pressed="1"] > div {
+  transform: rotateX(6deg) scale(.992);
+}
