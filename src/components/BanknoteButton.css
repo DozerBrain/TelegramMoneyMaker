@@ -63,7 +63,7 @@ button[data-pressed="1"] > div {
   will-change: transform, filter;
 }
 .bill-emoji.fast {
-  animation: spinBillFast 0.5s linear infinite, flashBoost 500ms ease-out;
+  animation: spinBillFast 0.35s linear infinite, flashBoost 600ms ease-out;
 }
 
 /* Quick brightness boost while fast spinning */
