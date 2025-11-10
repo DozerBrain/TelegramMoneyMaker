@@ -24,10 +24,10 @@ export default function BanknoteButton({
     setBoomKey(k => k + 1)
     setTextKey(k => k + 1)
 
-    // fast 3D spin + flash
     setFastSpin(true)
     setFlashKey(k => k + 1)
-    setTimeout(() => setFastSpin(false), 500) // duration feel set by CSS speed
+    // the visual speed is controlled by CSS; this just gates the flash elements
+    setTimeout(() => setFastSpin(false), 420)
 
     // tiny press tilt
     if (btnRef.current) {
@@ -42,9 +42,10 @@ export default function BanknoteButton({
   const H = S
   const R = Math.max(12, S * 0.07)
 
-  // size of the 3D chip in the middle
-  const chipW = S * 0.52
-  const chipH = S * 0.30
+  // 3D chip dimensions
+  const chipW = S * 0.56
+  const chipH = S * 0.34
+  const chipT = Math.max(8, Math.round(S * 0.06)) // thickness in px
 
   return (
     <div
@@ -52,7 +53,7 @@ export default function BanknoteButton({
       style={{
         width: W,
         height: H + S * 0.14,
-        perspective: 1000,
+        perspective: 900, // stronger perspective for clearer 3D
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -86,7 +87,7 @@ export default function BanknoteButton({
           animation: "noteFloat 4s ease-in-out infinite",
         }}
       >
-        {/* edge ripple (on each tap) */}
+        {/* Edge ripple (per tap) */}
         <span
           key={boomKey}
           className="pointer-events-none absolute inset-0 rounded-2xl"
@@ -97,7 +98,7 @@ export default function BanknoteButton({
           }}
         />
 
-        {/* floating +1 text (on each tap) */}
+        {/* Floating +1 text (per tap) */}
         <span
           key={"txt-" + textKey}
           className="pointer-events-none absolute text-emerald-300 font-extrabold"
@@ -141,7 +142,7 @@ export default function BanknoteButton({
             <rect x={S * 0.1} y={S * 0.12} width={W - S * 0.2} height={H - S * 0.24} rx={R * 0.6} fill="rgba(0,0,0,0.25)" stroke="rgba(16,255,176,.55)" strokeWidth={1} />
           </svg>
 
-          {/* === 3D 💸 chip (front+back faces) === */}
+          {/* === 3D 💸 chip === */}
           <div
             className={fastSpin ? "bill3d fast" : "bill3d"}
             style={{
@@ -149,34 +150,40 @@ export default function BanknoteButton({
               top: "50%",
               width: chipW,
               height: chipH,
-              // pass font sizing via CSS variable
+              // pass custom CSS vars
               // @ts-ignore
-              "--faceFS": `${S * 0.28}px`,
+              "--thick": `${chipT}px`,
+              "--faceFS": `${S * 0.26}px`,
             } as React.CSSProperties}
           >
+            {/* Edge/rim */}
+            <div className="rim" />
+
+            {/* Faces */}
             <div className="face front">💸</div>
             <div className="face back">💸</div>
-            {/* subtle holographic line */}
-            <div className="holo-line" />
+
+            {/* Subtle glare */}
+            <div className="glare" />
           </div>
 
-          {/* flash glow on tap (render only while fastSpin) */}
+          {/* flash glow on tap (only while fastSpin true) */}
           {fastSpin && (
             <>
               <span
                 key={"flash-" + flashKey}
                 className="flash-ring"
-                style={{ left: "50%", top: "50%", width: S * 0.9, height: S * 0.9 }}
+                style={{ left: "50%", top: "50%", width: S * 0.92, height: S * 0.92 }}
               />
               <span
                 key={"flash-2-" + flashKey}
                 className="flash-core"
-                style={{ left: "50%", top: "50%", width: S * 0.45, height: S * 0.45 }}
+                style={{ left: "50%", top: "50%", width: S * 0.46, height: S * 0.46 }}
               />
             </>
           )}
 
-          {/* corner $ */}
+          {/* corners */}
           <div
             style={{
               position: "absolute",
