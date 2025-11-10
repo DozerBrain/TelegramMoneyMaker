@@ -24,17 +24,16 @@ export default function BanknoteButton({
     setBoomKey(k => k + 1)
     setTextKey(k => k + 1)
 
-    // tap effects
+    // fast 3D spin + flash
     setFastSpin(true)
     setFlashKey(k => k + 1)
-    setTimeout(() => setFastSpin(false), 500)
+    setTimeout(() => setFastSpin(false), 500) // duration feel set by CSS speed
 
     // tiny press tilt
     if (btnRef.current) {
       btnRef.current.setAttribute("data-pressed", "1")
       setTimeout(() => btnRef.current?.removeAttribute("data-pressed"), 130)
     }
-
     onTap?.()
   }
 
@@ -42,6 +41,10 @@ export default function BanknoteButton({
   const W = S * 1.7
   const H = S
   const R = Math.max(12, S * 0.07)
+
+  // size of the 3D chip in the middle
+  const chipW = S * 0.52
+  const chipH = S * 0.30
 
   return (
     <div
@@ -83,7 +86,7 @@ export default function BanknoteButton({
           animation: "noteFloat 4s ease-in-out infinite",
         }}
       >
-        {/* Edge ripple (on each tap) */}
+        {/* edge ripple (on each tap) */}
         <span
           key={boomKey}
           className="pointer-events-none absolute inset-0 rounded-2xl"
@@ -94,7 +97,7 @@ export default function BanknoteButton({
           }}
         />
 
-        {/* Floating gain text (on each tap) */}
+        {/* floating +1 text (on each tap) */}
         <span
           key={"txt-" + textKey}
           className="pointer-events-none absolute text-emerald-300 font-extrabold"
@@ -110,7 +113,7 @@ export default function BanknoteButton({
           {floatText}
         </span>
 
-        {/* SVG banknote body */}
+        {/* banknote body */}
         <div
           className="relative h-full w-full rounded-2xl"
           style={{ transform: "translateZ(0)", transition: "transform 120ms cubic-bezier(.2,.9,.2,1)" }}
@@ -138,45 +141,42 @@ export default function BanknoteButton({
             <rect x={S * 0.1} y={S * 0.12} width={W - S * 0.2} height={H - S * 0.24} rx={R * 0.6} fill="rgba(0,0,0,0.25)" stroke="rgba(16,255,176,.55)" strokeWidth={1} />
           </svg>
 
-          {/* 💸 rotating emoji center */}
+          {/* === 3D 💸 chip (front+back faces) === */}
           <div
-            className={fastSpin ? "bill-emoji fast" : "bill-emoji"}
+            className={fastSpin ? "bill3d fast" : "bill3d"}
             style={{
               left: "50%",
               top: "50%",
-              fontSize: S * 0.35,
-            }}
+              width: chipW,
+              height: chipH,
+              // pass font sizing via CSS variable
+              // @ts-ignore
+              "--faceFS": `${S * 0.28}px`,
+            } as React.CSSProperties}
           >
-            💸
+            <div className="face front">💸</div>
+            <div className="face back">💸</div>
+            {/* subtle holographic line */}
+            <div className="holo-line" />
           </div>
 
-          {/* Flash glow on tap — render ONLY when fastSpin is true */}
+          {/* flash glow on tap (render only while fastSpin) */}
           {fastSpin && (
             <>
               <span
                 key={"flash-" + flashKey}
                 className="flash-ring"
-                style={{
-                  left: "50%",
-                  top: "50%",
-                  width: S * 0.9,
-                  height: S * 0.9,
-                }}
+                style={{ left: "50%", top: "50%", width: S * 0.9, height: S * 0.9 }}
               />
               <span
                 key={"flash-2-" + flashKey}
                 className="flash-core"
-                style={{
-                  left: "50%",
-                  top: "50%",
-                  width: S * 0.45,
-                  height: S * 0.45,
-                }}
+                style={{ left: "50%", top: "50%", width: S * 0.45, height: S * 0.45 }}
               />
             </>
           )}
 
-          {/* Corner $ symbols */}
+          {/* corner $ */}
           <div
             style={{
               position: "absolute",
@@ -209,12 +209,7 @@ export default function BanknoteButton({
       {/* reflection */}
       <div
         className="bn-reflection animate"
-        style={{
-          position: "absolute",
-          width: W * 0.9,
-          height: Math.max(10, H * 0.1),
-          bottom: S * 0.02,
-        }}
+        style={{ position: "absolute", width: W * 0.9, height: Math.max(10, H * 0.1), bottom: S * 0.02 }}
       />
     </div>
   )
