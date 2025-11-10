@@ -375,7 +375,7 @@ export default function App() {
           ))}
 
           <div className="relative flex justify-center mt-4">
-            <BanknoteButton onTap={() => onTap()} size={240} floatText={`+${liveGain} 💵`} />
+            <BanknoteButton onTap={() => onTap()} size={120} floatText={`+${liveGain} 💵`} />
           </div>
         </div>
 
