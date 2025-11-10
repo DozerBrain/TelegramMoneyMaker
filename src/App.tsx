@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import BanknoteButton from "./components/BanknoteButton";
 
 /* ========= Version tag (visible in header) ========= */
 const MM_VERSION = "ALLPACK v1.0";
@@ -77,8 +78,10 @@ export default function App() {
   const mascotRef = useRef<HTMLImageElement>(null);
   const tapCardRef = useRef<HTMLDivElement>(null);
   const [particles, setParticles] = useState<Particle[]>([]);
-  const [ripples, setRipples] = useState<Ripple[]>([]);
-  const pid = useRef(1); const rid = useRef(1);
+  // NOTE: we REMOVE manual ripple bubbles since BanknoteButton has its own ripple.
+  // const [ripples, setRipples] = useState<Ripple[]>([]);
+  const pid = useRef(1);
+  // const rid = useRef(1);
 
   // combo/fever
   const lastTapAt = useRef(0);
@@ -155,7 +158,7 @@ export default function App() {
     setParticles(ps=>[...ps,{id,x,y,value:shown}]);
     setTimeout(()=> setParticles(ps=>ps.filter(p=>p.id!==id)), 850);
   };
-  const spawnRipple = ()=>{ const id=rid.current++; setRipples(rs=>[...rs,{id}]); setTimeout(()=>setRipples(rs=>rs.filter(r=>r.id!==id)),450) };
+  // Removed spawnRipple + ripples since BanknoteButton has its own ripple
 
   const onTap = (e?:React.MouseEvent)=>{
     if (energy<1) return toast("No energy. Wait ⏳");
@@ -169,7 +172,7 @@ export default function App() {
     setScore(s=>s+gain); setTaps(t=>t+1); setEnergy(e_=>Math.max(0,e_-1));
     // fx
     mascotRef.current?.classList.remove("mrT-pop"); void mascotRef.current?.offsetWidth; mascotRef.current?.classList.add("mrT-pop");
-    spawnParticle(e?.clientX,e?.clientY); spawnRipple(); vibe("tap");
+    spawnParticle(e?.clientX,e?.clientY); vibe("tap");
     lastTapAt.current=now; tg?.HapticFeedback?.impactOccurred?.("medium");
   };
 
@@ -263,13 +266,10 @@ export default function App() {
             <span key={p.id} className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 text-sm font-extrabold text-emerald-300 drop-shadow"
                   style={{left:`${p.x}%`, top:`${p.y}%`, animation:"floatUp 850ms ease-out forwards"}}>+{p.value}</span>
           ))}
+
+          {/* 🔁 REPLACED the old round TAP button with the Futuristic Banknote */}
           <div className="relative flex justify-center mt-4">
-            {ripples.map(r=> <span key={r.id} className="absolute h-44 w-44 rounded-full bg-emerald-400/20 blur-[2px]" style={{animation:"ripple 450ms ease-out forwards"}}/>)}
-            <button onClick={(e)=>onTap(e)}
-              className="relative z-[1] grid h-44 w-44 place-items-center rounded-full bg-gradient-to-b from-emerald-400 to-emerald-500 text-emerald-950 text-3xl font-extrabold shadow-[0_18px_40px_rgba(16,185,129,0.35)] active:scale-[0.98] transition">
-              TAP
-              <span className="block text-xs font-semibold opacity-80">+{tapPower} / tap</span>
-            </button>
+            <BanknoteButton onTap={() => onTap()} size={240} />
           </div>
         </div>
 
@@ -346,9 +346,12 @@ export default function App() {
                   <h3 className="font-bold">Daily Chest 🎁</h3>
                   <span className="text-xs text-slate-400">{Date.now()<nextChestAt? `Next in ${chestCountdown}`: "Ready!"}</span>
                 </div>
-                <button onClick={openChest} disabled={Date.now()<nextChestAt}
-                        className={`w-full rounded-xl px-4 py-2 text-sm font-semibold ${Date.now()<nextChestAt?"bg-white/10 text-slate-400 cursor-not-allowed":"bg-emerald-500 text-emerald-950"}`}>
-                  {Date.now()<nextChestAt? `Come back in ${chestCountdown}`: "Open Chest"}
+                <button
+                  onClick={openChest}
+                  disabled={Date.now()<nextChestAt}
+                  className={`w-full rounded-xl px-3 py-2 font-semibold ${Date.now()<nextChestAt? "bg-white/10 text-slate-400 cursor-not-allowed" : "bg-amber-400 text-amber-950"}`}
+                >
+                  {Date.now()<nextChestAt? "Come back later" : "Open Chest"}
                 </button>
               </Card>
 
@@ -356,186 +359,183 @@ export default function App() {
               <Card>
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="font-bold">Prestige ✨</h3>
-                  <span className="text-xs text-slate-400">Shards: {shards} • Global x{globalMultiplier.toFixed(2)}</span>
+                  <span className="text-xs text-slate-400">Get shards to boost all income</span>
                 </div>
-                <div className="text-sm text-slate-300">Reset progress for <b>{shardGain}</b> shard(s). Each shard gives <b>+10%</b> forever.</div>
-                <button onClick={doPrestige} disabled={shardGain<=0} className={`mt-2 w-full rounded-xl px-4 py-2 text-sm font-semibold ${shardGain<=0?"bg-white/10 text-slate-400 cursor-not-allowed":"bg-amber-400 text-amber-950"}`}>Prestige & Rebirth</button>
-                <div className="mt-1 text-xs text-slate-400">Prestiges: {prestigeCount}</div>
-              </Card>
-
-              {/* Skins & Pets */}
-              <Card>
-                <h3 className="mb-2 font-bold">Skins & Pets 🐾</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <Choice active={skin==="default"} onClick={()=>setSkin("default")} title="Classic" subtitle="No bonus"/>
-                  <Choice active={skin==="emeraldSuit"} onClick={()=>setSkin("emeraldSuit")} title="Emerald Suit" subtitle="+5% tap"/>
-                  <Choice active={skin==="goldSuit"} onClick={()=>setSkin("goldSuit")} title="Gold Suit" subtitle="+8% tap"/>
-                  <Choice active={pet==="none"} onClick={()=>setPet("none")} title="No Pet" subtitle=""/>
-                  <Choice active={pet==="miniCoin"} onClick={()=>setPet("miniCoin")} title="Mini Coin" subtitle="+1 auto/sec"/>
-                  <Choice active={pet==="owl"} onClick={()=>setPet("owl")} title="Wise Owl" subtitle="+2 auto/sec"/>
-                </div>
-              </Card>
-
-              {/* Social + Settings */}
-              <Card>
-                <h3 className="mb-2 font-bold">Boosts & Settings</h3>
-                <div className="grid grid-cols-2 gap-2">
-                  <button onClick={()=>{ setCoins(c=>c+50); toast("Thanks for sharing! +50 💸"); }} className="rounded-xl bg-emerald-500/20 text-emerald-200 px-3 py-2 text-sm font-semibold">Share to Story</button>
-                  <button onClick={()=>{ tg?.showPopup?.({message:`Your friend code:\n${friendCode()}`}); }} className="rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold">Friend Code</button>
-                  <button onClick={()=>{ setSfxOn(v=>!v); }} className={`rounded-xl px-3 py-2 text-sm font-semibold ${sfxOn?"bg-emerald-500/20 text-emerald-200":"bg-white/10"}`}>{sfxOn?"Sound: ON":"Sound: OFF"}</button>
-                  <button onClick={()=>{ localStorage.clear(); location.reload() }} className="rounded-xl bg-white/10 px-3 py-2 text-sm font-semibold">Reset Local Data</button>
+                <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/5 p-3">
+                  <div>
+                    <div className="text-sm">You’ll gain <b>{shardGain}</b> shard(s)</div>
+                    <div className="text-xs text-slate-400">Current boost: x{globalMultiplier.toFixed(2)} • Times prestiged: {prestigeCount}</div>
+                  </div>
+                  <button onClick={doPrestige} className="rounded-xl bg-fuchsia-400 px-3 py-1 text-sm font-semibold text-fuchsia-950">Prestige</button>
                 </div>
               </Card>
             </div>
           )}
         </div>
 
-        {/* leaderboard */}
+        {/* Leaderboard */}
         <Card className="mt-4 w-full">
-          <div className="mb-2 flex items-center justify-between"><h3 className="font-bold">Weekly Leaderboard 🏆</h3><span className="text-xs text-slate-400">Resets Monday 00:00</span></div>
-          <ol className="divide-y divide-white/10">
-            {leaderboard.slice(0,10).map((row,i)=>(
-              <li key={row.id} className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <span className={"w-6 text-center font-semibold "+ (i<3?"text-amber-300":"text-slate-400")}>{i+1}</span>
-                  <span className={"font-medium "+(row.you?"text-emerald-300":"")}>{row.name}</span>
-                </div>
-                <span className="tabular-nums">{fmt(row.score)}</span>
-              </li>
+          <h3 className="font-bold mb-2">This Week 🏆</h3>
+          <div className="space-y-1">
+            {leaderboard.map((r,i)=>(
+              <div key={r.id} className={`flex items-center justify-between rounded-lg px-3 py-2 ${r.you? "bg-emerald-400/10" : "bg-white/5"}`}>
+                <div className="text-sm">{i+1}. {r.name}{r.you?" (you)":""}</div>
+                <div className="text-sm font-semibold">{fmt(r.score)}</div>
+              </div>
             ))}
-          </ol>
+          </div>
         </Card>
 
-        <div className="mt-6 text-center text-xs text-slate-400">Demo build. Replace localStorage with backend ⚠️</div>
+        {/* footer toggles */}
+        <div className="mt-6 text-xs text-slate-400 flex items-center gap-3">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={sfxOn} onChange={e=>setSfxOn(e.target.checked)} />
+            SFX
+          </label>
+          <span>Skin:</span>
+          <select value={skin} onChange={e=>setSkin(e.target.value as any)} className="bg-white/10 rounded px-2 py-1">
+            <option value="default">Default</option>
+            <option value="emeraldSuit">Emerald Suit (+5%)</option>
+            <option value="goldSuit">Gold Suit (+8%)</option>
+          </select>
+          <span>Pet:</span>
+          <select value={pet} onChange={e=>setPet(e.target.value as any)} className="bg-white/10 rounded px-2 py-1">
+            <option value="none">None</option>
+            <option value="miniCoin">Mini Coin (+1 auto)</option>
+            <option value="owl">Owl (+2 auto)</option>
+          </select>
+        </div>
       </div>
 
-      {/* animations */}
+      {/* Local styles for animations */}
       <style>{`
-        @keyframes bgMove{0%{transform:translateY(0) translateX(0) scale(1)}50%{transform:translateY(30px) translateX(10px) scale(1.05)}100%{transform:translateY(0) translateX(0) scale(1)}}
-        @keyframes bgMove2{0%{transform:translateY(0) translateX(0) scale(1)}50%{transform:translateY(-30px) translateX(-10px) scale(1.05)}100%{transform:translateY(0) translateX(0) scale(1)}}
-        .animate-bgMove{animation:bgMove 9s ease-in-out infinite}.animate-bgMove2{animation:bgMove2 12s ease-in-out infinite}
-        @keyframes breathe{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}.mrT-idle{animation:breathe 2.4s ease-in-out infinite}
-        @keyframes pop{0%{transform:scale(1)}35%{transform:scale(1.06)}100%{transform:scale(1)}}.mrT-pop{animation:pop 220ms ease-out}
-        @keyframes floatUp{0%{transform:translate(-50%,-50%) scale(0.9);opacity:0}10%{opacity:1}100%{transform:translate(-50%,-140%) scale(1.1);opacity:0}}
-        @keyframes ripple{0%{transform:scale(0.7);opacity:.7}100%{transform:scale(1.5);opacity:0}}
+        @keyframes floatUp { 0%{ transform: translate(-50%,-50%) translateY(6px); opacity:.95 } 100%{ transform: translate(-50%,-50%) translateY(-30px); opacity:0 } }
+        @keyframes ripple { from{ transform: scale(.9); opacity:.5 } to{ transform: scale(1.25); opacity:0 } }
+        @keyframes bgMove { 0%{ transform: translateY(0)} 100%{ transform: translateY(30px)} }
+        @keyframes bgMove2 { 0%{ transform: translateY(0)} 100%{ transform: translateY(-30px)} }
+        .animate-bgMove { animation: bgMove 6s ease-in-out infinite alternate; }
+        .animate-bgMove2 { animation: bgMove2 6s ease-in-out infinite alternate; }
+        .mrT-idle { animation: mrTFloat 3.5s ease-in-out infinite; }
+        .mrT-pop { animation: mrTPop .18s ease-out; }
+        @keyframes mrTFloat { 0%{ transform: translateY(0) } 50%{ transform: translateY(-6px) } 100%{ transform: translateY(0) } }
+        @keyframes mrTPop { from{ transform: scale(1) } to{ transform: scale(1.03) } }
       `}</style>
     </div>
   );
 }
 
 /* ============================================================
-   Lucky Spin
+   Tiny UI components
 ============================================================ */
-function LuckySpin({ nextSpinAt, setNextSpinAt, onReward, countdown }:{
-  nextSpinAt:number; setNextSpinAt:(v:number)=>void; onReward:(r:Reward)=>void; countdown:string;
-}) {
-  const seg:Reward[] = [
-    { kind:"coins", amount:100 }, { kind:"tap", amount:1 }, { kind:"coins", amount:250 }, { kind:"energy", amount:20 },
-    { kind:"booster", minutes:5 }, { kind:"coins", amount:500 }, { kind:"auto", amount:1 }, { kind:"coins", amount:150 },
-  ];
-  const [angle,setAngle] = useState(0); const [spinning,setSpinning]=useState(false);
-  const canSpin = Date.now()>=nextSpinAt;
-  const spin=()=>{
-    if(!canSpin||spinning) return;
-    const n=seg.length, idx=Math.floor(Math.random()*n), slice=360/n, center=slice*idx+slice/2;
-    const final = 5*360 + (360 - center);
-    setSpinning(true); setAngle(final);
-    setTimeout(()=>{ onReward(seg[idx]); setSpinning(false); const next=Date.now()+24*60*60*1000; setNextSpinAt(next); lsSet("nextSpinAt",next); }, 2600);
-  };
-  return (
-    <div className="py-3">
-      <div className="mb-2 flex items-center justify-between"><div className="font-semibold">Lucky Spin 🎰</div>{canSpin?<span className="text-xs text-emerald-300">Free spin ready!</span>:<span className="text-xs text-slate-400">Next in {countdown}</span>}</div>
-      <div className="flex items-center justify-center py-2">
-        <div className="relative">
-          <div className="absolute left-1/2 top-[-10px] h-0 w-0 -translate-x-1/2 border-l-[8px] border-r-[8px] border-b-[12px] border-l-transparent border-r-transparent border-b-emerald-300 drop-shadow"/>
-          <div className="h-40 w-40 rounded-full border border-white/10 shadow-inner"
-               style={{background:"conic-gradient(#10b981 0 45deg,#0ea5e9 45deg 90deg,#10b981 90deg 135deg,#f59e0b 135deg 180deg,#10b981 180deg 225deg,#0ea5e9 225deg 270deg,#10b981 270deg 315deg,#f59e0b 315deg 360deg)",
-               transform:`rotate(${angle}deg)`, transition:spinning?"transform 2.6s cubic-bezier(0.12,0.68,0,1.02)":"none"}}/>
-        </div>
-      </div>
-      <button onClick={spin} disabled={!canSpin||spinning}
-        className={`mt-2 w-full rounded-xl px-4 py-2 text-sm font-semibold ${canSpin&&!spinning?"bg-emerald-500 text-emerald-950":"bg-white/10 text-slate-400 cursor-not-allowed"}`}>
-        {canSpin? (spinning?"Spinning...":"Spin (Free)") : `Come back in ${countdown}`}
-      </button>
-    </div>
-  );
+
+function Card({children,className=""}:{children:React.ReactNode; className?:string}) {
+  return <div className={`rounded-2xl border border-white/10 bg-white/5 p-4 ${className}`}>{children}</div>
 }
 
-/* ============================================================
-   Small UI
-============================================================ */
-function Card({ children, className=""}:{children:React.ReactNode; className?:string}) {
-  return <section className={`rounded-2xl border border-white/10 bg-white/5 p-4 ${className}`}>{children}</section>;
-}
-function Choice({active,onClick,title,subtitle}:{active:boolean; onClick:()=>void; title:string; subtitle:string}) {
+function TabButton({children,active,onClick}:{children:React.ReactNode;active:boolean;onClick:()=>void}) {
   return (
-    <button onClick={onClick}
-      className={`rounded-xl border px-3 py-2 text-left ${active? "border-emerald-400/40 bg-emerald-500/10":"border-white/10 bg-white/5"}`}>
-      <div className="font-semibold">{title}</div>
-      <div className="text-xs text-slate-400">{subtitle}</div>
-    </button>
-  );
-}
-function TabButton({active,onClick,children}:{active?:boolean; onClick?:()=>void; children:React.ReactNode}) {
-  return (
-    <button onClick={onClick}
-      className={'rounded-2xl px-4 py-2 text-sm font-semibold transition active:scale-[0.99] '+
-        (active? 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30 shadow-inner'
-                : 'border border-white/10 bg-white/5 text-slate-100 hover:bg-white/7')}>
+    <button
+      onClick={onClick}
+      className={`rounded-xl px-3 py-1.5 text-sm font-semibold ${active? "bg-emerald-500 text-emerald-950" : "bg-white/10 text-white"}`}
+    >
       {children}
     </button>
   );
 }
-function Bar({label,percent,right,color="emerald",className=""}:{label:string;percent:number;right?:React.ReactNode;color?:"emerald"|"sky"|"amber";className?:string}) {
-  const c = {emerald:"bg-emerald-400", sky:"bg-sky-400", amber:"bg-amber-400"}[color];
-  const t = {emerald:"bg-emerald-400/15", sky:"bg-sky-400/15", amber:"bg-amber-400/15"}[color];
+
+function Bar({label,right,percent,color="emerald",className=""}:{label:string;right:string|number;percent:number;color?:"emerald"|"sky"|"amber";className?:string}) {
+  const bar = color==="emerald"?"bg-emerald-500":color==="sky"?"bg-sky-400":"bg-amber-400";
   return (
-    <div className={className}>
-      <div className="mb-1 flex items-center justify-between text-xs text-slate-300"><span>{label}</span><span className="tabular-nums">{right}</span></div>
-      <div className={`h-2 w-full overflow-hidden rounded-full ${t}`}><div className={`h-full ${c} transition-[width]`} style={{width:`${Math.max(0,Math.min(100,percent))}%`}}/></div>
+    <div className={`rounded-xl border border-white/10 bg-white/5 p-2 ${className}`}>
+      <div className="mb-1 flex items-center justify-between text-xs text-slate-300">
+        <span>{label}</span><span>{right}</span>
+      </div>
+      <div className="h-2 w-full rounded-lg bg-white/10 overflow-hidden">
+        <div className={`h-2 ${bar}`} style={{width: `${Math.max(0, Math.min(100, percent))}%`}}/>
+      </div>
     </div>
   );
 }
+
 function Quest({title,reward,onClaim}:{title:string;reward:number;onClaim:()=>void}) {
-  const [claimed,setClaimed]=useState(()=> lsGet(`q_${slug(title)}`,"0")==="1");
-  const claim=()=>{ if(claimed) return; setClaimed(true); lsSet(`q_${slug(title)}`,"1"); onClaim(); toast(`+${reward} coins ✅`) };
   return (
-    <div className="flex items-center justify-between py-3">
-      <div><div className="font-semibold">{title}</div><div className="text-xs text-slate-400">Reward: {reward}</div></div>
-      <button onClick={claim} disabled={claimed} className={`rounded-lg px-3 py-1 text-xs font-semibold ${claimed?"bg-white/10 text-slate-400":"bg-emerald-500/20 text-emerald-200"}`}>{claimed?"Claimed":"Claim"}</button>
+    <div className="flex items-center justify-between py-2">
+      <div>
+        <div className="font-semibold">{title}</div>
+        <div className="text-xs text-slate-400">Reward: {reward} coins</div>
+      </div>
+      <button onClick={()=>{onClaim(); toast(`+${reward} coins for ${title}`)}} className="rounded-xl bg-emerald-500 text-emerald-950 px-3 py-1 text-sm font-semibold">Claim</button>
     </div>
-  );
+  )
+}
+
+function LuckySpin({nextSpinAt,setNextSpinAt,onReward, countdown}:{nextSpinAt:number; setNextSpinAt:(v:number)=>void; onReward:(r:Reward)=>void; countdown:string}) {
+  const ready = Date.now() >= nextSpinAt;
+  const doSpin = ()=>{
+    if(!ready) return;
+    const pool:Reward[] = [
+      {kind:"coins", amount: 80+rand(0,120)},
+      {kind:"energy", amount: 20},
+      {kind:"tap", amount: 1},
+      {kind:"auto", amount: 1},
+    ];
+    const r = pool[Math.floor(Math.random()*pool.length)];
+    onReward(r);
+    const next = Date.now() + 3*60*60*1000; // every 3h
+    setNextSpinAt(next); lsSet("nextSpinAt", next);
+  };
+  return (
+    <div className="pt-2">
+      <div className="mb-2 flex items-center justify-between">
+        <div className="font-semibold">Lucky Spin 🎡</div>
+        <div className="text-xs text-slate-400">{ready? "Ready!" : `Next in ${countdown}`}</div>
+      </div>
+      <button onClick={doSpin} disabled={!ready} className={`w-full rounded-xl px-3 py-2 font-semibold ${ready? "bg-sky-400 text-sky-950" : "bg-white/10 text-slate-400 cursor-not-allowed"}`}>
+        {ready? "Spin Now" : "Come back later"}
+      </button>
+    </div>
+  )
 }
 
 /* ============================================================
-   Leaderboard helpers
+   Helpers
 ============================================================ */
-function ensureWeekBoard(name:string, myScore:number):LBRow[] {
-  const key = `lb_week_${weekKey()}`; let rows:LBRow[]=[];
-  try{ const raw=localStorage.getItem(key); if(raw) rows=JSON.parse(raw) }catch{}
-  if(!rows||rows.length===0) rows = seedBoard();
-  const youId="you"; const idx = rows.findIndex(r=>r.id===youId);
-  if(idx===-1) rows.push({id:youId, name, score:myScore, you:true}); else rows[idx] = {...rows[idx], name, score:myScore, you:true};
-  rows.sort((a,b)=> b.score-a.score); try{ localStorage.setItem(key, JSON.stringify(rows)) }catch{}
-  return rows;
-}
-function seedBoard():LBRow[] {
-  const names = ["CryptoPrince","TapMaster","LuckyLuna","TONWhale","GreenStack","CoinWolf","Minty","Blade","Jet","Kira"];
-  const rows = names.map((n,i)=>({id:`npc_${i}`, name:n, score: 500+Math.floor(Math.random()*5000)} as LBRow));
-  rows.sort((a,b)=>b.score-a.score); return rows;
-}
-function weekKey(){ const d=new Date(); const first=new Date(d.getFullYear(),0,1); const diff=(d.getTime()-first.getTime())/86400000+first.getDay(); return `${d.getFullYear()}_${Math.ceil(diff/7)}` }
+function lsGet(k:string, def:string){ try{ const v = localStorage.getItem(k); return v===null? def : v }catch{ return def } }
+function lsSet(k:string, v:any){ try{ localStorage.setItem(k, String(v)) }catch{} }
+function lsn(k:string, def:number){ try{ const v = localStorage.getItem(k); return v===null? def : Number(v) }catch{ return def } }
 
-/* ============================================================
-   Utils
-============================================================ */
-function useInterval(cb:()=>void, ms:number){ const s=useRef(cb); useEffect(()=>{s.current=cb},[cb]); useEffect(()=>{const id=setInterval(()=>s.current(),ms); return()=>clearInterval(id)},[ms]) }
-const toast=(m:string)=> window.Telegram?.WebApp?.showPopup? window.Telegram.WebApp.showPopup({message:m,buttons:[{type:"ok",text:"OK"}]}): console.log(m);
-const lsn=(k:string,f:number)=>{ try{ const n=Number(localStorage.getItem(k)); return isNaN(n)?f:n }catch{ return f } }
-const lsSet=(k:string,v:any)=>{ try{ localStorage.setItem(k,String(v)) }catch{} }
-const lsGet=(k:string,f:string)=>{ try{ const v=localStorage.getItem(k); return v??f }catch{ return f } }
-const slug=(s:string)=> s.toLowerCase().replace(/[^a-z0-9]+/g,"-");
-const fmt=(n:number)=> n.toLocaleString();
-const dur=(ms:number)=>{ const s=Math.ceil(ms/1000); const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), ss=s%60; return h>0?`${h}h ${m}m`:`${m}m ${ss}s` }
-const friendCode=()=>{ let c=lsGet("ref_code",""); if(!c){ c='U'+Math.random().toString(36).slice(2,8).toUpperCase(); lsSet("ref_code",c) } return c }
-const rand=(a:number,b:number)=> a+Math.floor(Math.random()*(b-a+1));
+function useInterval(cb:()=>void, ms:number){
+  useEffect(()=>{ const id = setInterval(cb, ms); return ()=>clearInterval(id) },[cb,ms])
+}
+
+function fmt(n:number){ return n.toLocaleString() }
+function rand(min:number,max:number){ return Math.floor(Math.random()*(max-min+1))+min }
+function dur(ms:number){
+  const s = Math.floor(ms/1000);
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), ss = s%60;
+  if (h>0) return `${h}h ${m}m`;
+  if (m>0) return `${m}m ${ss}s`;
+  return `${ss}s`;
+}
+function toast(msg:string){ try{ (window as any).Telegram?.WebApp?.showAlert?.(msg) }catch{} console.log("TOAST:", msg) }
+
+function ensureWeekBoard(username:string, score:number):LBRow[]{
+  const key = "lb_week";
+  let data:LBRow[];
+  try{
+    const raw = localStorage.getItem(key);
+    if(raw){ data = JSON.parse(raw) } else {
+      data = [
+        {id:"a", name:"Alice", score: 12000},
+        {id:"b", name:"Bob", score: 9200},
+        {id:"c", name:"Carol", score: 6100},
+      ];
+    }
+  }catch{ data = [] }
+  const youIdx = data.findIndex(r=>r.you);
+  if (youIdx>=0){ data[youIdx].name = username; data[youIdx].score = score }
+  else { data.push({id:"you", name:username, score, you:true}) }
+  data.sort((x,y)=>y.score - x.score);
+  try{ localStorage.setItem(key, JSON.stringify(data)) }catch{}
+  return data;
+}
