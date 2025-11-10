@@ -26,15 +26,19 @@ button[data-pressed="1"] > div {
   left: 50%;
   transform: translateX(-50%);
   pointer-events: none;
-  border-radius: 9999px;
-  /* soft emerald bar that fades out */
-  background: radial-gradient(65% 100% at 50% 0%,
-    rgba(16,255,176,0.40) 0%,
-    rgba(16,255,176,0.22) 30%,
-    rgba(16,255,176,0.10) 55%,
-    rgba(16,255,176,0.00) 100%);
-  filter: blur(12px);
-  opacity: .8;
+  border-radius: 50%;
+  width: 85%;
+  height: 12%;
+  bottom: -3%;
+  background: radial-gradient(
+    60% 100% at 50% 0%,
+    rgba(16,255,176,0.25) 0%,
+    rgba(16,255,176,0.12) 30%,
+    rgba(16,255,176,0.05) 60%,
+    rgba(16,255,176,0.00) 100%
+  );
+  filter: blur(10px);
+  opacity: .6;
 }
 
 /* optional: subtle breathing of the reflection */
