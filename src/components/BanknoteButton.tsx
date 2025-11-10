@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react"
+import "./BanknoteButton.css"
 
 interface Props {
   onTap?: () => void
@@ -19,7 +20,6 @@ export default function BanknoteButton({ onTap, size = 220, className = "" }: Pr
 
     btnRef.current?.setAttribute("data-pressed", "1")
     setTimeout(() => btnRef.current?.removeAttribute("data-pressed"), 130)
-
     onTap?.()
   }
 
@@ -33,7 +33,7 @@ export default function BanknoteButton({ onTap, size = 220, className = "" }: Pr
       className={`relative inline-flex select-none ${className}`}
       style={{ width: W, height: H, perspective: 1000 }}
     >
-      {/* Emerald glow */}
+      {/* Glow */}
       <div
         className="absolute inset-0 rounded-2xl blur-xl opacity-70 pointer-events-none"
         style={{
@@ -42,7 +42,6 @@ export default function BanknoteButton({ onTap, size = 220, className = "" }: Pr
         }}
       />
 
-      {/* Tap surface */}
       <button
         ref={btnRef}
         onClick={handlePress}
@@ -90,137 +89,85 @@ export default function BanknoteButton({ onTap, size = 220, className = "" }: Pr
           +1 💵
         </span>
 
-        {/* Banknote SVG */}
-        <div
-          className="relative h-full w-full rounded-2xl"
-          style={{
-            transform: "translateZ(0)",
-            transition: "transform 120ms cubic-bezier(.2,.9,.2,1)",
-          }}
+        {/* SVG Note */}
+        <svg
+          width={W}
+          height={H}
+          viewBox={`0 0 ${W} ${H}`}
+          xmlns="http://www.w3.org/2000/svg"
+          className="relative block"
         >
-          <svg
-            width={W}
-            height={H}
-            viewBox={`0 0 ${W} ${H}`}
-            xmlns="http://www.w3.org/2000/svg"
-            className="relative block"
-          >
-            <defs>
-              <linearGradient id="g-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#7CFFC4" />
-                <stop offset="50%" stopColor="#10FFB0" />
-                <stop offset="100%" stopColor="#00D39A" />
-              </linearGradient>
-              <filter id="f-glow" x="-50%" y="-50%" width="200%" height="200%">
-                <feDropShadow
-                  dx="0"
-                  dy="0"
-                  stdDeviation="6"
-                  floodColor="#10FFB0"
-                  floodOpacity="0.6"
-                />
-                <feDropShadow
-                  dx="0"
-                  dy="0"
-                  stdDeviation="18"
-                  floodColor="#10FFB0"
-                  floodOpacity="0.25"
-                />
-              </filter>
-            </defs>
+          <defs>
+            <linearGradient id="g-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#7CFFC4" />
+              <stop offset="50%" stopColor="#10FFB0" />
+              <stop offset="100%" stopColor="#00D39A" />
+            </linearGradient>
+            <filter id="f-glow" x="-50%" y="-50%" width="200%" height="200%">
+              <feDropShadow dx="0" dy="0" stdDeviation="6" floodColor="#10FFB0" floodOpacity="0.6" />
+              <feDropShadow dx="0" dy="0" stdDeviation="18" floodColor="#10FFB0" floodOpacity="0.25" />
+            </filter>
+          </defs>
 
-            {/* Main note */}
-            <rect
-              x={4}
-              y={4}
-              width={W - 8}
-              height={H - 8}
-              rx={R}
-              ry={R}
-              fill="#061A14"
-              stroke="url(#g-emerald)"
-              strokeWidth={2.5}
-              filter="url(#f-glow)"
-            />
+          <rect
+            x={4}
+            y={4}
+            width={W - 8}
+            height={H - 8}
+            rx={R}
+            ry={R}
+            fill="#061A14"
+            stroke="url(#g-emerald)"
+            strokeWidth={2.5}
+            filter="url(#f-glow)"
+          />
+          <rect
+            x={S * 0.1}
+            y={S * 0.12}
+            width={W - S * 0.2}
+            height={H - S * 0.24}
+            rx={R * 0.6}
+            fill="rgba(0,0,0,0.25)"
+            stroke="rgba(16,255,176,.55)"
+            strokeWidth={1}
+          />
 
-            {/* Inner frame */}
-            <rect
-              x={S * 0.1}
-              y={S * 0.12}
-              width={W - S * 0.2}
-              height={H - S * 0.24}
-              rx={R * 0.6}
-              fill="rgba(0,0,0,0.25)"
-              stroke="rgba(16,255,176,.55)"
+          <g transform={`translate(${W / 2 - S * 0.14}, ${H / 2 - S * 0.14})`}>
+            <circle
+              r={S * 0.14}
+              cx={S * 0.14}
+              cy={S * 0.14}
+              fill="rgba(16,255,176,.08)"
+              stroke="rgba(16,255,176,.6)"
               strokeWidth={1}
             />
-
-            {/* Center value */}
-            <g transform={`translate(${W / 2 - S * 0.14}, ${H / 2 - S * 0.14})`}>
-              <circle
-                r={S * 0.14}
-                cx={S * 0.14}
-                cy={S * 0.14}
-                fill="rgba(16,255,176,.08)"
-                stroke="rgba(16,255,176,.6)"
-                strokeWidth={1}
-              />
-              <text
-                x={S * 0.14}
-                y={S * 0.175}
-                textAnchor="middle"
-                fontSize={S * 0.21}
-                fontWeight={800}
-                fill="#10FFB0"
-              >
-                100
-              </text>
-            </g>
-
-            {/* Corners */}
             <text
-              x={S * 0.16}
-              y={S * 0.2}
-              fontSize={S * 0.12}
+              x={S * 0.14}
+              y={S * 0.175}
+              textAnchor="middle"
+              fontSize={S * 0.21}
+              fontWeight={800}
               fill="#10FFB0"
-              fontWeight={700}
             >
-              $
+              100
             </text>
-            <text
-              x={W - S * 0.16}
-              y={H - S * 0.12}
-              fontSize={S * 0.12}
-              fill="#10FFB0"
-              fontWeight={700}
-              textAnchor="end"
-            >
-              $
-            </text>
-          </svg>
-        </div>
+          </g>
+
+          <text x={S * 0.16} y={S * 0.2} fontSize={S * 0.12} fill="#10FFB0" fontWeight={700}>
+            $
+          </text>
+          <text
+            x={W - S * 0.16}
+            y={H - S * 0.12}
+            fontSize={S * 0.12}
+            fill="#10FFB0"
+            fontWeight={700}
+            textAnchor="end"
+          >
+            $
+          </text>
+        </svg>
       </button>
-
-      {/* Animations */}
-      <style>{`
-        @keyframes banknoteRipple {
-          from { transform: scale(0.96); opacity: .6; }
-          to   { transform: scale(1.06); opacity: 0; }
-        }
-        @keyframes pulseOut {
-          0%   { transform: translate(-50%,-50%) scale(.6); opacity:.7; }
-          100% { transform: translate(-50%,-50%) scale(1.25); opacity:0; }
-        }
-        @keyframes noteFloat {
-          0%,100% { transform: translateZ(0) translateY(0) rotateX(0deg); }
-          50%     { transform: translateZ(0) translateY(-4px) rotateX(1deg); }
-        }
-        @keyframes floatText {
-          0%   { transform: translate(-50%,-50%) translateY(6px); opacity:.95; }
-          100% { transform: translate(-50%,-50%) translateY(-26px); opacity:0; }
-        }
-        button[data-pressed="1"] > div { transform: rotateX(6deg) scale(.992); }
-      `}</style>
     </div>
   )
 }
