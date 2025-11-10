@@ -15,7 +15,6 @@ export default function BanknoteButton({
   floatText = "+1 💵",
 }: Props) {
   const [boomKey, setBoomKey] = useState(0)
-  const [burstKey, setBurstKey] = useState(0)
   const [textKey, setTextKey] = useState(0)
   const [fastSpin, setFastSpin] = useState(false)
   const [flashKey, setFlashKey] = useState(0)
@@ -23,19 +22,19 @@ export default function BanknoteButton({
 
   const handlePress = () => {
     setBoomKey(k => k + 1)
-    setBurstKey(k => k + 1)
     setTextKey(k => k + 1)
 
-    // speed-up spin + flash glow
+    // tap effects
     setFastSpin(true)
     setFlashKey(k => k + 1)
     setTimeout(() => setFastSpin(false), 500)
 
-    // small press tilt
+    // tiny press tilt
     if (btnRef.current) {
       btnRef.current.setAttribute("data-pressed", "1")
       setTimeout(() => btnRef.current?.removeAttribute("data-pressed"), 130)
     }
+
     onTap?.()
   }
 
@@ -84,7 +83,7 @@ export default function BanknoteButton({
           animation: "noteFloat 4s ease-in-out infinite",
         }}
       >
-        {/* Edge ripple */}
+        {/* Edge ripple (on each tap) */}
         <span
           key={boomKey}
           className="pointer-events-none absolute inset-0 rounded-2xl"
@@ -95,23 +94,7 @@ export default function BanknoteButton({
           }}
         />
 
-        {/* Center pulse ring */}
-        <span
-          key={"burst-" + burstKey}
-          className="pointer-events-none absolute rounded-full"
-          style={{
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%,-50%)",
-            width: S * 0.6,
-            height: S * 0.6,
-            border: "2px solid rgba(16,255,176,.55)",
-            boxShadow: "0 0 18px rgba(16,255,176,.45)",
-            animation: "pulseOut 520ms ease-out",
-          }}
-        />
-
-        {/* Floating gain text */}
+        {/* Floating gain text (on each tap) */}
         <span
           key={"txt-" + textKey}
           className="pointer-events-none absolute text-emerald-300 font-extrabold"
@@ -167,29 +150,33 @@ export default function BanknoteButton({
             💸
           </div>
 
-          {/* Flash glow on tap */}
-          <span
-            key={"flash-" + flashKey}
-            className="flash-ring"
-            style={{
-              left: "50%",
-              top: "50%",
-              width: S * 0.9,
-              height: S * 0.9,
-            }}
-          />
-          <span
-            key={"flash-2-" + flashKey}
-            className="flash-core"
-            style={{
-              left: "50%",
-              top: "50%",
-              width: S * 0.45,
-              height: S * 0.45,
-            }}
-          />
+          {/* Flash glow on tap — render ONLY when fastSpin is true */}
+          {fastSpin && (
+            <>
+              <span
+                key={"flash-" + flashKey}
+                className="flash-ring"
+                style={{
+                  left: "50%",
+                  top: "50%",
+                  width: S * 0.9,
+                  height: S * 0.9,
+                }}
+              />
+              <span
+                key={"flash-2-" + flashKey}
+                className="flash-core"
+                style={{
+                  left: "50%",
+                  top: "50%",
+                  width: S * 0.45,
+                  height: S * 0.45,
+                }}
+              />
+            </>
+          )}
 
-          {/* corner $ symbols */}
+          {/* Corner $ symbols */}
           <div
             style={{
               position: "absolute",
