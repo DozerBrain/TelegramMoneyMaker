@@ -31,7 +31,7 @@ img {
 
 /* Ultimate holographic border animation */
 @keyframes hue {
-  from { filter: hue-rotate(0deg);   }
+  from { filter: hue-rotate(0deg); }
   to   { filter: hue-rotate(360deg); }
 }
 .foil-animate {
