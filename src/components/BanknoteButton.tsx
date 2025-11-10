@@ -163,8 +163,6 @@ export default function BanknoteButton({
             <div className="face front">💸</div>
             <div className="face back">💸</div>
 
-            {/* Subtle glare */}
-            <div className="glare" />
           </div>
 
           {/* flash glow on tap (only while fastSpin true) */}
