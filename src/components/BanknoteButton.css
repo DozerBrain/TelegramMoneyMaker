@@ -1,19 +1,47 @@
 @keyframes banknoteRipple {
   from { transform: scale(0.96); opacity: .6; }
-  to { transform: scale(1.06); opacity: 0; }
+  to   { transform: scale(1.06); opacity: 0; }
 }
 @keyframes pulseOut {
-  0% { transform: translate(-50%,-50%) scale(.6); opacity:.7; }
+  0%   { transform: translate(-50%,-50%) scale(.6); opacity:.7; }
   100% { transform: translate(-50%,-50%) scale(1.25); opacity:0; }
 }
 @keyframes noteFloat {
   0%,100% { transform: translateZ(0) translateY(0) rotateX(0deg); }
-  50% { transform: translateZ(0) translateY(-4px) rotateX(1deg); }
+  50%     { transform: translateZ(0) translateY(-4px) rotateX(1deg); }
 }
 @keyframes floatText {
-  0% { transform: translate(-50%,-50%) translateY(6px); opacity:.95; }
+  0%   { transform: translate(-50%,-50%) translateY(6px); opacity:.95; }
   100% { transform: translate(-50%,-50%) translateY(-26px); opacity:0; }
 }
+
+/* Press micro-tilt */
 button[data-pressed="1"] > div {
   transform: rotateX(6deg) scale(.992);
+}
+
+/* Gentle neon reflection below the note */
+.bn-reflection {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+  border-radius: 9999px;
+  /* soft emerald bar that fades out */
+  background: radial-gradient(65% 100% at 50% 0%,
+    rgba(16,255,176,0.40) 0%,
+    rgba(16,255,176,0.22) 30%,
+    rgba(16,255,176,0.10) 55%,
+    rgba(16,255,176,0.00) 100%);
+  filter: blur(12px);
+  opacity: .8;
+}
+
+/* optional: subtle breathing of the reflection */
+@keyframes reflectionPulse {
+  0%,100% { opacity: .75; }
+  50%     { opacity: .90; }
+}
+.bn-reflection.animate {
+  animation: reflectionPulse 4s ease-in-out infinite;
 }
