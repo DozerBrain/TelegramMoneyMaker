@@ -5,9 +5,16 @@ interface Props {
   onTap?: () => void
   size?: number
   className?: string
+  /** Text that floats on tap, e.g. "+5 💵" */
+  floatText?: string
 }
 
-export default function BanknoteButton({ onTap, size = 220, className = "" }: Props) {
+export default function BanknoteButton({
+  onTap,
+  size = 220,
+  className = "",
+  floatText = "+1 💵",
+}: Props) {
   const [boomKey, setBoomKey] = useState(0)
   const [burstKey, setBurstKey] = useState(0)
   const [textKey, setTextKey] = useState(0)
@@ -47,10 +54,7 @@ export default function BanknoteButton({ onTap, size = 220, className = "" }: Pr
         onClick={handlePress}
         className="group relative h-full w-full rounded-2xl bg-transparent outline-none transition-transform"
         aria-label="Tap the futuristic banknote"
-        style={{
-          transformStyle: "preserve-3d",
-          animation: "noteFloat 4s ease-in-out infinite",
-        }}
+        style={{ transformStyle: "preserve-3d", animation: "noteFloat 4s ease-in-out infinite" }}
       >
         {/* Ripple border */}
         <span
@@ -76,7 +80,7 @@ export default function BanknoteButton({ onTap, size = 220, className = "" }: Pr
           }}
         />
 
-        {/* Floating +1 💵 */}
+        {/* Floating gain text (dynamic) */}
         <span
           key={`txt-${textKey}`}
           className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-emerald-300 font-extrabold"
@@ -86,7 +90,7 @@ export default function BanknoteButton({ onTap, size = 220, className = "" }: Pr
             animation: "floatText 700ms ease-out",
           }}
         >
-          +1 💵
+          {floatText}
         </span>
 
         {/* SVG Note */}
@@ -109,63 +113,16 @@ export default function BanknoteButton({ onTap, size = 220, className = "" }: Pr
             </filter>
           </defs>
 
-          <rect
-            x={4}
-            y={4}
-            width={W - 8}
-            height={H - 8}
-            rx={R}
-            ry={R}
-            fill="#061A14"
-            stroke="url(#g-emerald)"
-            strokeWidth={2.5}
-            filter="url(#f-glow)"
-          />
-          <rect
-            x={S * 0.1}
-            y={S * 0.12}
-            width={W - S * 0.2}
-            height={H - S * 0.24}
-            rx={R * 0.6}
-            fill="rgba(0,0,0,0.25)"
-            stroke="rgba(16,255,176,.55)"
-            strokeWidth={1}
-          />
+          <rect x={4} y={4} width={W - 8} height={H - 8} rx={R} ry={R} fill="#061A14" stroke="url(#g-emerald)" strokeWidth={2.5} filter="url(#f-glow)" />
+          <rect x={S * 0.1} y={S * 0.12} width={W - S * 0.2} height={H - S * 0.24} rx={R * 0.6} fill="rgba(0,0,0,0.25)" stroke="rgba(16,255,176,.55)" strokeWidth={1} />
 
           <g transform={`translate(${W / 2 - S * 0.14}, ${H / 2 - S * 0.14})`}>
-            <circle
-              r={S * 0.14}
-              cx={S * 0.14}
-              cy={S * 0.14}
-              fill="rgba(16,255,176,.08)"
-              stroke="rgba(16,255,176,.6)"
-              strokeWidth={1}
-            />
-            <text
-              x={S * 0.14}
-              y={S * 0.175}
-              textAnchor="middle"
-              fontSize={S * 0.21}
-              fontWeight={800}
-              fill="#10FFB0"
-            >
-              100
-            </text>
+            <circle r={S * 0.14} cx={S * 0.14} cy={S * 0.14} fill="rgba(16,255,176,.08)" stroke="rgba(16,255,176,.6)" strokeWidth={1} />
+            <text x={S * 0.14} y={S * 0.175} textAnchor="middle" fontSize={S * 0.21} fontWeight={800} fill="#10FFB0">100</text>
           </g>
 
-          <text x={S * 0.16} y={S * 0.2} fontSize={S * 0.12} fill="#10FFB0" fontWeight={700}>
-            $
-          </text>
-          <text
-            x={W - S * 0.16}
-            y={H - S * 0.12}
-            fontSize={S * 0.12}
-            fill="#10FFB0"
-            fontWeight={700}
-            textAnchor="end"
-          >
-            $
-          </text>
+          <text x={S * 0.16} y={S * 0.2} fontSize={S * 0.12} fill="#10FFB0" fontWeight={700}>$</text>
+          <text x={W - S * 0.16} y={H - S * 0.12} fontSize={S * 0.12} fill="#10FFB0" fontWeight={700} textAnchor="end">$</text>
         </svg>
       </button>
     </div>
