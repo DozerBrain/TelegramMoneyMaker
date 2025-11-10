@@ -49,3 +49,11 @@ button[data-pressed="1"] > div {
 .bn-reflection.animate {
   animation: reflectionPulse 4s ease-in-out infinite;
 }
+@keyframes spinBill {
+  from {
+    transform: translate(-50%, -50%) rotateY(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotateY(360deg);
+  }
+}
