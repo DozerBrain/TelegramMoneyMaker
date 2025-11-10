@@ -8,7 +8,12 @@ type Props = {
   floatText?: string
 }
 
-export default function BanknoteButton({ onTap, size = 220, className = "", floatText = "+1 💵" }: Props) {
+export default function BanknoteButton({
+  onTap,
+  size = 220,
+  className = "",
+  floatText = "+1 💵",
+}: Props) {
   const [boomKey, setBoomKey] = useState(0)
   const [burstKey, setBurstKey] = useState(0)
   const [textKey, setTextKey] = useState(0)
@@ -32,28 +37,42 @@ export default function BanknoteButton({ onTap, size = 220, className = "", floa
 
   return (
     <div
-      className={`relative flex items-center justify-center select-none ${className}`}
-      style={{ width: W, height: H + S * 0.14, perspective: 1000 }}
+      className={`relative select-none ${className}`}
+      style={{
+        width: W,
+        // give a little extra space for the reflection but keep the note centered
+        height: H + S * 0.14,
+        perspective: 1000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
-      {/* ambient glow behind */}
+      {/* ambient glow (behind the note) */}
       <div
-        className="absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-2xl blur-xl opacity-70 pointer-events-none"
+        className="absolute rounded-2xl blur-xl opacity-70 pointer-events-none"
         style={{
+          left: 0,
+          right: 0,
+          margin: "auto",
           height: H * 0.9,
+          top: "50%",
+          transform: "translateY(-50%)",
           boxShadow:
             "0 0 0.5rem rgba(16,255,176,.7), 0 0 2.2rem rgba(16,255,176,.35), 0 0 4rem rgba(16,255,176,.25)",
         }}
       />
 
-      {/* main button */}
+      {/* NOTE: no absolute positioning here — flex does the centering */}
       <button
         ref={btnRef}
         onClick={handlePress}
-        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-transparent outline-none transition-transform"
+        className="group rounded-2xl bg-transparent outline-none transition-transform"
         aria-label="Tap the futuristic banknote"
         style={{
           width: W,
           height: H,
+          position: "relative",
           transformStyle: "preserve-3d",
           animation: "noteFloat 4s ease-in-out infinite",
         }}
@@ -72,8 +91,11 @@ export default function BanknoteButton({ onTap, size = 220, className = "", floa
         {/* Center pulse */}
         <span
           key={"burst-" + burstKey}
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full"
+          className="pointer-events-none absolute rounded-full"
           style={{
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%,-50%)",
             width: S * 0.6,
             height: S * 0.6,
             border: "2px solid rgba(16,255,176,.55)",
@@ -85,8 +107,11 @@ export default function BanknoteButton({ onTap, size = 220, className = "", floa
         {/* Floating gain text */}
         <span
           key={"txt-" + textKey}
-          className="pointer-events-none absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-emerald-300 font-extrabold"
+          className="pointer-events-none absolute text-emerald-300 font-extrabold"
           style={{
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%,-50%)",
             fontSize: Math.max(14, S * 0.12),
             textShadow: "0 0 10px rgba(16,255,176,.7)",
             animation: "floatText 700ms ease-out",
@@ -95,9 +120,18 @@ export default function BanknoteButton({ onTap, size = 220, className = "", floa
           {floatText}
         </span>
 
-        {/* SVG */}
-        <div className="relative h-full w-full rounded-2xl" style={{ transform: "translateZ(0)", transition: "transform 120ms cubic-bezier(.2,.9,.2,1)" }}>
-          <svg width={W} height={H} viewBox={`0 0 ${W} ${H}`} xmlns="http://www.w3.org/2000/svg" className="relative block">
+        {/* SVG banknote */}
+        <div
+          className="relative h-full w-full rounded-2xl"
+          style={{ transform: "translateZ(0)", transition: "transform 120ms cubic-bezier(.2,.9,.2,1)" }}
+        >
+          <svg
+            width={W}
+            height={H}
+            viewBox={`0 0 ${W} ${H}`}
+            xmlns="http://www.w3.org/2000/svg"
+            className="relative block"
+          >
             <defs>
               <linearGradient id="g-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
                 <stop offset="0%" stopColor="#7CFFC4" />
@@ -124,13 +158,14 @@ export default function BanknoteButton({ onTap, size = 220, className = "", floa
         </div>
       </button>
 
-      {/* reflection */}
+      {/* tight neon reflection */}
       <div
         className="bn-reflection animate"
         style={{
+          position: "absolute",
           width: W * 0.9,
           height: Math.max(10, H * 0.1),
-          top: H * 0.85, // positions glow tight below
+          bottom: S * 0.02, // sits just under the note
         }}
       />
     </div>
