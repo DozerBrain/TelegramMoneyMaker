@@ -105,3 +105,70 @@ button[data-pressed="1"] > div {
   0%   { transform: translate(-50%, -50%) scale(.6); opacity:.75; }
   100% { transform: translate(-50%, -50%) scale(1.2); opacity:0; }
 }
+
+/* ===== 3D 💸 chip ===== */
+.bill3d {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  transform-style: preserve-3d;
+  --thick: 10px;               /* chip thickness */
+  animation: spin3d 6s linear infinite;
+  will-change: transform;
+  filter:
+    drop-shadow(0 0 10px rgba(16,255,176,.6))
+    drop-shadow(0 0 22px rgba(16,255,176,.35));
+}
+.bill3d.fast {
+  /* faster spin on tap (duration feel set here) */
+  animation: spin3dFast 0.35s linear infinite, flashBoost 600ms ease-out;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background:
+    radial-gradient(140% 120% at 30% 20%, rgba(16,255,176,.12) 0%, rgba(0,0,0,.55) 60%);
+  border: 2px solid rgba(16,255,176,.85);
+  box-shadow:
+    0 0 12px rgba(16,255,176,.55),
+    inset 0 0 10px rgba(16,255,176,.25);
+  color: #cffff0;
+  text-shadow: 0 0 10px rgba(16,255,176,.9);
+  font-size: var(--faceFS, 56px);
+  backface-visibility: hidden;
+}
+/* front and back faces sit on either side of thickness */
+.face.front { transform: translateZ(calc(var(--thick)/2)); }
+.face.back  { transform: rotateY(180deg) translateZ(calc(var(--thick)/2)); }
+
+/* thin holographic vertical line for sci-fi feel */
+.holo-line {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 2px;
+  height: 85%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(
+    to bottom,
+    rgba(16,255,176,0) 0%,
+    rgba(16,255,176,.65) 45%,
+    rgba(16,255,176,0) 100%
+  );
+  filter: blur(0.6px);
+  opacity: .6;
+}
+
+/* 3D spin keyframes */
+@keyframes spin3d {
+  from { transform: translate(-50%, -50%) rotateY(0deg); }
+  to   { transform: translate(-50%, -50%) rotateY(360deg); }
+}
+@keyframes spin3dFast {
+  from { transform: translate(-50%, -50%) rotateY(0deg); }
+  to   { transform: translate(-50%, -50%) rotateY(720deg); }
+}
