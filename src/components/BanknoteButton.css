@@ -1,3 +1,4 @@
+/* ---------- Base motion ---------- */
 @keyframes banknoteRipple {
   from { transform: scale(0.96); opacity: .6; }
   to   { transform: scale(1.06); opacity: 0; }
@@ -20,7 +21,7 @@ button[data-pressed="1"] > div {
   transform: rotateX(6deg) scale(.992);
 }
 
-/* Gentle neon reflection below the note */
+/* ---------- Neon reflection under the note ---------- */
 .bn-reflection {
   position: absolute;
   left: 50%;
@@ -41,19 +42,66 @@ button[data-pressed="1"] > div {
   opacity: .6;
 }
 
-/* optional: subtle breathing of the reflection */
-@keyframes reflectionPulse {
-  0%,100% { opacity: .75; }
-  50%     { opacity: .90; }
-}
-.bn-reflection.animate {
-  animation: reflectionPulse 4s ease-in-out infinite;
-}
+@keyframes reflectionPulse { 0%,100% { opacity:.75 } 50% { opacity:.9 } }
+.bn-reflection.animate { animation: reflectionPulse 4s ease-in-out infinite; }
+
+/* ---------- Emoji spin + boosted spin on tap ---------- */
 @keyframes spinBill {
-  from {
-    transform: translate(-50%, -50%) rotateY(0deg);
-  }
-  to {
-    transform: translate(-50%, -50%) rotateY(360deg);
-  }
+  from { transform: translate(-50%, -50%) rotateY(0deg); }
+  to   { transform: translate(-50%, -50%) rotateY(360deg); }
+}
+@keyframes spinBillFast {
+  from { transform: translate(-50%, -50%) rotateY(0deg); }
+  to   { transform: translate(-50%, -50%) rotateY(720deg); }
+}
+
+.bill-emoji {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 0 8px rgba(16,255,176,.85)) drop-shadow(0 0 15px rgba(16,255,176,.45));
+  animation: spinBill 4s linear infinite;
+  will-change: transform, filter;
+}
+.bill-emoji.fast {
+  animation: spinBillFast 0.5s linear infinite, flashBoost 500ms ease-out;
+}
+
+/* Quick brightness boost while fast spinning */
+@keyframes flashBoost {
+  0%   { filter: drop-shadow(0 0 14px rgba(16,255,176,1)) drop-shadow(0 0 28px rgba(16,255,176,.6)); }
+  100% { filter: drop-shadow(0 0 8px rgba(16,255,176,.85)) drop-shadow(0 0 15px rgba(16,255,176,.45)); }
+}
+
+/* ---------- Pop flash on tap ---------- */
+.flash-ring,
+.flash-core {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  border-radius: 9999px;
+}
+
+.flash-ring {
+  border: 2px solid rgba(16,255,176,.65);
+  box-shadow: 0 0 24px rgba(16,255,176,.55), inset 0 0 18px rgba(16,255,176,.25);
+  animation: flashPop 420ms ease-out;
+  opacity: .85;
+}
+.flash-core {
+  background: radial-gradient(50% 50% at 50% 50%,
+    rgba(16,255,176,.45) 0%,
+    rgba(16,255,176,.25) 40%,
+    rgba(16,255,176,0) 70%);
+  filter: blur(6px);
+  animation: flashCore 420ms ease-out;
+  opacity: .75;
+}
+
+@keyframes flashPop {
+  0%   { transform: translate(-50%, -50%) scale(.75); opacity:.85; }
+  100% { transform: translate(-50%, -50%) scale(1.35); opacity:0; }
+}
+@keyframes flashCore {
+  0%   { transform: translate(-50%, -50%) scale(.6); opacity:.75; }
+  100% { transform: translate(-50%, -50%) scale(1.2); opacity:0; }
 }
