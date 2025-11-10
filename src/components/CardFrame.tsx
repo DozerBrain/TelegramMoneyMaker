@@ -38,16 +38,12 @@ export default function CardFrame({
 }: Props) {
   const cfg = RARITY[rarity];
   const label = (title ?? cfg.text).toUpperCase();
-
-  // For Ultimate we use a foil gradient; others use a solid stroke
   const isUltimate = rarity === "ultimate";
 
   return (
     <div
       className={`relative rounded-2xl overflow-hidden aspect-[3/4] bg-[#0b1220] ${className}`}
-      style={{
-        boxShadow: `0 0 28px ${cfg.glow}, inset 0 0 0 1px rgba(255,255,255,0.06)`,
-      }}
+      style={{ boxShadow: `0 0 28px ${cfg.glow}, inset 0 0 0 1px rgba(255,255,255,0.06)` }}
     >
       {/* Artwork */}
       <img
@@ -57,15 +53,14 @@ export default function CardFrame({
         draggable={false}
       />
 
-      {/* Dim top/bottom for text readability */}
+      {/* Dim top/bottom for readability */}
       <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent pointer-events-none" />
       <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/55 to-transparent pointer-events-none" />
 
-      {/* Frame border (SVG keeps crisp corners) */}
+      {/* Frame border */}
       <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 100 133">
         {isUltimate ? (
           <>
-            {/* Animated foil gradient */}
             <defs>
               <linearGradient id="foil" x1="0%" y1="0%" x2="100%" y2="0%">
                 <stop offset="0%"  stopColor="#ffffff" />
@@ -75,29 +70,12 @@ export default function CardFrame({
                 <stop offset="100%" stopColor="#ffffff" />
               </linearGradient>
             </defs>
-            <rect
-              x="2" y="2" width="96" height="129" rx="7"
-              fill="none"
-              stroke="url(#foil)"
-              strokeWidth="1.5"
-              className="foil-animate"
-            />
+            <rect x="2" y="2" width="96" height="129" rx="7" fill="none" stroke="url(#foil)" strokeWidth="1.5" className="foil-animate" />
           </>
         ) : (
-          <rect
-            x="2" y="2" width="96" height="129" rx="7"
-            fill="none"
-            stroke={cfg.stroke}
-            strokeWidth="1.5"
-          />
+          <rect x="2" y="2" width="96" height="129" rx="7" fill="none" stroke={cfg.stroke} strokeWidth="1.5" />
         )}
-        {/* Inner bezel */}
-        <rect
-          x="6" y="8" width="88" height="117" rx="6"
-          fill="none"
-          stroke="rgba(255,255,255,0.08)"
-          strokeWidth="0.8"
-        />
+        <rect x="6" y="8" width="88" height="117" rx="6" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.8" />
       </svg>
 
       {/* Top rarity label */}
@@ -114,7 +92,7 @@ export default function CardFrame({
         {label}
       </div>
 
-      {/* Bottom divider line */}
+      {/* Bottom divider */}
       <div
         className="absolute left-6 right-6 bottom-[38px] h-[1.5px] rounded"
         style={{
@@ -131,8 +109,7 @@ export default function CardFrame({
           className="absolute bottom-2 left-1/2 -translate-x-1/2 text-[10px] font-semibold"
           style={{
             color: cfg.stroke,
-            textShadow:
-              "0 0 6px rgba(255,255,255,0.45), 0 0 10px rgba(255,255,255,0.25)",
+            textShadow: "0 0 6px rgba(255,255,255,0.45), 0 0 10px rgba(255,255,255,0.25)",
             letterSpacing: "0.08em",
           }}
         >
