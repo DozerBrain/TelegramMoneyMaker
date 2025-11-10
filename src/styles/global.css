@@ -16,8 +16,6 @@
   mix-blend-mode: screen;
   z-index: 60;
 }
-
-/* Color variants */
 .aura-epic {
   background:
     radial-gradient(50% 45% at 50% 50%, rgba(255,122,0,0.35), transparent 60%),
