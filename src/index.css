@@ -2,38 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Global look and feel */
-:root {
-  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont;
-  color-scheme: dark;
-}
+/* Layout */
+html, body, #root { height: 100%; }
+body { @apply bg-gradient-to-b from-zinc-900 to-black text-white antialiased; }
 
-body {
-  @apply bg-[#0b1220] text-slate-100 antialiased;
-}
-
-/* Optional smoother scrolling */
-html {
-  scroll-behavior: smooth;
-}
-
-/* Touch feedback on buttons */
-button:active {
-  transform: scale(0.97);
-  transition: transform 0.1s ease;
-}
-
-/* Hide image dragging highlight */
-img {
-  -webkit-user-drag: none;
-  user-select: none;
-}
-
-/* Ultimate holographic border animation */
-@keyframes hue {
-  from { filter: hue-rotate(0deg); }
-  to   { filter: hue-rotate(360deg); }
-}
-.foil-animate {
-  animation: hue 8s linear infinite;
-}
+/* Reusable */
+.card       { @apply rounded-2xl bg-zinc-800/60 backdrop-blur p-4 shadow-lg border border-white/5; }
+.btn        { @apply inline-flex items-center justify-center rounded-2xl px-5 py-3 font-semibold active:scale-95 transition; }
+.btn-primary{ @apply btn bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg; }
+.btn-ghost  { @apply btn bg-white/5 hover:bg-white/10 text-white; }
+.badge      { @apply inline-flex items-center gap-1 rounded-full bg-white/10 px-3 py-1 text-sm; }
+.tab        { @apply flex-1 text-center py-3 font-semibold rounded-xl; }
+.tab-active { @apply bg-white/10; }
