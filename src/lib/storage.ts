@@ -1,60 +1,28 @@
-// src/lib/storage.ts
-import { initialAchievementState } from "../data/achievements";
-
-const KEY = "moneymaker:save:v1";
-
-export type SaveData = {
-  balance: number;
-  totalEarnings: number;
-  taps: number;
-  tapValue: number;
-  autoPerSec: number;
-  multi: number; // global multiplier
-  bestSuitName: string;
-  spinCooldownEndsAt: number | null;
-  quests: Record<string, { done: boolean; claimed: boolean }>;
-  achievements: Record<string, { done: boolean; claimed: boolean }>;
+// simple localStorage helpers
+const K = {
+  TAP: "mm.tapCounter",
+  COLLECTION: "mm.collection",
+  LAST_DROP: "mm.lastDrop",
 };
 
-export const defaultSave: SaveData = {
-  balance: 0,
-  totalEarnings: 0,
-  taps: 0,
-  tapValue: 1,
-  autoPerSec: 0,
-  multi: 1,
-  bestSuitName: "Starter",
-  spinCooldownEndsAt: null,
-  quests: {
-    first100: { done: false, claimed: false },
-    first1k: { done: false, claimed: false },
-    first10k: { done: false, claimed: false },
+export type Collection = Record<import("../data/cards").Rarity, number>;
+
+function getJSON<T>(key: string, fallback: T): T {
+  try { return JSON.parse(localStorage.getItem(key) || "") as T; }
+  catch { return fallback; }
+}
+
+export const StorageAPI = {
+  getTap(): number { return Number(localStorage.getItem(K.TAP) || "0"); },
+  setTap(v: number) { localStorage.setItem(K.TAP, String(v)); },
+
+  getCollection(): Collection {
+    return getJSON<Collection>(K.COLLECTION, {
+      common:0, uncommon:0, rare:0, epic:0, legendary:0, mythic:0, ultimate:0,
+    });
   },
-  achievements: initialAchievementState(),
+  setCollection(c: Collection) { localStorage.setItem(K.COLLECTION, JSON.stringify(c)); },
+
+  setLastDrop(card: any | null) { localStorage.setItem(K.LAST_DROP, JSON.stringify(card)); },
+  getLastDrop<T = any>(): T | null { return getJSON<T | null>(K.LAST_DROP, null); },
 };
-
-export function loadSave(): SaveData {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (!raw) return defaultSave;
-    const parsed = JSON.parse(raw) as SaveData;
-
-    // Merge with defaults to include any newly added achievements
-    return {
-      ...defaultSave,
-      ...parsed,
-      achievements: { ...initialAchievementState(), ...(parsed.achievements ?? {}) },
-      quests: { ...defaultSave.quests, ...(parsed.quests ?? {}) },
-    };
-  } catch {
-    return defaultSave;
-  }
-}
-
-export function saveSave(data: SaveData) {
-  localStorage.setItem(KEY, JSON.stringify(data));
-}
-
-export function resetSave() {
-  localStorage.removeItem(KEY);
-}
