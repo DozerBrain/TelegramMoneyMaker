@@ -1,71 +1,75 @@
-import { useEffect, useMemo } from "react";
-import { fmt } from "../lib/format";
-import Card from "../components/Card";
-import { SUITS } from "../data/suits";
+// src/pages/Home.tsx
+import React, { useEffect, useState } from "react";
+import CardsModal from "../cards/CardsModal";
+import { handleMainTapForPacks } from "../lib/game";
 
-type Props = {
-  balance:number; setBalance:(n:number)=>void;
-  totalEarnings:number; setTotalEarnings:(n:number)=>void;
-  taps:number; setTaps:(n:number)=>void;
-  tapValue:number; multi:number;
-  currentSuitName:string; setCurrentSuitName:(s:string)=>void;
-};
+// If you already track score elsewhere, you can remove the local score state here
+export default function Home() {
+  const [score, setScore] = useState<number>(0);
+  const [showCards, setShowCards] = useState<boolean>(false);
 
-export default function Home(p:Props){
-  const perTap = Math.max(1, Math.floor(p.tapValue * p.multi));
-  const currentSuit = useMemo(()=>{
-    const best = SUITS.reduce((acc, s)=> p.totalEarnings >= s.unlock ? s : acc);
-    if (best.name !== p.currentSuitName) p.setCurrentSuitName(best.name);
-    return best;
-  }, [p.totalEarnings, p.currentSuitName]);
+  // Auto-open Cards modal whenever a pack is opened by the MAIN tap
+  useEffect(() => {
+    const onOpen = () => setShowCards(true);
+    window.addEventListener("pack:opened", onOpen as any);
+    return () => window.removeEventListener("pack:opened", onOpen as any);
+  }, []);
 
-  function handleTap(){
-    const gain = perTap;
-    p.setBalance(p.balance + gain);
-    p.setTotalEarnings(p.totalEarnings + gain);
-    p.setTaps(p.taps + 1);
+  // Main tap -> increases score AND drives the 5-tap pack counter
+  function onMainTap() {
+    // Your normal tap logic (increase balance, animations, etc.)
+    setScore((s) => s + 1);
+
+    // Drives the pack counter; opens pack automatically on 5th tap
+    const res = handleMainTapForPacks();
+    // You don't need to do anything here: the modal will auto-open via event listener
+    // if (res.opened) { setShowCards(true); } // <- optional; event already does this
   }
 
-  const nextSuit = useMemo(()=>{
-    const idx = SUITS.findIndex(s => s.name === currentSuit.name);
-    return SUITS[idx+1] ?? null;
-  }, [currentSuit]);
-
-  useEffect(()=>{ /* simple unlock glow: add CSS pulse once on change */ }, [currentSuit.name]);
-
   return (
-    <div className="max-w-xl mx-auto p-4 flex flex-col gap-4">
-      <Card title="Balance" right={<div className="badge">Total: ${fmt(p.totalEarnings)}</div>}>
-        <div className="text-center">
-          <div className="text-sm opacity-80">Current</div>
-          <div className="text-4xl font-extrabold mt-1">${fmt(p.balance)}</div>
-        </div>
-      </Card>
+    <div className="min-h-screen w-full bg-[#0b0f13] text-white flex flex-col">
+      {/* Top bar (replace with your TopBar component if you have one) */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <div className="text-lg font-bold">MoneyMaker</div>
+        <div className="text-sm opacity-80">Balance: ${score}</div>
+      </div>
 
-      <div className="card flex flex-col items-center gap-3">
+      {/* Mascot / suit stage */}
+      <div className="flex-1 flex flex-col items-center justify-center px-4">
+        {/* Show your mascot (use whatever suit you prefer) */}
         <img
-          src={currentSuit.image}
-          alt={`Mr.T — ${currentSuit.name}`}
-          className="w-56 h-auto rounded-xl select-none"
+          src="/suits/starter.png"       // change to the selected suit path if you have wardrobe state
+          alt="Mr.T"
+          className="w-56 h-auto object-contain drop-shadow-[0_10px_30px_rgba(0,255,170,0.15)]"
           draggable={false}
         />
-        <div className="text-sm opacity-80">
-          Suit: <span className="font-semibold">{currentSuit.name}</span>
-          {nextSuit && <span className="opacity-70"> · Next at ${fmt(nextSuit.unlock)}</span>}
-        </div>
-        <button onClick={handleTap} className="btn-primary text-lg px-8">
-          Tap to Earn 💵 (+{fmt(perTap)})
+
+        {/* Main TAP button — this is the only tap now */}
+        <button
+          onClick={onMainTap}
+          className="mt-8 px-8 py-4 rounded-2xl font-extrabold text-lg bg-emerald-500 hover:bg-emerald-400 active:scale-[0.98] transition"
+        >
+          Tap 💸
         </button>
       </div>
 
-      <Card title="How to Play">
-        <ul className="list-disc pl-6 text-sm opacity-90 space-y-1">
-          <li>Tap the button to earn cash.</li>
-          <li>Buy upgrades in the Shop to earn faster.</li>
-          <li>Unlock new suits automatically as you earn more.</li>
-          <li>Spin the wheel for bonuses once the cooldown ends.</li>
-        </ul>
-      </Card>
+      {/* Bottom nav mock (replace with your Tabs component if you have it) */}
+      <div className="px-4 py-3 border-t border-white/10 flex items-center justify-center gap-3">
+        <button
+          onClick={() => setShowCards(true)}
+          className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10"
+        >
+          Cards
+        </button>
+        <button className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10">
+          Shop
+        </button>
+        <button className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10">
+          More
+        </button>
+      </div>
+
+      {showCards && <CardsModal onClose={() => setShowCards(false)} />}
     </div>
   );
 }
