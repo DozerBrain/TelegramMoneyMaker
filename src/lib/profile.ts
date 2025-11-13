@@ -1,28 +1,29 @@
 // src/lib/profile.ts
-import { get, set } from "./tiny-store";
+import { ref, get, set } from "firebase/database";
+import { db } from "./firebase";
 
 export type Profile = {
-  userId: string;
+  uid: string;
   username: string;
-  country: string; // ISO-2 code like "US"
-  region?: string;
+  country: string;
+  bestScore: number;
 };
 
-const KEY = "mm_profile";
-
-export function getProfile(): Profile {
-  const existing = get<Profile | null>(KEY, null);
-  if (existing) return existing;
-
-  const generated: Profile = {
-    userId: "u_" + Math.random().toString(36).slice(2, 10),
-    username: "Player_" + Math.random().toString(36).slice(2, 6),
-    country: "US",
-  };
-  set(KEY, generated);
-  return generated;
+export async function saveProfile(profile: Profile) {
+  try {
+    await set(ref(db, "profiles/" + profile.uid), profile);
+  } catch (err) {
+    console.error("Error saving profile:", err);
+  }
 }
 
-export function setProfile(p: Profile) {
-  set(KEY, p);
+export async function getProfile(uid: string): Promise<Profile | null> {
+  try {
+    const snap = await get(ref(db, "profiles/" + uid));
+    if (!snap.exists()) return null;
+    return snap.val() as Profile;
+  } catch (err) {
+    console.error("Error loading profile:", err);
+    return null;
+  }
 }
