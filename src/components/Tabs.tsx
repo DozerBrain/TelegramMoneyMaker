@@ -1,4 +1,3 @@
-// src/components/Tabs.tsx
 import React from "react";
 
 type Props = {
@@ -8,16 +7,16 @@ type Props = {
 
 export default function Tabs({ active, onChange }: Props) {
   const tabs = [
-    { key: "home", label: "Home" },
-    { key: "shop", label: "Shop" },
-    { key: "spin", label: "Spin" },
-    { key: "more", label: "More" },
+    { key: "home",        label: "Home" },
+    { key: "shop",        label: "Shop" },
+    { key: "spin",        label: "Spin" },
+    { key: "more",        label: "More" },
     { key: "leaderboard", label: "Leaderboard" },
-    { key: "profile", label: "Profile" },
+    { key: "profile",     label: "Profile" },
   ];
 
   return (
-    <div className="flex justify-around border-t border-white/10 bg-[#101418] py-3">
+    <div className="flex justify-around border-top border-white/10 bg-[#101418] py-3">
       {tabs.map(t => (
         <button
           key={t.key}
