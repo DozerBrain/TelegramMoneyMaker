@@ -1,79 +1,143 @@
 // src/pages/More.tsx
-import Card from "../components/Card";
-import { fmt } from "../lib/format";
-import { resetSave } from "../lib/storage";
-import { achievements } from "../data/achievements";
+import React, { useState } from "react";
+
+type AchState = Record<string, { done: boolean; claimed: boolean }>;
 
 type Props = {
-  balance:number; totalEarnings:number; taps:number;
-  tapValue:number; autoPerSec:number; multi:number;
-  achievementsState: Record<string, {done:boolean; claimed:boolean}>;
-  onClaim:(id:string, reward:number)=>void;
-
-  onReset:()=>void;
-  onExport:()=>void; onImport:(raw:string)=>void;
+  balance: number;
+  totalEarnings: number;
+  taps: number;
+  tapValue: number;
+  autoPerSec: number;
+  multi: number;
+  achievementsState: AchState;
+  onClaim: (id: string, reward: number) => void;
+  onReset: () => void;
+  onExport: () => void;
+  onImport: (raw: string) => void;
 };
 
-export default function More(p:Props){
-  return (
-    <div className="max-w-xl mx-auto p-4 flex flex-col gap-4">
-      <Card title="Stats">
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div className="badge">Balance: ${fmt(p.balance)}</div>
-          <div className="badge">Total: ${fmt(p.totalEarnings)}</div>
-          <div className="badge">Taps: {fmt(p.taps)}</div>
-          <div className="badge">Per Tap: +{fmt(p.tapValue)}</div>
-          <div className="badge">Auto/s: +{fmt(p.autoPerSec)}</div>
-          <div className="badge">Multi: x{p.multi.toFixed(2)}</div>
-        </div>
-      </Card>
+export default function More({
+  balance, totalEarnings, taps, tapValue, autoPerSec, multi,
+  achievementsState, onClaim, onReset, onExport, onImport,
+}: Props) {
+  const [importText, setImportText] = useState("");
+  const [importError, setImportError] = useState("");
 
-      <Card title="Achievements">
-        <div className="grid grid-cols-1 gap-3">
-          {achievements.map(a=>{
-            const st = p.achievementsState[a.id];
-            const done = !!st?.done;
-            const claimed = !!st?.claimed;
-            return (
-              <div key={a.id} className="flex items-center justify-between bg-white/5 rounded-xl p-3">
-                <div>
-                  <div className="font-semibold">{a.name} {done && "✅"}</div>
-                  <div className="text-sm opacity-70">{a.desc}</div>
-                  <div className="text-xs opacity-60 mt-1">Reward: ${fmt(a.reward)}</div>
+  function niceId(id: string) {
+    return id.replace(/[_-]+/g, " ")
+             .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function claim(id: string) {
+    const reward = 100;
+    onClaim(id, reward);
+  }
+
+  function handleImport() {
+    setImportError("");
+    if (!importText.trim()) return;
+    try {
+      JSON.parse(importText);
+      onImport(importText.trim());
+      setImportText("");
+    } catch {
+      setImportError("Invalid JSON. Paste your exact save string.");
+    }
+  }
+
+  return (
+    <div className="p-4 space-y-6 text-white">
+      {/* Stats */}
+      <section className="space-y-1">
+        <h2 className="text-lg font-bold">Your Stats</h2>
+        <div className="text-sm opacity-80">
+          Balance: <b className="text-emerald-300">{balance.toLocaleString()}</b>
+        </div>
+        <div className="text-sm opacity-80">
+          Total Earned: <b className="text-emerald-300">{totalEarnings.toLocaleString()}</b>
+        </div>
+        <div className="text-sm opacity-80">
+          Taps: <b>{taps.toLocaleString()}</b>
+        </div>
+        <div className="text-sm opacity-80">
+          Tap Value: <b>{tapValue}</b> • Multiplier: <b>{multi}x</b>
+        </div>
+        <div className="text-sm opacity-80">
+          Auto/sec: <b>{autoPerSec}</b>
+        </div>
+      </section>
+
+      {/* Achievements */}
+      <section className="space-y-2">
+        <h2 className="text-lg font-bold">Achievements</h2>
+        {Object.keys(achievementsState).length === 0 ? (
+          <div className="text-sm opacity-70">
+            No achievements yet — keep tapping! 💪
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {Object.entries(achievementsState).map(([id, st]) => (
+              <div key={id} className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2">
+                <div className="text-sm">
+                  <div className="font-semibold">{niceId(id)}</div>
+                  <div className="opacity-70">{st.done ? "Completed" : "In progress"}</div>
                 </div>
                 <button
-                  className="btn-ghost"
-                  disabled={!done || claimed}
-                  onClick={()=>p.onClaim(a.id, a.reward)}
+                  disabled={!st.done || st.claimed}
+                  onClick={() => claim(id)}
+                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition
+                    ${st.done && !st.claimed ? "bg-emerald-600 hover:bg-emerald-500" : "bg-white/10 opacity-60"}`}
                 >
-                  {claimed ? "Claimed" : done ? "Claim" : "Locked"}
+                  {st.claimed ? "Claimed" : "Claim +100"}
                 </button>
               </div>
-            );
-          })}
-        </div>
-      </Card>
+            ))}
+          </div>
+        )}
+      </section>
 
-      <Card title="Data">
-        <div className="flex gap-2">
-          <button className="btn-ghost" onClick={p.onExport}>Export Save</button>
-          <button className="btn-ghost" onClick={()=>{
-            const raw = prompt("Paste save JSON:");
-            if (raw) p.onImport(raw);
-          }}>Import Save</button>
-          <button className="btn-ghost" onClick={()=>{
-            if (confirm("Reset all progress?")) { resetSave(); p.onReset(); }
-          }}>Reset</button>
+      {/* Save & Import/Export */}
+      <section className="space-y-3">
+        <h2 className="text-lg font-bold">Save Management</h2>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={onExport}
+            className="rounded-xl py-3 bg-white/10 hover:bg-white/20 font-semibold"
+          >
+            📤 Export Save
+          </button>
+          <button
+            onClick={onReset}
+            className="rounded-xl py-3 bg-white/10 hover:bg-white/20 font-semibold"
+          >
+            ♻️ Reset Progress
+          </button>
         </div>
-      </Card>
 
-      <Card title="Coming Next">
-        <ul className="list-disc pl-6 text-sm opacity-80 space-y-1">
-          <li>Prestige/Rebirth for exponential scaling</li>
-          <li>Leaderboards & referrals</li>
-          <li>Tutorial overlay for new players</li>
-        </ul>
-      </Card>
+        <div>
+          <textarea
+            value={importText}
+            onChange={(e) => setImportText(e.target.value)}
+            placeholder="Paste your save JSON here"
+            className="w-full h-28 rounded-xl bg-black/40 border border-white/10 p-3"
+          />
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={handleImport}
+              className="rounded-xl px-4 py-2 bg-emerald-600 hover:bg-emerald-500 font-semibold"
+            >
+              Import
+            </button>
+            {importError && (
+              <div className="text-sm text-red-400">{importError}</div>
+            )}
+          </div>
+          <div className="text-xs opacity-60 mt-1">
+            Tip: Export on one device and paste here to continue on another.
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
