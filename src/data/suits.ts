@@ -1,14 +1,7 @@
 // src/data/suits.ts
-export type Suit = {
-  id: string;              // unique key for each suit
-  name: string;            // display name
-  unlock: number;          // cost to unlock
-  img: string;             // image path
-  bonus: number;           // gameplay bonus multiplier
-  rarity: string;          // rarity color/tag
-};
+import type { Suit } from "../types";
 
-export const suits: Suit[] = [
+export const SUITS: Suit[] = [
   {
     id: "starter",
     name: "Starter",
