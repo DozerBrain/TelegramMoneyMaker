@@ -1,5 +1,5 @@
 // src/App.tsx
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 
 // UI
 import TopBar from "./components/TopBar";
@@ -17,34 +17,57 @@ import ProfilePage from "./pages/Profile";
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
 import { useInterval } from "./lib/useInterval";
 import { achievements } from "./data/achievements";
+import { initTelegramUI } from "./lib/telegram";
 
 // Tab keys
 type Tab = "home" | "shop" | "spin" | "leaderboard" | "profile" | "more";
 
 export default function App() {
-  // Load last save (safe on web)
-  const s = loadSave();
+  // Load last save (snapshot may not have all keys, so normalize with fallbacks)
+  const s: any = loadSave();
 
-  // Core state
-  const [balance, setBalance] = useState<number>(s.balance);
-  const [totalEarnings, setTotalEarnings] = useState<number>(s.totalEarnings);
-  const [taps, setTaps] = useState<number>(s.taps);
-  const [tapValue, setTapValue] = useState<number>(s.tapValue);
-  const [autoPerSec, setAutoPerSec] = useState<number>(s.autoPerSec);
-  const [multi, setMulti] = useState<number>(s.multi);
+  // Core state (with robust fallbacks)
+  const [balance, setBalance] = useState<number>(
+    (s.balance ?? s.score ?? 0) as number
+  );
+  const [totalEarnings, setTotalEarnings] = useState<number>(
+    (s.totalEarnings ?? s.score ?? 0) as number
+  );
+  const [taps, setTaps] = useState<number>((s.taps ?? s.tap ?? 0) as number);
+  const [tapValue, setTapValue] = useState<number>(
+    (s.tapValue ?? 1) as number
+  );
+  const [autoPerSec, setAutoPerSec] = useState<number>(
+    (s.autoPerSec ?? 0) as number
+  );
+  const [multi, setMulti] = useState<number>((s.multi ?? 1) as number);
 
   // Suits
-  const [bestSuitName, setBestSuitName] = useState<string>(s.bestSuitName);
+  const [bestSuitName, setBestSuitName] = useState<string>(
+    (s.bestSuitName ?? "Starter") as string
+  );
 
   // Spin
-  const [spinCooldownEndsAt, setSpinCooldownEndsAt] = useState<number | null>(s.spinCooldownEndsAt);
+  const [spinCooldownEndsAt, setSpinCooldownEndsAt] = useState<number | null>(
+    (s.spinCooldownEndsAt ?? null) as number | null
+  );
 
   // Achievements
   const [achState, setAchState] =
-    useState<Record<string, { done: boolean; claimed: boolean }>>(s.achievements || {});
+    useState<Record<string, { done: boolean; claimed: boolean }>>(
+      (s.achievements ?? {}) as Record<
+        string,
+        { done: boolean; claimed: boolean }
+      >
+    );
 
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
+
+  // Telegram Mini App init (safe no-op in normal browsers)
+  useEffect(() => {
+    initTelegramUI();
+  }, []);
 
   // --- Passive income tick (autoPerSec * multi each second)
   useInterval(() => {
@@ -64,7 +87,8 @@ export default function App() {
       const next = { ...prev };
       for (const a of achievements) {
         if (!next[a.id]) next[a.id] = { done: false, claimed: false };
-        if (!next[a.id].done && a.check(ctx)) next[a.id] = { ...next[a.id], done: true };
+        if (!next[a.id].done && a.check(ctx))
+          next[a.id] = { ...next[a.id], done: true };
       }
       return next;
     });
@@ -72,7 +96,21 @@ export default function App() {
 
   // --- Persist save whenever anything important changes
   useEffect(() => {
+    // Save with the fields your pages expect; unknown fields are fine
     saveSave({
+      ...defaultSave,
+      // map both the old and new shapes so nothing is lost
+      score: balance, // keep score in sync
+      tap: taps,
+      collection: s.collection ?? defaultSave.collection,
+      lastDrop: s.lastDrop ?? null,
+      ownedPets: s.ownedPets ?? [],
+      equippedPet: s.equippedPet ?? null,
+      ownedSuits: s.ownedSuits ?? [],
+      equippedSuit: s.equippedSuit ?? null,
+      profile: s.profile ?? defaultSave.profile,
+
+      // your app’s richer shape
       balance,
       totalEarnings,
       taps,
@@ -81,9 +119,9 @@ export default function App() {
       multi,
       bestSuitName,
       spinCooldownEndsAt,
-      quests: s.quests,
+      quests: s.quests ?? [],
       achievements: achState,
-    });
+    } as any);
   }, [
     balance,
     totalEarnings,
@@ -102,7 +140,7 @@ export default function App() {
       const h = (location.hash || "").toLowerCase();
       if (h.startsWith("#/leaderboard")) setTab("leaderboard");
       else if (h.startsWith("#/profile")) setTab("profile");
-      // You can add more hash routes here if needed
+      // add more hashes as needed
     };
     applyHash();
     window.addEventListener("hashchange", applyHash);
