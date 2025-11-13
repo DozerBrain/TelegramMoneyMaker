@@ -1,10 +1,9 @@
 import React from "react";
-
-type Tab = "home" | "shop" | "spin" | "leaderboard" | "profile" | "more";
+import { Tab } from "../types";
 
 type Props = {
   active: Tab;
-  onChange: React.Dispatch<React.SetStateAction<Tab>>; // accepts setTab directly
+  onChange: React.Dispatch<React.SetStateAction<Tab>>;
 };
 
 export default function Tabs({ active, onChange }: Props) {
