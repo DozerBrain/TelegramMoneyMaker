@@ -1,3 +1,5 @@
+import LeaderboardPage from "./pages/Leaderboard";
+import ProfilePage from "./pages/Profile";
 import { useEffect, useMemo, useState } from "react";
 import TopBar from "./components/TopBar";
 import Tabs from "./components/Tabs";
@@ -136,6 +138,8 @@ export default function App(){
             onReset={doReset} onExport={doExport} onImport={doImport}
           />
         )}
+        {tab==="leaderboard" && <LeaderboardPage />}
+{tab==="profile" && <ProfilePage />}
       </main>
 
       <Tabs active={tab} onChange={setTab} />
