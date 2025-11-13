@@ -1,32 +1,19 @@
 // src/lib/firebase.ts
-// Firebase bootstrap (Realtime Database). Vercel will install deps on deploy.
-// Make sure "firebase": "^11.0.0" is in package.json dependencies.
+import { initializeApp } from "firebase/app";
+import { getDatabase } from "firebase/database";
 
-import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
-import { getDatabase, type Database } from "firebase/database";
-
-// 🔑 Fill these from Firebase Console → Project settings → Your apps (Web)
 const firebaseConfig = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  databaseURL:       "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID",
+  apiKey: "AIzaSyBGSR1l1ocnZu7i72rK_C51ML_eI87X6Q", // ← your key
+  authDomain: "moneymaker-a669c.firebaseapp.com",
+  projectId: "moneymaker-a669c",
+  storageBucket: "moneymaker-a669c.firebasestorage.app",
+  messagingSenderId: "352896227263",
+  appId: "1:352896227263:web:3d998d8a2f22f2d7a2730a",
+  databaseURL: "https://moneymaker-a669c-default-rtdb.firebaseio.com",
 };
 
-let _app: FirebaseApp | null = null;
-let _db: Database | null = null;
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
 
-export function getFirebaseApp(): FirebaseApp {
-  if (_app) return _app;
-  _app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  return _app;
-}
-
-export function getDB(): Database {
-  if (_db) return _db;
-  _db = getDatabase(getFirebaseApp());
-  return _db;
-}
+// Initialize Realtime Database
+export const db = getDatabase(app);
