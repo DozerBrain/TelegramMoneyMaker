@@ -13,7 +13,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
   const s = loadSave();
   const totalEarnings = s.totalEarnings ?? 0;
 
-  // Prefer Telegram identity (inside Telegram); fallback to initials
+  // Prefer Telegram identity (inside TG), fallback to initials
   const tgUser = getTelegramUser();
   const name = tgDisplayName(tgUser);
   const initials = useMemo(() => {
@@ -21,7 +21,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
     return parts.map(p => p[0]?.toUpperCase() || "").join("") || "P";
   }, [name]);
 
-  // simple progress to next magnitude (1, 10, 100, 1k, 10k…)
+  // Simple progress: % toward next order of magnitude (1, 10, 100, 1k, 10k…)
   const nextTarget = Math.max(1, Math.pow(10, Math.ceil(Math.log10(Math.max(1, totalEarnings))))); 
   const pct = Math.max(0, Math.min(100, Math.floor((totalEarnings / nextTarget) * 100)));
 
@@ -35,7 +35,8 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
         <h1 className="text-center text-lg font-extrabold tracking-wide">
           <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-200 bg-clip-text text-transparent">
             MoneyMaker
-          </span> <span aria-hidden>💸</span>
+          </span>{" "}
+          <span aria-hidden>💸</span>
         </h1>
       </div>
 
@@ -49,7 +50,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
             <div>Taps <span className="text-white/70">{taps.toLocaleString()}</span></div>
           </div>
 
-          {/* Center: avatar + name (tap to open Profile) */}
+          {/* Center: avatar + name */}
           <div className="flex items-center justify-center gap-2">
             <button
               onClick={openProfile}
@@ -72,7 +73,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
             <div className="max-w-[7.5rem] truncate text-sm opacity-90">{name}</div>
           </div>
 
-          {/* Right: rank/progress (tap to open Leaderboard) */}
+          {/* Right: rank/progress */}
           <div className="flex flex-col items-end">
             <button
               onClick={openLeaderboard}
