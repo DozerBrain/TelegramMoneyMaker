@@ -1,3 +1,4 @@
+// src/lib/profile.ts
 import { PlayerProfile } from "../types";
 
 const KEY = "mm_profile";
@@ -5,7 +6,7 @@ const KEY = "mm_profile";
 export function getProfile(): PlayerProfile {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) return JSON.parse(raw) as PlayerProfile;
   } catch {}
 
   const p: PlayerProfile = {
@@ -20,4 +21,8 @@ export function getProfile(): PlayerProfile {
   };
   localStorage.setItem(KEY, JSON.stringify(p));
   return p;
+}
+
+export function setProfile(p: PlayerProfile) {
+  localStorage.setItem(KEY, JSON.stringify(p));
 }
