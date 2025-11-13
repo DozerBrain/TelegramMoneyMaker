@@ -6,7 +6,11 @@ import App from "./App";
 // 🧩 Styles (import your globals)
 import "./index.css";
 
-// Storage helpers
+// 🧠 Telegram WebApp setup
+import { initTelegramUI } from "./lib/telegram";
+initTelegramUI(); // works inside Telegram, no-op elsewhere
+
+// 📦 Storage helpers
 import {
   getOwnedPets, setOwnedPets, getEquippedPet, setEquippedPet,
   getOwnedSuits, setOwnedSuits, getEquippedSuit, setEquippedSuit,
@@ -16,25 +20,25 @@ import {
 // 🔰 Seed defaults once (safe even if called multiple times)
 (function seedOnce() {
   try {
-    // Pets
+    // 🐾 Pets
     const ownedPets = getOwnedPets();
     if (!ownedPets || ownedPets.length === 0) {
-      setOwnedPets(["mouse"]);            // give Common pet
+      setOwnedPets(["mouse"]); // give Common pet
       setEquippedPet("mouse");
     } else if (!getEquippedPet()) {
       setEquippedPet(ownedPets[0]);
     }
 
-    // Suits
+    // 👔 Suits
     const ownedSuits = getOwnedSuits();
     if (!ownedSuits || ownedSuits.length === 0) {
-      setOwnedSuits(["starter"]);         // give Starter suit
+      setOwnedSuits(["starter"]); // give Starter suit
       setEquippedSuit("starter");
     } else if (!getEquippedSuit()) {
       setEquippedSuit(ownedSuits[0]);
     }
 
-    // Cards collection (rarity counts)
+    // 🃏 Cards collection (rarity counts)
     const col = getCollection();
     if (!col || typeof col !== "object") {
       setCollection({
@@ -42,7 +46,7 @@ import {
       });
     }
 
-    // Tap/Score sanity
+    // 👆 Tap / Score sanity
     const tap = Number(getTap());
     if (!Number.isFinite(tap) || tap < 0) setTap(0);
 
@@ -53,7 +57,7 @@ import {
   }
 })();
 
-// 🚀 Render app
+// 🚀 Render App
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
