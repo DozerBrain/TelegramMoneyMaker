@@ -1,5 +1,5 @@
 import React from 'react';
-import { Suit } from '../data/suits';
+import { SUITS } from '../data/suits';
 import { getOwnedSuits, setOwnedSuits, getEquippedSuit, setEquippedSuit } from '../lib/storage';
 
 export default function SuitCard({ suit }: { suit: Suit }) {
