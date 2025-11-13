@@ -1,6 +1,6 @@
 import LeaderboardPage from "./pages/Leaderboard";
 import ProfilePage from "./pages/Profile";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import TopBar from "./components/TopBar";
 import Tabs from "./components/Tabs";
 import Home from "./pages/Home";
@@ -11,7 +11,7 @@ import { loadSave, saveSave, defaultSave } from "./lib/storage";
 import { useInterval } from "./lib/useInterval";
 import { achievements } from "./data/achievements";
 
-type Tab = "home" | "shop" | "spin" | "more";
+type Tab = "home" | "shop" | "spin" | "more" | "leaderboard" | "profile";
 
 export default function App(){
   const s = loadSave();
@@ -88,7 +88,7 @@ export default function App(){
     location.reload();
   }
 
-  // Claim achievement: add reward to balance and mark claimed
+  // Claim achievement
   function claimAchievement(id:string, reward:number){
     setAchState(prev => {
       const st = prev[id];
@@ -99,7 +99,7 @@ export default function App(){
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col bg-[#0b0f13] text-white">
       <TopBar taps={taps} tapValue={tapValue} autoPerSec={autoPerSec} />
 
       <main className="flex-1">
@@ -139,10 +139,10 @@ export default function App(){
           />
         )}
         {tab==="leaderboard" && <LeaderboardPage />}
-{tab==="profile" && <ProfilePage />}
+        {tab==="profile" && <ProfilePage />}
       </main>
 
-      <Tabs active={tab} onChange={setTab} />
+      <Tabs active={tab} onChange={(t)=>setTab(t as Tab)} />
     </div>
   );
 }
