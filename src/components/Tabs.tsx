@@ -1,23 +1,34 @@
-type Tab = "home" | "shop" | "spin" | "more";
+// src/components/Tabs.tsx
+import React from "react";
 
-export default function Tabs({active, onChange}:{active:Tab, onChange:(t:Tab)=>void}) {
-  const btn = (id:Tab, label:string, icon:string) => (
-    <button
-      onClick={()=>onChange(id)}
-      className={`tab ${active===id ? "tab-active" : "bg-white/0 hover:bg-white/5"}`}
-    >
-      <span className="opacity-80">{icon}</span>
-      <span className="ml-1">{label}</span>
-    </button>
-  );
+type Props = {
+  active: string;
+  onChange: (tab: string) => void;
+};
+
+export default function Tabs({ active, onChange }: Props) {
+  const tabs = [
+    { key: "home", label: "Home" },
+    { key: "shop", label: "Shop" },
+    { key: "spin", label: "Spin" },
+    { key: "more", label: "More" },
+    { key: "leaderboard", label: "Leaderboard" },
+    { key: "profile", label: "Profile" },
+  ];
+
   return (
-    <nav className="sticky bottom-0 p-3 bg-black/40 backdrop-blur border-t border-white/5">
-      <div className="max-w-xl mx-auto grid grid-cols-4 gap-2">
-        {btn("home","Home","🏠")}
-        {btn("shop","Shop","🛒")}
-        {btn("spin","Spin","🎡")}
-        {btn("more","More","⋯")}
-      </div>
-    </nav>
+    <div className="flex justify-around border-t border-white/10 bg-[#101418] py-3">
+      {tabs.map(t => (
+        <button
+          key={t.key}
+          onClick={() => onChange(t.key)}
+          className={`px-4 py-2 rounded-xl font-semibold transition ${
+            active === t.key ? "bg-emerald-600" : "bg-white/5 hover:bg-white/10"
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
   );
 }
