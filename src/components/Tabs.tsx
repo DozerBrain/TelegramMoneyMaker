@@ -1,12 +1,14 @@
 import React from "react";
 
+type Tab = "home" | "shop" | "spin" | "leaderboard" | "profile" | "more";
+
 type Props = {
-  active: string;
-  onChange: (tab: string) => void;
+  active: Tab;
+  onChange: React.Dispatch<React.SetStateAction<Tab>>; // accepts setTab directly
 };
 
 export default function Tabs({ active, onChange }: Props) {
-  const tabs = [
+  const tabs: { key: Tab; label: string }[] = [
     { key: "home",        label: "Home" },
     { key: "shop",        label: "Shop" },
     { key: "spin",        label: "Spin" },
@@ -16,8 +18,8 @@ export default function Tabs({ active, onChange }: Props) {
   ];
 
   return (
-    <div className="flex justify-around border-top border-white/10 bg-[#101418] py-3">
-      {tabs.map(t => (
+    <div className="flex justify-around border-t border-white/10 bg-[#101418] py-3">
+      {tabs.map((t) => (
         <button
           key={t.key}
           onClick={() => onChange(t.key)}
