@@ -1,28 +1,97 @@
-// simple localStorage helpers
-const K = {
-  TAP: "mm.tapCounter",
-  COLLECTION: "mm.collection",
-  LAST_DROP: "mm.lastDrop",
-};
+// src/lib/storage.ts
 
-export type Collection = Record<import("../data/cards").Rarity, number>;
-
-function getJSON<T>(key: string, fallback: T): T {
-  try { return JSON.parse(localStorage.getItem(key) || "") as T; }
-  catch { return fallback; }
+// -------- 🔒 Safe get/set JSON helpers ----------
+function get<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
 }
 
-export const StorageAPI = {
-  getTap(): number { return Number(localStorage.getItem(K.TAP) || "0"); },
-  setTap(v: number) { localStorage.setItem(K.TAP, String(v)); },
+function set<T>(key: string, value: T) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
 
-  getCollection(): Collection {
-    return getJSON<Collection>(K.COLLECTION, {
-      common:0, uncommon:0, rare:0, epic:0, legendary:0, mythic:0, ultimate:0,
-    });
-  },
-  setCollection(c: Collection) { localStorage.setItem(K.COLLECTION, JSON.stringify(c)); },
+// -------- 🧮 SCORE & TAP COUNTER ----------
+const KEY_SCORE = 'mm_score';
+const KEY_TAP = 'mm_tap';
+export function getScore(): number {
+  return get(KEY_SCORE, 0);
+}
+export function setScore(v: number) {
+  set(KEY_SCORE, v);
+}
+export function getTap(): number {
+  return get(KEY_TAP, 0);
+}
+export function setTap(v: number) {
+  set(KEY_TAP, v);
+}
 
-  setLastDrop(card: any | null) { localStorage.setItem(K.LAST_DROP, JSON.stringify(card)); },
-  getLastDrop<T = any>(): T | null { return getJSON<T | null>(K.LAST_DROP, null); },
-};
+// -------- 🎴 CARDS ----------
+const KEY_COLLECTION = 'mm_collection';
+const KEY_LAST_DROP = 'mm_last_drop';
+
+// Card collection is { rarity: number }
+export type Collection = Record<string, number>;
+
+export function getCollection(): Collection {
+  return get(KEY_COLLECTION, {
+    common: 0,
+    uncommon: 0,
+    rare: 0,
+    epic: 0,
+    legendary: 0,
+    mythic: 0,
+    ultimate: 0,
+  });
+}
+export function setCollection(c: Collection) {
+  set(KEY_COLLECTION, c);
+}
+
+export function setLastDrop(card: any | null) {
+  set(KEY_LAST_DROP, card);
+}
+export function getLastDrop<T = any>(): T | null {
+  return get(KEY_LAST_DROP, null);
+}
+
+// -------- 🐾 PETS + SUITS ----------
+const KEYS = {
+  ownedPets: 'mm_owned_pets',
+  equippedPet: 'mm_equipped_pet',
+  ownedSuits: 'mm_owned_suits',
+  equippedSuit: 'mm_equipped_suit',
+} as const;
+
+// PETS
+export function getOwnedPets(): string[] {
+  return get(KEYS.ownedPets, [] as string[]);
+}
+export function setOwnedPets(ids: string[]) {
+  set(KEYS.ownedPets, ids);
+}
+export function getEquippedPet(): string | null {
+  return get(KEYS.equippedPet, null as string | null);
+}
+export function setEquippedPet(id: string | null) {
+  set(KEYS.equippedPet, id);
+}
+
+// SUITS
+export function getOwnedSuits(): string[] {
+  return get(KEYS.ownedSuits, [] as string[]);
+}
+export function setOwnedSuits(ids: string[]) {
+  set(KEYS.ownedSuits, ids);
+}
+export function getEquippedSuit(): string | null {
+  return get(KEYS.equippedSuit, 'starter'); // default
+}
+export function setEquippedSuit(id: string) {
+  set(KEYS.equippedSuit, id);
+}
