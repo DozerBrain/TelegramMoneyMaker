@@ -10,7 +10,7 @@ type Props = {
 
 export default function BanknoteButton({
   onTap,
-  size = 220,
+  size = 120,
   className = "",
   floatText = "+1 💵",
 }: Props) {
