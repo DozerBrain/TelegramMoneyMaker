@@ -12,8 +12,20 @@ export type Tab =
 export type Suit = {
   id: string;
   name: string;
-  img: string; // image path
+  img: string;
   rarity: "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary" | "Mythic" | "Ultimate";
-  bonus: number; // e.g., +3 means +3%
-  unlock?: number; // optional: some UIs show an unlock price
+  bonus: number;
+  unlock?: number;
+};
+
+export type PlayerProfile = {
+  uid: string;
+  name: string;
+  country: string;
+  avatarUrl?: string;
+  // fields some pages are reading:
+  userId: string;
+  username: string;
+  region: string;
+  updatedAt: number;
 };
