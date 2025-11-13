@@ -1,33 +1,38 @@
-import { CARDS, weightedPick, Card } from "../data/cards";
-import { StorageAPI } from "./storage";
+// src/lib/game.ts
+import {
+  loadSave,
+  saveSave,
+  getTap as _getTap,
+  setTap as _setTap,
+  getCollection as _getCollection,
+  setCollection as _setCollection,
+  getLastDrop as _getLastDrop,
+  setLastDrop as _setLastDrop,
+} from "./storage";
 
-/**
- * Called from the main tap button.
- * Increments counter and opens a pack automatically on 5.
- * Emits CustomEvents for UI: 'pack:update' and 'pack:opened'
- */
-export function handleMainTapForPacks() {
-  const current = StorageAPI.getTap();
-  const next = current + 1;
-  if (next < 5) {
-    StorageAPI.setTap(next);
-    window.dispatchEvent(new CustomEvent("pack:update", { detail: { tap: next } }));
-    return { opened: false as const };
-  }
+// direct pass-through for existing calls in pages/components
+export const getTap = _getTap;
+export const setTap = _setTap;
+export const getCollection = _getCollection;
+export const setCollection = _setCollection;
+export const getLastDrop = _getLastDrop;
+export const setLastDrop = _setLastDrop;
 
-  // open pack
-  const card: Card = weightedPick(CARDS);
-  // update collection
-  const col = StorageAPI.getCollection();
-  col[card.rarity] = (col[card.rarity] ?? 0) + 1;
-  StorageAPI.setCollection(col);
-  // reset counter + remember last drop
-  StorageAPI.setTap(0);
-  StorageAPI.setLastDrop(card);
+// these were missing but some code references them:
+export function getTotalEarnings(): number {
+  return loadSave().totalEarnings ?? 0;
+}
+export function setTotalEarnings(v: number) {
+  const s = loadSave();
+  s.totalEarnings = Math.max(0, v | 0);
+  saveSave(s);
+}
 
-  // notify UI
-  window.dispatchEvent(new CustomEvent("pack:update", { detail: { tap: 0 } }));
-  window.dispatchEvent(new CustomEvent("pack:opened", { detail: { card } }));
-
-  return { opened: true as const, card };
+export function getAutoPerSec(): number {
+  return loadSave().autoPerSec ?? 0;
+}
+export function setAutoPerSec(v: number) {
+  const s = loadSave();
+  s.autoPerSec = Math.max(0, v | 0);
+  saveSave(s);
 }
