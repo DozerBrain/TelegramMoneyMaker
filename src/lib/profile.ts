@@ -1,29 +1,53 @@
-// src/lib/profile.ts
-import { ref, get, set } from "firebase/database";
+import { ref, set, update } from "firebase/database";
 import { db } from "./firebase";
 
-export type Profile = {
+export type PlayerProfile = {
   uid: string;
-  username: string;
-  country: string;
-  bestScore: number;
+  name: string;
+  country: string;     // ISO like "US", "GB", "RU" etc.
+  avatarUrl?: string;
+  createdAt: number;
+  lastSeen: number;
 };
 
-export async function saveProfile(profile: Profile) {
-  try {
-    await set(ref(db, "profiles/" + profile.uid), profile);
-  } catch (err) {
-    console.error("Error saving profile:", err);
-  }
+const LS_KEY = "moneymaker:profile:v1";
+
+function randomId(len = 16) {
+  const abc = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let out = "";
+  for (let i = 0; i < len; i++) out += abc[Math.floor(Math.random() * abc.length)];
+  return out;
 }
 
-export async function getProfile(uid: string): Promise<Profile | null> {
-  try {
-    const snap = await get(ref(db, "profiles/" + uid));
-    if (!snap.exists()) return null;
-    return snap.val() as Profile;
-  } catch (err) {
-    console.error("Error loading profile:", err);
-    return null;
-  }
+function guessCountry(): string {
+  // simple default; player can edit in Profile page
+  return "US";
+}
+
+export function loadOrCreateProfile(): PlayerProfile {
+  const raw = localStorage.getItem(LS_KEY);
+  if (raw) return JSON.parse(raw);
+
+  const uid = randomId(20);
+  const prof: PlayerProfile = {
+    uid,
+    name: `Banker#${uid.slice(0, 5)}`,
+    country: guessCountry(),
+    createdAt: Date.now(),
+    lastSeen: Date.now(),
+  };
+  localStorage.setItem(LS_KEY, JSON.stringify(prof));
+
+  // write baseline to /users/{uid}
+  set(ref(db, `users/${uid}`), prof).catch(()=>{});
+  return prof;
+}
+
+export function saveProfile(p: PlayerProfile) {
+  localStorage.setItem(LS_KEY, JSON.stringify(p));
+  update(ref(db, `users/${p.uid}`), { ...p, lastSeen: Date.now() }).catch(()=>{});
+}
+
+export function getProfile(): PlayerProfile {
+  return JSON.parse(localStorage.getItem(LS_KEY) || JSON.stringify(loadOrCreateProfile()));
 }
