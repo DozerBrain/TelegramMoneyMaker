@@ -1,39 +1,67 @@
-// src/pages/Leaderboard.tsx
 import React, { useEffect, useState } from "react";
-import { getTopPlayers, PlayerData } from "../lib/leaderboard";
+import { topGlobal, topByCountry } from "../lib/leaderboard";
+import { getProfile } from "../lib/profile";
+
+type Tab = "global" | "country";
 
 export default function LeaderboardPage() {
-  const [players, setPlayers] = useState<PlayerData[]>([]);
+  const me = getProfile();
+  const [tab, setTab] = useState<Tab>("global");
+  const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    (async () => {
-      const top = await getTopPlayers(30);
-      setPlayers(top);
-      setLoading(false);
-    })();
-  }, []);
+  async function load() {
+    setLoading(true);
+    const data = tab === "global" ? await topGlobal(100) : await topByCountry(me.country, 100);
+    setRows(data);
+    setLoading(false);
+  }
+
+  useEffect(() => { load(); }, [tab]);
 
   return (
-    <div className="p-4 text-white">
-      <h1 className="text-2xl font-bold text-center mb-4">🏆 Global Leaderboard</h1>
-      {loading && <p className="text-center text-gray-400">Loading...</p>}
-      {!loading && players.length === 0 && (
-        <p className="text-center text-gray-400">No players yet. Be the first to tap!</p>
+    <div className="p-4 max-w-md mx-auto">
+      <div className="flex gap-2 mb-4">
+        <button
+          className={`px-3 py-2 rounded-xl ${tab==='global'?'bg-emerald-600 text-white':'bg-slate-800'}`}
+          onClick={()=>setTab("global")}
+        >Global</button>
+        <button
+          className={`px-3 py-2 rounded-xl ${tab==='country'?'bg-emerald-600 text-white':'bg-slate-800'}`}
+          onClick={()=>setTab("country")}
+        >{me.country}</button>
+      </div>
+
+      {loading ? (
+        <div className="opacity-70 text-sm">Loading…</div>
+      ) : rows.length === 0 ? (
+        <div className="opacity-70 text-sm">No scores yet.</div>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((r, i) => {
+            const isMe = r.uid === me.uid;
+            return (
+              <li
+                key={r.uid}
+                className={`flex items-center justify-between rounded-xl px-3 py-2 ${isMe ? "bg-emerald-900/40" : "bg-slate-800"}`}
+              >
+                <div className="flex items-center gap-3">
+                  <span className="w-6 text-right">{i+1}</span>
+                  <div className="w-8 h-8 rounded-full bg-slate-700 grid place-items-center text-xs">
+                    {r.country || "??"}
+                  </div>
+                  <div className="font-semibold">{r.name}</div>
+                </div>
+                <div className="font-mono">{r.score.toLocaleString()}</div>
+              </li>
+            );
+          })}
+        </ul>
       )}
-      <ul className="space-y-2">
-        {players.map((p, i) => (
-          <li
-            key={i}
-            className="flex justify-between bg-emerald-900/40 px-4 py-2 rounded-xl border border-emerald-600/30"
-          >
-            <span>
-              #{i + 1} <b>{p.username || "Unknown"}</b> 🌍 {p.country || "?"}
-            </span>
-            <span className="font-bold text-emerald-300">{p.score.toLocaleString()} 💵</span>
-          </li>
-        ))}
-      </ul>
+
+      <div className="mt-6 text-xs opacity-60">
+        Your ID: <span className="font-mono">{me.uid}</span>
+      </div>
     </div>
   );
 }
