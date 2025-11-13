@@ -8,12 +8,12 @@ type Props = {
 
 export default function Tabs({ active, onChange }: Props) {
   const tabs: { key: Tab; label: string }[] = [
-    { key: "home",        label: "Home" },
-    { key: "shop",        label: "Shop" },
-    { key: "spin",        label: "Spin" },
-    { key: "more",        label: "More" },
+    { key: "home", label: "Home" },
+    { key: "shop", label: "Shop" },
+    { key: "spin", label: "Spin" },
+    { key: "more", label: "More" },
     { key: "leaderboard", label: "Leaderboard" },
-    { key: "profile",     label: "Profile" },
+    { key: "profile", label: "Profile" },
   ];
 
   return (
