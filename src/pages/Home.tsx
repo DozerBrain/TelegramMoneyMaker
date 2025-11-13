@@ -1,35 +1,42 @@
 // src/pages/Home.tsx
-import React, { useEffect, useState } from "react";
-import CardsModal from "../cards/CardsModal";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import BanknoteButton from "../components/BanknoteButton";
-import { handleMainTapForPacks } from "../lib/game";
 import { comboTap } from "../lib/combo";
-import { getEquippedSuit, getScore, setScore } from "../lib/storage";
+import { getProfile } from "../lib/profile";
+import { submitScore } from "../lib/leaderboard";
 
-export default function Home() {
-  const [score, setScoreState] = useState<number>(getScore());
-  const [showCards, setShowCards] = useState<boolean>(false);
-  const [equippedSuit, setEquippedSuitState] = useState<string>(getEquippedSuit() || "starter");
+type Props = {
+  // balances & totals
+  balance: number;
+  setBalance: (v: number | ((p: number) => number)) => void;
 
-  // combo UI states
-  const [combo, setCombo] = useState<number>(0);
-  const [best, setBest] = useState<number>(0);
+  totalEarnings: number;
+  setTotalEarnings: (v: number | ((p: number) => number)) => void;
 
-  // Listen for pack opened -> open modal
-  useEffect(() => {
-    const onOpen = () => setShowCards(true);
-    window.addEventListener("pack:opened", onOpen as any);
-    return () => window.removeEventListener("pack:opened", onOpen as any);
-  }, []);
+  // tapping
+  taps: number;
+  setTaps: (v: number | ((p: number) => number)) => void;
 
-  // Listen for storage changes (e.g., suit equipped elsewhere)
-  useEffect(() => {
-    const onStorage = () => setEquippedSuitState(getEquippedSuit() || "starter");
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
+  tapValue: number;
+  multi: number;
 
-  // Listen for combo updates
+  // suit
+  currentSuitName: string;
+  setCurrentSuitName: (v: string) => void;
+};
+
+export default function Home({
+  balance, setBalance,
+  totalEarnings, setTotalEarnings,
+  taps, setTaps,
+  tapValue, multi,
+  currentSuitName,
+}: Props) {
+
+  // ---------- Combo UI ----------
+  const [combo, setCombo] = useState(0);
+  const [best, setBest] = useState(0);
+
   useEffect(() => {
     const onCombo = (e: any) => {
       setCombo(e.detail.combo);
@@ -39,78 +46,72 @@ export default function Home() {
     return () => window.removeEventListener("combo:update", onCombo as any);
   }, []);
 
-  function onMainTap() {
-    // 1) update score (persist + UI)
-    const newScore = score + 1;
-    setScore(newScore);       // persist
-    setScoreState(newScore);  // UI
+  // ---------- Leaderboard submit (throttled) ----------
+  const profile = useMemo(() => getProfile(), []);
+  const lastPushRef = useRef(0);
 
-    // 2) combo
-    comboTap();
+  async function pushLeaderboard(newScore: number) {
+    const now = Date.now();
+    if (now - lastPushRef.current < 1500) return; // throttle ~1.5s
+    lastPushRef.current = now;
 
-    // 3) packs (auto opens on 5)
-    handleMainTapForPacks();
+    await submitScore({
+      userId: profile.userId,
+      username: profile.username,
+      country: profile.country,
+      region: profile.region,
+      score: newScore,
+      updatedAt: now,
+    });
   }
 
-  // Resolve suit image path
-  const suitImg = `/suits/${equippedSuit}.png`;
+  // ---------- Tap handler ----------
+  function onMainTap() {
+    // tap gain = tapValue * multi, always >= 1
+    const gain = Math.max(1, Math.floor(tapValue * multi));
+
+    setTaps(t => t + 1);
+    setBalance(b => b + gain);
+    setTotalEarnings(t => t + gain);
+
+    comboTap();
+    // Leaderboard: use the new balance after gain
+    const newBalance = balance + gain;
+    pushLeaderboard(newBalance);
+  }
+
+  // ---------- View helpers ----------
+  const suitImg = useMemo(() => {
+    const name = (currentSuitName || "starter").toLowerCase();
+    return `/suits/${name}.png`;
+  }, [currentSuitName]);
 
   return (
-    <div className="min-h-screen w-full bg-[#0b0f13] text-white flex flex-col">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-        <div className="text-lg font-bold">MoneyMaker</div>
-        <div className="text-sm opacity-80">Balance: ${score}</div>
+    <div className="w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
+      {/* Equipped suit / mascot */}
+      <img
+        src={suitImg}
+        alt="Equipped suit"
+        className="w-56 h-auto object-contain select-none drop-shadow-[0_10px_30px_rgba(0,255,170,0.15)]"
+        draggable={false}
+      />
+
+      {/* Tap button */}
+      <div className="mt-3">
+        <BanknoteButton onTap={onMainTap} size={140} />
       </div>
 
-      {/* Stage */}
-      <div className="flex-1 flex flex-col items-center justify-center px-4 relative">
-        {/* Equipped suit / mascot */}
-        <img
-          src={suitImg}
-          alt="Suit"
-          className="w-56 h-auto object-contain drop-shadow-[0_10px_30px_rgba(0,255,170,0.15)]"
-          draggable={false}
-        />
-
-        {/* Main Tap Button */}
-        <div className="mt-4">
-          <BanknoteButton onTap={onMainTap} size={140} />
+      {/* Combo badge */}
+      {combo > 0 && (
+        <div className="mt-2 text-emerald-300 text-sm font-semibold">
+          Combo x{combo} <span className="text-zinc-400">• Best {best}</span>
         </div>
+      )}
 
-        {/* Combo badge */}
-        {combo > 0 && (
-          <div className="mt-2 text-emerald-300 text-sm font-semibold">
-            Combo x{combo} <span className="text-zinc-400">• Best {best}</span>
-          </div>
-        )}
+      {/* Balance readout */}
+      <div className="mt-3 text-white/90 text-sm">
+        Balance: <span className="text-emerald-400 font-semibold">${balance.toLocaleString()}</span>
       </div>
-
-      {/* Bottom nav mock */}
-      <div className="px-4 py-3 border-t border-white/10 flex items-center justify-center gap-3">
-        <button
-          onClick={() => setShowCards(true)}
-          className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10"
-        >
-          Cards
-        </button>
-        <a
-          href="#"
-          className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 pointer-events-none opacity-60"
-          onClick={(e) => e.preventDefault()}
-        >
-          Shop
-        </a>
-        <a
-          href="#"
-          className="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 pointer-events-none opacity-60"
-          onClick={(e) => e.preventDefault()}
-        >
-          More
-        </a>
-      </div>
-
-      {showCards && <CardsModal onClose={() => setShowCards(false)} />}
     </div>
   );
 }
