@@ -1,7 +1,6 @@
 // src/components/SuitCard.tsx
 import React from "react";
-import { SUITS } from "../data/suits";
-import type { Suit } from "../types"; // ✅ <-- Add this line
+import type { Suit } from "../types";
 import {
   getOwnedSuits,
   setOwnedSuits,
