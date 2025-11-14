@@ -22,7 +22,7 @@ import { achievements } from "./data/achievements";
 import { initTelegramUI } from "./lib/telegram";
 
 // Tab keys
-type Tab = "home" | "shop" | "spin" | "leaderboard" | "profile" | "more" | "cards" | "suits" | "pets";
+import { Tab } from "./types";
 
 export default function App() {
   // Load last save once (normalize with fallbacks)
