@@ -2,17 +2,14 @@
 import React from "react";
 import { PETS } from "../data/pets";
 import PetCard from "../components/PetCard";
-import CardFrame from "../components/CardFrame";
 
-export default function Pets() {
+export default function PetsPage() {
   return (
     <div className="p-4">
       <h1 className="mb-4 text-lg font-semibold text-emerald-200">Pets</h1>
-      <div className="grid grid-cols-1 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         {PETS.map((pet) => (
-          <CardFrame key={pet.id}>
-            <PetCard pet={pet} />
-          </CardFrame>
+          <PetCard key={pet.id} pet={pet} />
         ))}
       </div>
     </div>
