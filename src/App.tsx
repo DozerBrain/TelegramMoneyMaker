@@ -14,7 +14,8 @@ import LeaderboardPage from "./pages/Leaderboard";
 import ProfilePage from "./pages/Profile";
 import PetsPage from "./pages/Pets";
 import SuitsPage from "./pages/Suits";
-import CardsPage from "./pages/Cards";
+// Cards page is optional; we render a placeholder if missing
+// import CardsPage from "./pages/Cards";
 
 // Game helpers
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
@@ -22,8 +23,8 @@ import { useInterval } from "./lib/useInterval";
 import { achievements } from "./data/achievements";
 import { initTelegramUI } from "./lib/telegram";
 
-// Tab keys
-import { Tab } from "./types";
+// Types
+import type { Tab } from "./types";
 
 export default function App() {
   // Load last save once (normalize with fallbacks)
@@ -48,9 +49,7 @@ export default function App() {
   // Achievements
   const [achState, setAchState] = useState<
     Record<string, { done: boolean; claimed: boolean }>
-  >(
-    (s.achievements ?? {}) as Record<string, { done: boolean; claimed: boolean }>
-  );
+  >((s.achievements ?? {}) as Record<string, { done: boolean; claimed: boolean }>);
 
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
@@ -60,7 +59,7 @@ export default function App() {
     initTelegramUI();
   }, []);
 
-  // --- Passive income tick (autoPerSec * multi each second)
+  // Passive income tick (autoPerSec * multi each second)
   useInterval(() => {
     if (autoPerSec > 0) {
       const gain = Math.max(0, Math.floor(autoPerSec * multi));
@@ -71,7 +70,7 @@ export default function App() {
     }
   }, 1000);
 
-  // --- Achievements re-check when key stats change
+  // Re-check achievements when key stats change
   useEffect(() => {
     const ctx = { taps, balance, totalEarnings, bestSuitName };
     setAchState((prev) => {
@@ -84,10 +83,12 @@ export default function App() {
     });
   }, [taps, balance, totalEarnings, bestSuitName]);
 
-  // --- Persist save whenever anything important changes
+  // Persist save whenever important things change
   useEffect(() => {
     saveSave({
       ...defaultSave,
+
+      // legacy-compatible mapping
       score: balance,
       tap: taps,
       collection: s.collection ?? defaultSave.collection,
@@ -98,6 +99,7 @@ export default function App() {
       equippedSuit: s.equippedSuit ?? null,
       profile: s.profile ?? defaultSave.profile,
 
+      // current shape
       balance,
       totalEarnings,
       taps,
@@ -129,7 +131,7 @@ export default function App() {
     s.quests,
   ]);
 
-  // --- Hash navigation (TopBar sets #/profile or #/leaderboard)
+  // Hash navigation (TopBar sets #/profile or #/leaderboard)
   useEffect(() => {
     const applyHash = () => {
       const h = (location.hash || "").toLowerCase();
@@ -141,7 +143,7 @@ export default function App() {
     return () => window.removeEventListener("hashchange", applyHash);
   }, []);
 
-  // --- Listen for quick-nav events from LeftQuickNav
+  // Listen for quick-nav events from LeftQuickNav (Cards / Suits / Pets)
   useEffect(() => {
     const onGoto = (e: Event) => {
       const ce = e as CustomEvent<{ goto: Tab }>;
@@ -152,7 +154,7 @@ export default function App() {
     return () => window.removeEventListener("MM_GOTO", onGoto as EventListener);
   }, []);
 
-  // --- Export / Import / Reset
+  // Export / Import / Reset
   function doExport() {
     try {
       const snapshot = loadSave();
@@ -190,7 +192,7 @@ export default function App() {
     location.reload();
   }
 
-  // --- Claim achievement (adds reward to balance)
+  // Claim achievement
   function claimAchievement(id: string, reward: number) {
     setAchState((prev) => {
       const st = prev[id];
@@ -206,20 +208,19 @@ export default function App() {
 
       <main className="flex-1">
         {tab === "home" && (
- <Home
-    balance={balance}
-    setBalance={setBalance}
-    totalEarnings={totalEarnings}
-    setTotalEarnings={setTotalEarnings}
-    taps={taps}
-    setTaps={setTaps}
-    tapValue={tapValue}
-    multi={multi}
-    currentSuitName={bestSuitName}
-    setCurrentSuitName={setBestSuitName}
-    onOpen={(t) => setTab(t)}
-  />
-)}
+          <Home
+            balance={balance}
+            setBalance={setBalance}
+            totalEarnings={totalEarnings}
+            setTotalEarnings={setTotalEarnings}
+            taps={taps}
+            setTaps={setTaps}
+            tapValue={tapValue}
+            multi={multi}
+            currentSuitName={bestSuitName}
+            setCurrentSuitName={setBestSuitName}
+          />
+        )}
 
         {tab === "shop" && (
           <Shop
@@ -252,15 +253,16 @@ export default function App() {
         {tab === "leaderboard" && <LeaderboardPage />}
         {tab === "profile" && <ProfilePage />}
 
-        {/* NEW: Cards / Suits / Pets */}
+        {/* Cards / Suits / Pets */}
         {tab === "suits" && <SuitsPage />}
         {tab === "pets" && <PetsPage />}
         {tab === "cards" && (
+          // If you have src/pages/Cards.tsx, replace this block with: <CardsPage />
           <div className="p-6 text-white/90">
             <h2 className="text-xl font-semibold mb-2">Cards</h2>
             <p className="text-white/70">
-              Card collection screen coming soon. (The left quick button is working — this is a safe placeholder so you
-              don’t get build errors. If you add <code>src/pages/Cards.tsx</code> later, we can swap it in.)
+              Card collection screen coming soon. (Left quick button works; this is a safe placeholder
+              so builds never fail.)
             </p>
           </div>
         )}
