@@ -16,6 +16,7 @@ type Props = {
   title?: string;          // defaults to rarity label in caps
   serial?: string;         // e.g. "#CM-0001 | MNYMKR v1.0"
   className?: string;      // optional wrapper classes (w-48, etc.)
+  children?: React.ReactNode; // ✅ allows nested elements like <Card />
 };
 
 /** Palette + frame behavior */
@@ -35,6 +36,7 @@ export default function CardFrame({
   title,
   serial,
   className = "",
+  children, // ✅ new prop
 }: Props) {
   const cfg = RARITY[rarity];
   const label = (title ?? cfg.text).toUpperCase();
@@ -52,6 +54,13 @@ export default function CardFrame({
         className="absolute inset-0 w-full h-full object-cover"
         draggable={false}
       />
+
+      {/* Optional children overlay (for <Card/> inside) */}
+      {children && (
+        <div className="absolute inset-0 flex items-center justify-center p-3 pointer-events-none">
+          <div className="pointer-events-auto w-full h-full">{children}</div>
+        </div>
+      )}
 
       {/* Dim top/bottom for readability */}
       <div className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-black/55 to-transparent pointer-events-none" />
