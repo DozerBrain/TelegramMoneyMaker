@@ -1,28 +1,33 @@
+// src/components/LeftQuickNav.tsx
 import React from "react";
 import type { Tab } from "../types";
 
-export default function LeftQuickNav({ onOpen }: { onOpen: (t: Tab) => void }) {
+function go(to: Tab) {
+  window.dispatchEvent(
+    new CustomEvent("MM_GOTO", { detail: { goto: to } })
+  );
+}
+
+export default function LeftQuickNav() {
   return (
-    <div className="absolute left-4 top-28 flex flex-col gap-3 z-10">
+    <div className="absolute left-4 top-28 z-50 flex flex-col gap-4">
       <button
-        onClick={() => onOpen("cards")}
-        className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-emerald-900/20 border border-emerald-700/40 text-emerald-200 shadow active:scale-[0.98]"
+        onClick={() => go("cards")}
+        className="px-4 py-2 rounded-2xl bg-emerald-900/30 border border-emerald-500/40 text-emerald-200 shadow"
       >
-        <span>🎴</span> <span className="font-medium">Cards</span>
+        🧩 Cards
       </button>
-
       <button
-        onClick={() => onOpen("suits")}
-        className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-sky-900/20 border border-sky-700/40 text-sky-200 shadow active:scale-[0.98]"
+        onClick={() => go("suits")}
+        className="px-4 py-2 rounded-2xl bg-sky-900/30 border border-sky-500/40 text-sky-200 shadow"
       >
-        <span>🧥</span> <span className="font-medium">Suits</span>
+        🧥 Suits
       </button>
-
       <button
-        onClick={() => onOpen("pets")}
-        className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-teal-900/20 border border-teal-700/40 text-teal-200 shadow active:scale-[0.98]"
+        onClick={() => go("pets")}
+        className="px-4 py-2 rounded-2xl bg-amber-900/30 border border-amber-500/40 text-amber-200 shadow"
       >
-        <span>🐉</span> <span className="font-medium">Pets</span>
+        🐾 Pets
       </button>
     </div>
   );
