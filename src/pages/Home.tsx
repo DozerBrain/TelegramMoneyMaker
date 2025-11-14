@@ -1,4 +1,3 @@
-// src/pages/Home.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import BanknoteButton from "../components/BanknoteButton";
 import { comboTap } from "../lib/combo";
@@ -55,14 +54,8 @@ export default function Home({
     if (now - lastPushRef.current < 1500) return; // throttle ~1.5s
     lastPushRef.current = now;
 
-    await submitScore({
-      userId: profile.userId,
-      username: profile.username,
-      country: profile.country,
-      region: profile.region,
-      score: newScore,
-      updatedAt: now,
-    });
+    // ✅ match leaderboard.ts signature
+    await submitScore(newScore, profile);
   }
 
   // ---------- Tap handler ----------
@@ -70,14 +63,17 @@ export default function Home({
     // tap gain = tapValue * multi, always >= 1
     const gain = Math.max(1, Math.floor(tapValue * multi));
 
-    setTaps(t => t + 1);
-    setBalance(b => b + gain);
-    setTotalEarnings(t => t + gain);
+    setTaps((t) => t + 1);
+    setTotalEarnings((t) => t + gain);
+
+    // Use functional update so we push the exact new balance (no stale value)
+    setBalance((b) => {
+      const newBalance = b + gain;
+      pushLeaderboard(newBalance);
+      return newBalance;
+    });
 
     comboTap();
-    // Leaderboard: use the new balance after gain
-    const newBalance = balance + gain;
-    pushLeaderboard(newBalance);
   }
 
   // ---------- View helpers ----------
@@ -110,7 +106,10 @@ export default function Home({
 
       {/* Balance readout */}
       <div className="mt-3 text-white/90 text-sm">
-        Balance: <span className="text-emerald-400 font-semibold">${balance.toLocaleString()}</span>
+        Balance:{" "}
+        <span className="text-emerald-400 font-semibold">
+          ${balance.toLocaleString()}
+        </span>
       </div>
     </div>
   );
