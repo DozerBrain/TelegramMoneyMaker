@@ -3,26 +3,27 @@ import BanknoteButton from "../components/BanknoteButton";
 import { comboTap } from "../lib/combo";
 import { getProfile } from "../lib/profile";
 import { submitScore } from "../lib/leaderboard";
-import LeftQuickNav from "../components/LeftQuickNav"; // ⬅️ NEW
+import LeftQuickNav from "../components/LeftQuickNav";
+import type { Tab } from "../types";
 
 type Props = {
-  // balances & totals
   balance: number;
   setBalance: (v: number | ((p: number) => number)) => void;
 
   totalEarnings: number;
   setTotalEarnings: (v: number | ((p: number) => number)) => void;
 
-  // tapping
   taps: number;
   setTaps: (v: number | ((p: number) => number)) => void;
 
   tapValue: number;
   multi: number;
 
-  // suit
   currentSuitName: string;
   setCurrentSuitName: (v: string) => void;
+
+  /** NEW: navigation callback provided by App */
+  onOpen?: (t: Tab) => void;
 };
 
 export default function Home({
@@ -31,9 +32,9 @@ export default function Home({
   taps, setTaps,
   tapValue, multi,
   currentSuitName,
+  onOpen,
 }: Props) {
-
-  // ---------- Combo UI ----------
+  // Combo UI
   const [combo, setCombo] = useState(0);
   const [best, setBest] = useState(0);
 
@@ -46,38 +47,31 @@ export default function Home({
     return () => window.removeEventListener("combo:update", onCombo as any);
   }, []);
 
-  // ---------- Leaderboard submit (throttled) ----------
+  // Leaderboard submit (throttled)
   const profile = useMemo(() => getProfile(), []);
   const lastPushRef = useRef(0);
 
   async function pushLeaderboard(newScore: number) {
     const now = Date.now();
-    if (now - lastPushRef.current < 1500) return; // throttle ~1.5s
+    if (now - lastPushRef.current < 1500) return;
     lastPushRef.current = now;
-
-    // ✅ match leaderboard.ts signature
     await submitScore(newScore, profile);
   }
 
-  // ---------- Tap handler ----------
+  // Tap handler
   function onMainTap() {
-    // tap gain = tapValue * multi, always >= 1
     const gain = Math.max(1, Math.floor(tapValue * multi));
-
     setTaps((t) => t + 1);
     setTotalEarnings((t) => t + gain);
-
-    // Use functional update so we push the exact new balance (no stale value)
     setBalance((b) => {
-      const newBalance = b + gain;
-      pushLeaderboard(newBalance);
-      return newBalance;
+      const next = b + gain;
+      pushLeaderboard(next);
+      return next;
     });
-
     comboTap();
   }
 
-  // ---------- View helpers ----------
+  // Equipped suit image
   const suitImg = useMemo(() => {
     const name = (currentSuitName || "starter").toLowerCase();
     return `/suits/${name}.png`;
@@ -85,10 +79,10 @@ export default function Home({
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
-      {/* ⬅️ Left quick buttons (Cards / Suits / Pets) */}
-      <LeftQuickNav />
+      {/* Left quick buttons */}
+      {onOpen && <LeftQuickNav onOpen={onOpen} />}
 
-      {/* Equipped suit / mascot */}
+      {/* Mascot */}
       <img
         src={suitImg}
         alt="Equipped suit"
@@ -108,7 +102,7 @@ export default function Home({
         </div>
       )}
 
-      {/* Balance readout */}
+      {/* Balance */}
       <div className="mt-3 text-white/90 text-sm">
         Balance:{" "}
         <span className="text-emerald-400 font-semibold">
