@@ -8,9 +8,10 @@ import {
   setCollection as _setCollection,
   getLastDrop as _getLastDrop,
   setLastDrop as _setLastDrop,
+  type SaveData,
 } from "./storage";
 
-// direct pass-through for existing calls in pages/components
+// --- pass-through re-exports ---
 export const getTap = _getTap;
 export const setTap = _setTap;
 export const getCollection = _getCollection;
@@ -18,21 +19,25 @@ export const setCollection = _setCollection;
 export const getLastDrop = _getLastDrop;
 export const setLastDrop = _setLastDrop;
 
-// these were missing but some code references them:
+// --- custom stat helpers (adds new optional fields safely) ---
 export function getTotalEarnings(): number {
-  return loadSave().totalEarnings ?? 0;
+  const data = loadSave() as SaveData & { totalEarnings?: number };
+  return data.totalEarnings ?? 0;
 }
+
 export function setTotalEarnings(v: number) {
-  const s = loadSave();
-  s.totalEarnings = Math.max(0, v | 0);
-  saveSave(s);
+  const data = loadSave() as SaveData & { totalEarnings?: number };
+  data.totalEarnings = Math.max(0, Math.floor(v));
+  saveSave(data);
 }
 
 export function getAutoPerSec(): number {
-  return loadSave().autoPerSec ?? 0;
+  const data = loadSave() as SaveData & { autoPerSec?: number };
+  return data.autoPerSec ?? 0;
 }
+
 export function setAutoPerSec(v: number) {
-  const s = loadSave();
-  s.autoPerSec = Math.max(0, v | 0);
-  saveSave(s);
+  const data = loadSave() as SaveData & { autoPerSec?: number };
+  data.autoPerSec = Math.max(0, Math.floor(v));
+  saveSave(data);
 }
