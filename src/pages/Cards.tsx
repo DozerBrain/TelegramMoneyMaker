@@ -1,17 +1,20 @@
+// src/pages/Cards.tsx
 import React from "react";
-import Card from "../components/Card";        // if you have a single card component
-import CardFrame from "../components/CardFrame"; // optional frame
+import CardFrame from "../components/CardFrame";
 
-export default function Cards() {
-  // Render your available cards here (placeholder grid)
+export default function CardsPage() {
   return (
-    <div className="p-4">
-      <h1 className="mb-4 text-lg font-semibold text-emerald-200">Cards</h1>
-      <div className="grid grid-cols-2 gap-3">
-        <CardFrame><Card id="starter" /></CardFrame>
-        <CardFrame><Card id="boost" /></CardFrame>
-        {/* add the rest */}
-      </div>
+    <div className="p-4 space-y-3">
+      <h1 className="text-lg font-semibold text-emerald-200 mb-2">Cards</h1>
+
+      {/* Example card tiles (content placeholders) */}
+      <CardFrame title="Starter">
+        <div className="h-24 rounded-xl bg-zinc-800/60" />
+      </CardFrame>
+
+      <CardFrame title="Boost">
+        <div className="h-24 rounded-xl bg-zinc-800/60" />
+      </CardFrame>
     </div>
   );
 }
