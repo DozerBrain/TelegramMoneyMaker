@@ -256,16 +256,7 @@ export default function App() {
         {/* Cards / Suits / Pets */}
         {tab === "suits" && <SuitsPage />}
         {tab === "pets" && <PetsPage />}
-        {tab === "cards" && (
-          // If you have src/pages/Cards.tsx, replace this block with: <CardsPage />
-          <div className="p-6 text-white/90">
-            <h2 className="text-xl font-semibold mb-2">Cards</h2>
-            <p className="text-white/70">
-              Card collection screen coming soon. (Left quick button works; this is a safe placeholder
-              so builds never fail.)
-            </p>
-          </div>
-        )}
+        {tab === "cards" && <CardsPage />}
 
         {tab === "more" && (
           <More
