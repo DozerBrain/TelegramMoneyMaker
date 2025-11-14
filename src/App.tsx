@@ -14,8 +14,7 @@ import LeaderboardPage from "./pages/Leaderboard";
 import ProfilePage from "./pages/Profile";
 import PetsPage from "./pages/Pets";
 import SuitsPage from "./pages/Suits";
-// Cards page is optional; we render a placeholder if missing
-// import CardsPage from "./pages/Cards";
+import CardsPage from "./pages/Cards";
 
 // Game helpers
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
