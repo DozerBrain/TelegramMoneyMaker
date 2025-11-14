@@ -12,6 +12,8 @@ import Spin from "./pages/Spin";
 import More from "./pages/More";
 import LeaderboardPage from "./pages/Leaderboard";
 import ProfilePage from "./pages/Profile";
+import PetsPage from "./pages/Pets";     // ⬅️ new
+import SuitsPage from "./pages/Suits";   // ⬅️ new
 
 // Game helpers
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
@@ -20,7 +22,16 @@ import { achievements } from "./data/achievements";
 import { initTelegramUI } from "./lib/telegram";
 
 // Tab keys
-type Tab = "home" | "shop" | "spin" | "leaderboard" | "profile" | "more";
+type Tab =
+  | "home"
+  | "shop"
+  | "spin"
+  | "leaderboard"
+  | "profile"
+  | "more"
+  | "cards"       // ⬅️ new
+  | "suits"       // ⬅️ new
+  | "pets";       // ⬅️ new
 
 export default function App() {
   // Load last save once (normalize with fallbacks)
@@ -83,12 +94,9 @@ export default function App() {
 
   // --- Persist save whenever anything important changes
   useEffect(() => {
-    // Save with the fields your pages expect; unknown fields are fine
     saveSave({
       ...defaultSave,
-
-      // legacy-compatible mapping
-      score: balance, // keep score in sync
+      score: balance,
       tap: taps,
       collection: s.collection ?? defaultSave.collection,
       lastDrop: s.lastDrop ?? null,
@@ -98,7 +106,6 @@ export default function App() {
       equippedSuit: s.equippedSuit ?? null,
       profile: s.profile ?? defaultSave.profile,
 
-      // richer shape (newer fields)
       balance,
       totalEarnings,
       taps,
@@ -136,14 +143,24 @@ export default function App() {
       const h = (location.hash || "").toLowerCase();
       if (h.startsWith("#/leaderboard")) setTab("leaderboard");
       else if (h.startsWith("#/profile")) setTab("profile");
-      // add more hashes as needed
     };
     applyHash();
     window.addEventListener("hashchange", applyHash);
     return () => window.removeEventListener("hashchange", applyHash);
   }, []);
 
-  // --- Export / Import / Reset (use storage snapshot API)
+  // --- Listen for quick-nav events from LeftQuickNav
+  useEffect(() => {
+    const onGoto = (e: Event) => {
+      const ce = e as CustomEvent<{ goto: Tab }>;
+      if (!ce.detail?.goto) return;
+      setTab(ce.detail.goto);
+    };
+    window.addEventListener("MM_GOTO", onGoto as EventListener);
+    return () => window.removeEventListener("MM_GOTO", onGoto as EventListener);
+  }, []);
+
+  // --- Export / Import / Reset
   function doExport() {
     try {
       const snapshot = loadSave();
@@ -151,7 +168,6 @@ export default function App() {
       navigator.clipboard.writeText(json).then(
         () => alert("Save copied to clipboard!"),
         () => {
-          // fallback to download if clipboard fails
           const blob = new Blob([json], { type: "application/json" });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
@@ -170,7 +186,7 @@ export default function App() {
   function doImport(raw: string) {
     try {
       const parsed = JSON.parse(raw);
-      saveSave(parsed as any); // storage.ts spreads fields into proper keys
+      saveSave(parsed as any);
       location.reload();
     } catch {
       alert("Invalid save JSON.");
@@ -194,10 +210,8 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0f13]">
-      {/* Top header with title, avatar (Telegram), and rank */}
       <TopBar taps={taps} tapValue={tapValue} autoPerSec={autoPerSec} />
 
-      {/* Pages */}
       <main className="flex-1">
         {tab === "home" && (
           <Home
@@ -243,8 +257,20 @@ export default function App() {
         )}
 
         {tab === "leaderboard" && <LeaderboardPage />}
-
         {tab === "profile" && <ProfilePage />}
+
+        {/* NEW: Cards / Suits / Pets */}
+        {tab === "suits" && <SuitsPage />}
+        {tab === "pets" && <PetsPage />}
+        {tab === "cards" && (
+          <div className="p-6 text-white/90">
+            <h2 className="text-xl font-semibold mb-2">Cards</h2>
+            <p className="text-white/70">
+              Card collection screen coming soon. (The left quick button is working — this is a safe placeholder so you
+              don’t get build errors. If you add <code>src/pages/Cards.tsx</code> later, we can swap it in.)
+            </p>
+          </div>
+        )}
 
         {tab === "more" && (
           <More
@@ -263,7 +289,6 @@ export default function App() {
         )}
       </main>
 
-      {/* Bottom Tabs — cast keeps types happy if Tabs expects string */}
       <Tabs active={tab} onChange={setTab} />
     </div>
   );
