@@ -1,12 +1,28 @@
 // src/types.ts
-export type Tab = "home" | "shop" | "spin" | "leaderboard" | "profile" | "more";
+export type Tab =
+  | "home"
+  | "shop"
+  | "spin"
+  | "leaderboard"
+  | "profile"
+  | "more"
+  | "cards"
+  | "suits"
+  | "pets";
 
 export type Suit = {
   id: string;
   name: string;
   img: string;
   bonus: number;
-  rarity: "Common" | "Uncommon" | "Rare" | "Epic" | "Legendary" | "Mythic" | "Ultimate";
+  rarity:
+    | "Common"
+    | "Uncommon"
+    | "Rare"
+    | "Epic"
+    | "Legendary"
+    | "Mythic"
+    | "Ultimate";
   unlock: number;
 };
 
