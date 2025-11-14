@@ -11,7 +11,6 @@ export function getProfile(): PlayerProfile {
     const raw = localStorage.getItem(KEY);
     if (raw) {
       const parsed = JSON.parse(raw) as PlayerProfile;
-      // return directly if valid
       if (parsed && typeof parsed === "object") return parsed;
     }
   } catch {
@@ -43,3 +42,6 @@ export function setProfile(update: Partial<PlayerProfile>) {
   const merged = { ...current, ...update, updatedAt: Date.now() };
   localStorage.setItem(KEY, JSON.stringify(merged));
 }
+
+// ✅ Add this one line for backward compatibility
+export const saveProfile = setProfile;
