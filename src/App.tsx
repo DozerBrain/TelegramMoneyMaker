@@ -264,7 +264,7 @@ export default function App() {
       </main>
 
       {/* Bottom Tabs — cast keeps types happy if Tabs expects string */}
-      <Tabs active={tab} onChange={(v: string) => setTab(v as Tab)} />
+      <Tabs active={tab} onChange={setTab} />
     </div>
   );
 }
