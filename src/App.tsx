@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 // UI
 import TopBar from "./components/TopBar";
@@ -23,29 +23,19 @@ import { initTelegramUI } from "./lib/telegram";
 type Tab = "home" | "shop" | "spin" | "leaderboard" | "profile" | "more";
 
 export default function App() {
-  // Load last save (snapshot may not have all keys, so normalize with fallbacks)
-  const s: any = loadSave();
+  // Load last save once (normalize with fallbacks)
+  const s: any = useMemo(() => loadSave() as any, []);
 
   // Core state (with robust fallbacks)
-  const [balance, setBalance] = useState<number>(
-    (s.balance ?? s.score ?? 0) as number
-  );
-  const [totalEarnings, setTotalEarnings] = useState<number>(
-    (s.totalEarnings ?? s.score ?? 0) as number
-  );
+  const [balance, setBalance] = useState<number>((s.balance ?? s.score ?? 0) as number);
+  const [totalEarnings, setTotalEarnings] = useState<number>((s.totalEarnings ?? s.score ?? 0) as number);
   const [taps, setTaps] = useState<number>((s.taps ?? s.tap ?? 0) as number);
-  const [tapValue, setTapValue] = useState<number>(
-    (s.tapValue ?? 1) as number
-  );
-  const [autoPerSec, setAutoPerSec] = useState<number>(
-    (s.autoPerSec ?? 0) as number
-  );
+  const [tapValue, setTapValue] = useState<number>((s.tapValue ?? 1) as number);
+  const [autoPerSec, setAutoPerSec] = useState<number>((s.autoPerSec ?? 0) as number);
   const [multi, setMulti] = useState<number>((s.multi ?? 1) as number);
 
   // Suits
-  const [bestSuitName, setBestSuitName] = useState<string>(
-    (s.bestSuitName ?? "Starter") as string
-  );
+  const [bestSuitName, setBestSuitName] = useState<string>((s.bestSuitName ?? "Starter") as string);
 
   // Spin
   const [spinCooldownEndsAt, setSpinCooldownEndsAt] = useState<number | null>(
@@ -53,13 +43,11 @@ export default function App() {
   );
 
   // Achievements
-  const [achState, setAchState] =
-    useState<Record<string, { done: boolean; claimed: boolean }>>(
-      (s.achievements ?? {}) as Record<
-        string,
-        { done: boolean; claimed: boolean }
-      >
-    );
+  const [achState, setAchState] = useState<
+    Record<string, { done: boolean; claimed: boolean }>
+  >(
+    (s.achievements ?? {}) as Record<string, { done: boolean; claimed: boolean }>
+  );
 
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
@@ -87,8 +75,7 @@ export default function App() {
       const next = { ...prev };
       for (const a of achievements) {
         if (!next[a.id]) next[a.id] = { done: false, claimed: false };
-        if (!next[a.id].done && a.check(ctx))
-          next[a.id] = { ...next[a.id], done: true };
+        if (!next[a.id].done && a.check(ctx)) next[a.id] = { ...next[a.id], done: true };
       }
       return next;
     });
@@ -99,7 +86,8 @@ export default function App() {
     // Save with the fields your pages expect; unknown fields are fine
     saveSave({
       ...defaultSave,
-      // map both the old and new shapes so nothing is lost
+
+      // legacy-compatible mapping
       score: balance, // keep score in sync
       tap: taps,
       collection: s.collection ?? defaultSave.collection,
@@ -110,7 +98,7 @@ export default function App() {
       equippedSuit: s.equippedSuit ?? null,
       profile: s.profile ?? defaultSave.profile,
 
-      // your app’s richer shape
+      // richer shape (newer fields)
       balance,
       totalEarnings,
       taps,
@@ -132,6 +120,14 @@ export default function App() {
     bestSuitName,
     spinCooldownEndsAt,
     achState,
+    s.collection,
+    s.lastDrop,
+    s.ownedPets,
+    s.equippedPet,
+    s.ownedSuits,
+    s.equippedSuit,
+    s.profile,
+    s.quests,
   ]);
 
   // --- Hash navigation (TopBar sets #/profile or #/leaderboard)
@@ -147,21 +143,34 @@ export default function App() {
     return () => window.removeEventListener("hashchange", applyHash);
   }, []);
 
-  // --- Export / Import / Reset
+  // --- Export / Import / Reset (use storage snapshot API)
   function doExport() {
-    const raw = localStorage.getItem("moneymaker:save:v1");
-    if (raw) {
-      navigator.clipboard.writeText(raw).catch(() => {});
-      alert("Save copied to clipboard!");
-    } else {
-      alert("No save found.");
+    try {
+      const snapshot = loadSave();
+      const json = JSON.stringify(snapshot, null, 2);
+      navigator.clipboard.writeText(json).then(
+        () => alert("Save copied to clipboard!"),
+        () => {
+          // fallback to download if clipboard fails
+          const blob = new Blob([json], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = "moneymaker-save.json";
+          a.click();
+          URL.revokeObjectURL(url);
+          alert("Save downloaded as moneymaker-save.json");
+        }
+      );
+    } catch {
+      alert("Could not export save.");
     }
   }
 
   function doImport(raw: string) {
     try {
       const parsed = JSON.parse(raw);
-      localStorage.setItem("moneymaker:save:v1", JSON.stringify(parsed));
+      saveSave(parsed as any); // storage.ts spreads fields into proper keys
       location.reload();
     } catch {
       alert("Invalid save JSON.");
@@ -169,7 +178,7 @@ export default function App() {
   }
 
   function doReset() {
-    localStorage.setItem("moneymaker:save:v1", JSON.stringify(defaultSave));
+    saveSave({ ...defaultSave } as any);
     location.reload();
   }
 
@@ -254,8 +263,8 @@ export default function App() {
         )}
       </main>
 
-      {/* Bottom Tabs */}
-      <Tabs active={tab} onChange={setTab} />
+      {/* Bottom Tabs — cast keeps types happy if Tabs expects string */}
+      <Tabs active={tab} onChange={(v: string) => setTab(v as Tab)} />
     </div>
   );
 }
