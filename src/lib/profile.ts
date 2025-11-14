@@ -1,11 +1,10 @@
 // src/lib/profile.ts
-import { PlayerProfile } from "../types/player";
+import type { PlayerProfile } from "../types";
+
+export type { PlayerProfile }; // re-export so pages can `import { PlayerProfile } from '../lib/profile'`
 
 const KEY = "mm_profile";
 
-/**
- * Load the saved player profile or create a default one.
- */
 export function getProfile(): PlayerProfile {
   try {
     const raw = localStorage.getItem(KEY);
@@ -13,35 +12,27 @@ export function getProfile(): PlayerProfile {
       const parsed = JSON.parse(raw) as PlayerProfile;
       if (parsed && typeof parsed === "object") return parsed;
     }
-  } catch {
-    // fall through to default
-  }
-
-  const defaultProfile: PlayerProfile = {
+  } catch {}
+  const p: PlayerProfile = {
     uid: "local",
     name: "Player",
     country: "US",
     avatarUrl: undefined,
-    // aliases for backward compatibility
+    // legacy aliases some pages may read
     userId: "local",
     username: "Player",
     region: "US",
     updatedAt: Date.now(),
   };
-
-  localStorage.setItem(KEY, JSON.stringify(defaultProfile));
-  return defaultProfile;
+  localStorage.setItem(KEY, JSON.stringify(p));
+  return p;
 }
 
-/**
- * Replace or update the profile in localStorage.
- * If you only want to update certain fields, pass partial.
- */
 export function setProfile(update: Partial<PlayerProfile>) {
   const current = getProfile();
   const merged = { ...current, ...update, updatedAt: Date.now() };
   localStorage.setItem(KEY, JSON.stringify(merged));
 }
 
-// ✅ Add this one line for backward compatibility
+// legacy name used in some pages
 export const saveProfile = setProfile;
