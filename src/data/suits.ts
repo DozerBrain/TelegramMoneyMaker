@@ -8,3 +8,6 @@ export const SUITS: Suit[] = [
   { id: "millionaire", name: "Millionaire", unlock: 1_000_000, img: "/suits/millionaire.png", bonus: 6, rarity: "Legendary" },
   { id: "crypto-king", name: "Crypto King", unlock: 1_000_000_000, img: "/suits/crypto.png", bonus: 10, rarity: "Mythic" },
 ];
+
+// ✅ add this line only:
+export const suits = SUITS;
