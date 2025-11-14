@@ -1,13 +1,7 @@
+// src/lib/leaderboard.ts
 import { db } from "./firebase";
-import {
-  get,
-  set,
-  ref,
-  query,
-  orderByChild,
-  limitToLast,
-} from "firebase/database";
-import { PlayerProfile, getProfile } from "./profile";
+import { get, set, ref, query, orderByChild, limitToLast } from "firebase/database";
+import type { PlayerProfile } from "./profile";
 
 export type LeaderRow = {
   uid: string;
@@ -17,36 +11,41 @@ export type LeaderRow = {
   updatedAt: number;
 };
 
-// ✅ Main function used in your app
 export async function submitScore(
   totalEarnings: number,
   profile?: PlayerProfile
 ) {
-  const p = profile || getProfile();
-
+  const p = profile ?? JSON.parse(localStorage.getItem("mm_profile") || "{}");
   const row: LeaderRow = {
-    uid: p.uid,
-    name: p.name,
-    country: p.country,
+    uid: p.uid || p.userId || "local",
+    name: p.name || p.username || "Player",
+    country: p.country || p.region || "US",
     score: Math.floor(totalEarnings),
     updatedAt: Date.now(),
   };
-
-  // Save globally and by country
-  await set(ref(db, `leaderboard/global/${p.uid}`), row);
-  await set(ref(db, `leaderboard/byCountry/${p.country}/${p.uid}`), row);
+  await set(ref(db, `leaderboard/global/${row.uid}`), row);
+  await set(ref(db, `leaderboard/byCountry/${row.country}/${row.uid}`), row);
 }
 
-// ✅ Optional helper to fetch top leaderboard results
-export async function getTopLeaders(limitCount = 50) {
-  const q = query(ref(db, "leaderboard/global"), orderByChild("score"), limitToLast(limitCount));
-  const snap = await get(q);
-  const data: LeaderRow[] = [];
+// --- simple readers used by the page; safe fallbacks if DB empty
+export async function topGlobal(limit = 50): Promise<LeaderRow[]> {
+  try {
+    const snap = await get(query(ref(db, "leaderboard/global"), orderByChild("score"), limitToLast(limit)));
+    if (!snap.exists()) return [];
+    return Object.values(snap.val() as Record<string, LeaderRow>)
+      .sort((a, b) => b.score - a.score);
+  } catch {
+    return [];
+  }
+}
 
-  snap.forEach((child) => {
-    data.push(child.val());
-  });
-
-  // Sort descending (highest score first)
-  return data.sort((a, b) => b.score - a.score);
+export async function topByCountry(country: string, limit = 50): Promise<LeaderRow[]> {
+  try {
+    const snap = await get(query(ref(db, `leaderboard/byCountry/${country}`), orderByChild("score"), limitToLast(limit)));
+    if (!snap.exists()) return [];
+    return Object.values(snap.val() as Record<string, LeaderRow>)
+      .sort((a, b) => b.score - a.score);
+  } catch {
+    return [];
+  }
 }
