@@ -206,19 +206,20 @@ export default function App() {
 
       <main className="flex-1">
         {tab === "home" && (
-          <Home
-            balance={balance}
-            setBalance={setBalance}
-            totalEarnings={totalEarnings}
-            setTotalEarnings={setTotalEarnings}
-            taps={taps}
-            setTaps={setTaps}
-            tapValue={tapValue}
-            multi={multi}
-            currentSuitName={bestSuitName}
-            setCurrentSuitName={setBestSuitName}
-          />
-        )}
+ <Home
+    balance={balance}
+    setBalance={setBalance}
+    totalEarnings={totalEarnings}
+    setTotalEarnings={setTotalEarnings}
+    taps={taps}
+    setTaps={setTaps}
+    tapValue={tapValue}
+    multi={multi}
+    currentSuitName={bestSuitName}
+    setCurrentSuitName={setBestSuitName}
+    onOpen={(t) => setTab(t)}
+  />
+)}
 
         {tab === "shop" && (
           <Shop
