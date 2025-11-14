@@ -3,6 +3,7 @@ import BanknoteButton from "../components/BanknoteButton";
 import { comboTap } from "../lib/combo";
 import { getProfile } from "../lib/profile";
 import { submitScore } from "../lib/leaderboard";
+import LeftQuickNav from "../components/LeftQuickNav"; // ⬅️ NEW
 
 type Props = {
   // balances & totals
@@ -83,7 +84,10 @@ export default function Home({
   }, [currentSuitName]);
 
   return (
-    <div className="w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
+    <div className="relative w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
+      {/* ⬅️ Left quick buttons (Cards / Suits / Pets) */}
+      <LeftQuickNav />
+
       {/* Equipped suit / mascot */}
       <img
         src={suitImg}
