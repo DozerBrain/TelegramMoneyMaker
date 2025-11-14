@@ -12,8 +12,9 @@ import Spin from "./pages/Spin";
 import More from "./pages/More";
 import LeaderboardPage from "./pages/Leaderboard";
 import ProfilePage from "./pages/Profile";
-import PetsPage from "./pages/Pets";     // ⬅️ new
-import SuitsPage from "./pages/Suits";   // ⬅️ new
+import PetsPage from "./pages/Pets";
+import SuitsPage from "./pages/Suits";
+import CardsPage from "./pages/Cards";
 
 // Game helpers
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
