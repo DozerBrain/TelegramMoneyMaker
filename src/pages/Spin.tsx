@@ -56,7 +56,6 @@ type RewardSlot = {
   desc: string;
   kind: RewardKind;
   weight: number;
-  petId?: string;
 };
 
 const REWARDS: RewardSlot[] = [
@@ -101,7 +100,6 @@ const REWARDS: RewardSlot[] = [
     desc: "Legendary Jackpot",
     kind: "jackpot_legendary",
     weight: 3,
-    petId: "unicorn", // Unicorn Pegasus
   },
   {
     id: "jp_mythic",
@@ -109,7 +107,6 @@ const REWARDS: RewardSlot[] = [
     desc: "Mythic Jackpot",
     kind: "jackpot_mythic",
     weight: 1,
-    petId: "goblin", // Fourarms Goblin
   },
   {
     id: "jp_ultimate",
@@ -117,17 +114,16 @@ const REWARDS: RewardSlot[] = [
     desc: "Ultimate Jackpot",
     kind: "jackpot_ultimate",
     weight: 1,
-    petId: "dragon", // Crypto Dragon
   },
 ];
 
-// map jackpot kind → pet image (if found)
+// map jackpot kind → pet image
 const petIconByKind: Partial<Record<RewardKind, string>> = (() => {
-  const byId = (id: string) => PETS.find((p) => p.id === id)?.img;
+  const byId = (id: string) => PETS.find((p) => p.id === id)?.img ?? "";
   return {
-    jackpot_legendary: byId("unicorn") || "",
-    jackpot_mythic: byId("goblin") || "",
-    jackpot_ultimate: byId("dragon") || "",
+    jackpot_legendary: byId("unicorn"), // Unicorn Pegasus
+    jackpot_mythic: byId("goblin"), // Fourarms Goblin
+    jackpot_ultimate: byId("dragon"), // Crypto Dragon
   };
 })();
 
@@ -148,7 +144,6 @@ export default function Spin(p: Props) {
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [wheelRotation, setWheelRotation] = useState(0);
-  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
 
   const now = Date.now();
   const remaining = p.spinCooldownEndsAt
@@ -244,13 +239,13 @@ export default function Spin(p: Props) {
     if (!canSpin || isSpinning) return;
 
     const idx = pickRewardIndex();
-    setPendingIndex(idx);
-
     const segments = REWARDS.length;
     const anglePer = 360 / segments;
 
+    // Angle of the chosen segment center
     const targetSegmentAngle = idx * anglePer + anglePer / 2;
 
+    // Keep rotation smooth between spins
     const baseRot = wheelRotation % 360;
     const extraSpins = 4;
     const targetRotation =
@@ -259,11 +254,10 @@ export default function Spin(p: Props) {
     setIsSpinning(true);
     setWheelRotation(targetRotation);
 
+    // Match duration with CSS (2000ms)
     setTimeout(() => {
       setIsSpinning(false);
-      const finalIdx = pendingIndex ?? idx;
-      applyReward(finalIdx);
-      setPendingIndex(null);
+      applyReward(idx);
     }, 2100);
   }
 
@@ -295,40 +289,40 @@ export default function Spin(p: Props) {
         {/* WHEEL */}
         <div className="flex flex-col items-center gap-4 mt-1">
           <div className="relative w-64 h-64 sm:w-72 sm:h-72">
-            {/* Outer glow ring */}
+            {/* Outer glow */}
             <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_0%,rgba(16,185,129,0.35),transparent_55%)]" />
 
-            {/* Main wheel */}
+            {/* Main spinning disc */}
             <div
-              className="absolute inset-[10%] rounded-full bg-slate-950/90 border-[3px] border-emerald-500/70 shadow-[0_0_40px_rgba(16,185,129,0.45)] overflow-hidden transition-transform duration-[2000ms] ease-out"
+              className="absolute inset-[10%] rounded-full bg-slate-950/95 border border-emerald-500/40 shadow-[0_0_40px_rgba(16,185,129,0.35)] overflow-hidden transition-transform duration-[2000ms] ease-out"
               style={{ transform: `rotate(${wheelRotation}deg)` }}
             >
-              {/* middle hub */}
-              <div className="absolute inset-[36%] rounded-full bg-black/80 border border-white/10 shadow-inner" />
+              {/* Rim ring */}
+              <div className="absolute inset-[6%] rounded-full border border-emerald-500/40" />
 
-              {/* slice separators to feel like real wheel */}
+              {/* Center hub */}
+              <div className="absolute inset-[35%] rounded-full bg-black/80 border border-white/10 shadow-inner" />
+
+              {/* Slice separators */}
               {Array.from({ length: REWARDS.length }).map((_, i) => {
-                const segments = REWARDS.length;
-                const anglePer = 360 / segments;
-                const angle = i * anglePer;
+                const angle = (360 / REWARDS.length) * i;
                 return (
                   <div
                     key={`sep-${i}`}
-                    className="absolute left-1/2 top-1/2 w-[2px] h-[46%] bg-emerald-500/30"
+                    className="absolute left-1/2 top-1/2"
                     style={{
-                      transform: `translate(-50%, -100%) rotate(${angle}deg)`,
-                      transformOrigin: "50% 100%",
+                      transform: `translate(-50%, -50%) rotate(${angle}deg)`,
                     }}
-                  />
+                  >
+                    <div className="w-[3px] h-[60%] bg-emerald-500/18 origin-bottom rounded-full" />
+                  </div>
                 );
               })}
 
-              {/* segments */}
+              {/* Tokens on rim */}
               {REWARDS.map((r, index) => {
-                const segments = REWARDS.length;
-                const anglePer = 360 / segments;
-                const angle = index * anglePer + anglePer / 2;
-
+                const anglePer = 360 / REWARDS.length;
+                const angle = index * anglePer;
                 const isJackpot =
                   r.kind === "jackpot_legendary" ||
                   r.kind === "jackpot_mythic" ||
@@ -344,36 +338,33 @@ export default function Spin(p: Props) {
                     key={r.id}
                     className="absolute left-1/2 top-1/2"
                     style={{
-                      // center, rotate to slice, then push to rim
-                      transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0, -92%)`,
+                      transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0, -118%)`,
                       transformOrigin: "50% 50%",
                     }}
                   >
                     {isJackpot ? (
-                      // PET PICTURE SLICE
                       <div
-                        className="flex items-center justify-center"
+                        className="w-16 h-16 rounded-full border-[3px] border-amber-400 bg-[radial-gradient(circle_at_30%_0%,rgba(250,204,21,0.4),rgba(0,0,0,0.9))] shadow-[0_0_18px_rgba(250,204,21,0.6)] flex items-center justify-center"
                         style={{ transform: `rotate(${-angle}deg)` }}
                       >
-                        <div className="w-14 h-14 rounded-full border-[3px] border-amber-400 bg-black/80 shadow-[0_0_20px_rgba(251,191,36,0.9)] flex items-center justify-center overflow-hidden">
-                          {icon && (
-                            <img
-                              src={icon}
-                              alt={r.label}
-                              className="w-11 h-11 object-contain"
-                            />
-                          )}
-                        </div>
+                        {icon ? (
+                          <img
+                            src={icon}
+                            alt={r.label}
+                            className="w-11 h-11 rounded-full object-contain"
+                          />
+                        ) : (
+                          <span className="text-[9px] font-semibold text-amber-200">
+                            {r.label.toUpperCase()}
+                          </span>
+                        )}
                       </div>
                     ) : (
-                      // NORMAL TEXT SLICE
                       <div
-                        className="flex items-center justify-center"
+                        className="px-3 py-1 rounded-full border border-white/20 bg-black/60 text-[10px] text-slate-100 font-semibold tracking-wide"
                         style={{ transform: `rotate(${-angle}deg)` }}
                       >
-                        <div className="px-3 py-1 rounded-full border-[2px] border-slate-500/70 bg-black/60 text-[9px] text-slate-50 font-semibold whitespace-nowrap shadow-[0_0_10px_rgba(15,23,42,0.9)]">
-                          {r.label.toUpperCase()}
-                        </div>
+                        {r.label.toUpperCase()}
                       </div>
                     )}
                   </div>
