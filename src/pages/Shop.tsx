@@ -1,5 +1,6 @@
 // src/pages/Shop.tsx
 import React from "react";
+import { formatMoneyShort } from "../lib/format";
 
 type Props = {
   balance: number;
@@ -15,37 +16,6 @@ type Props = {
   setMulti: (v: number | ((p: number) => number)) => void;
 };
 
-// ---------- Money formatter (K / M / B / T / Q) ----------
-function formatMoneyShort(value: number): string {
-  if (!Number.isFinite(value)) return "∞";
-
-  const abs = Math.abs(value);
-  const sign = value < 0 ? "-" : "";
-
-  const UNITS: { v: number; s: string }[] = [
-    { v: 1e15, s: "Q" }, // Quadrillion
-    { v: 1e12, s: "T" }, // Trillion
-    { v: 1e9, s: "B" },  // Billion
-    { v: 1e6, s: "M" },  // Million
-    { v: 1e3, s: "K" },  // Thousand
-  ];
-
-  for (const u of UNITS) {
-    if (abs >= u.v) {
-      const num = abs / u.v;
-      let str = num.toFixed(2);
-      // remove trailing .00 / .0
-      if (str.endsWith("00")) str = str.slice(0, -3);
-      else if (str.endsWith("0")) str = str.slice(0, -1);
-      return `${sign}${str}${u.s}`;
-    }
-  }
-
-  // < 1000 -> show full, with commas
-  return `${sign}${Math.floor(abs).toLocaleString()}`;
-}
-
-// ---------- Upgrade card component ----------
 type UpgradeProps = {
   title: string;
   description: string;
@@ -79,7 +49,6 @@ function UpgradeCard({ title, description, price, disabled, onBuy }: UpgradeProp
   );
 }
 
-// ---------- Page ----------
 export default function Shop({
   balance,
   setBalance,
@@ -90,7 +59,6 @@ export default function Shop({
   multi,
   setMulti,
 }: Props) {
-  // base prices (same as before)
   const priceTap1 = 100;
   const priceTap5 = 1_000;
   const priceAuto1 = 5_000;
@@ -121,9 +89,7 @@ export default function Shop({
         description="Increase tap value by 1"
         price={priceTap1}
         disabled={!canBuy(priceTap1)}
-        onBuy={() =>
-          buy(priceTap1, () => setTapValue((v) => v + 1))
-        }
+        onBuy={() => buy(priceTap1, () => setTapValue((v) => v + 1))}
       />
 
       <UpgradeCard
@@ -131,9 +97,7 @@ export default function Shop({
         description="Increase tap value by 5"
         price={priceTap5}
         disabled={!canBuy(priceTap5)}
-        onBuy={() =>
-          buy(priceTap5, () => setTapValue((v) => v + 5))
-        }
+        onBuy={() => buy(priceTap5, () => setTapValue((v) => v + 5))}
       />
 
       <UpgradeCard
@@ -141,9 +105,7 @@ export default function Shop({
         description="Earn passively each second"
         price={priceAuto1}
         disabled={!canBuy(priceAuto1)}
-        onBuy={() =>
-          buy(priceAuto1, () => setAutoPerSec((v) => v + 1))
-        }
+        onBuy={() => buy(priceAuto1, () => setAutoPerSec((v) => v + 1))}
       />
 
       <UpgradeCard
@@ -151,9 +113,7 @@ export default function Shop({
         description="Multiply all earnings"
         price={priceMult15}
         disabled={!canBuy(priceMult15)}
-        onBuy={() =>
-          buy(priceMult15, () => setMulti((v) => v * 1.5))
-        }
+        onBuy={() => buy(priceMult15, () => setMulti((v) => v * 1.5))}
       />
 
       <UpgradeCard
@@ -161,9 +121,7 @@ export default function Shop({
         description="Big boost to all earnings"
         price={priceMult2}
         disabled={!canBuy(priceMult2)}
-        onBuy={() =>
-          buy(priceMult2, () => setMulti((v) => v * 2))
-        }
+        onBuy={() => buy(priceMult2, () => setMulti((v) => v * 2))}
       />
     </div>
   );
