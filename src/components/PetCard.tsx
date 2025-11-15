@@ -23,7 +23,6 @@ export default function PetCard({ pet }: { pet: Pet }) {
   const [, bump] = useState(0);
   useEffect(() => {
     const onSaved = () => bump((x) => x + 1);
-    // listen to both (in case other parts still dispatch "storage")
     window.addEventListener("mm:save", onSaved as any);
     window.addEventListener("storage", onSaved as any);
     return () => {
@@ -55,33 +54,4 @@ export default function PetCard({ pet }: { pet: Pet }) {
         " flex flex-col items-center gap-2"
       }
     >
-      <img src={pet.img} alt={pet.name} className="w-28 h-28 object-contain" />
-
-      <div className="text-center">
-        <div className="font-bold text-white text-lg">{pet.name}</div>
-        <div className="text-xs text-gray-400">{pet.rarity}</div>
-      </div>
-
-      {!owned ? (
-        <button
-          onClick={markOwned}
-          className="mt-2 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm transition"
-        >
-          Unlock
-        </button>
-      ) : (
-        <button
-          onClick={equip}
-          className={
-            "mt-2 px-3 py-1 rounded-lg text-sm transition " +
-            (equipped
-              ? "bg-yellow-500 hover:bg-yellow-600 text-black"
-              : "bg-blue-600 hover:bg-blue-700 text-white")
-          }
-        >
-          {equipped ? "Equipped" : "Equip"}
-        </button>
-      )}
-    </div>
-  );
-}
+      <img src={pet.img} alt={pet.name} class
