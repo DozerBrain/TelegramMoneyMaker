@@ -32,7 +32,7 @@ type Props = {
   cardMultAll: number;
   globalMult: number;
 
-  // NEW: which pet is equipped
+  // equipped pet
   equippedPetId: string | null;
 };
 
@@ -46,7 +46,7 @@ export default function Home({
   tapValue,
   multi,
   currentSuitName,
-  // setCurrentSuitName, // not used yet
+  setCurrentSuitName, // kept for future use
   suitMult,
   petTapMult,
   cardMultAll,
@@ -72,12 +72,12 @@ export default function Home({
 
   async function pushLeaderboard(newScore: number) {
     const now = Date.now();
-    if (now - lastPushRef.current < 1500) return; // throttle ~1.5s
+    if (now - lastPushRef.current < 1500) return;
     lastPushRef.current = now;
     await submitScore(newScore, profile);
   }
 
-  // ---------- Tap handler WITH FULL MATH ----------
+  // ---------- Tap handler with full math ----------
   function onMainTap() {
     const totalTapMult = suitMult * petTapMult * cardMultAll * globalMult;
     const rawGain = tapValue * multi * totalTapMult;
@@ -85,11 +85,13 @@ export default function Home({
 
     setTaps((t) => t + 1);
     setTotalEarnings((t) => t + gain);
+
     setBalance((b) => {
       const newBalance = b + gain;
       pushLeaderboard(newBalance);
       return newBalance;
     });
+
     comboTap();
   }
 
@@ -106,12 +108,12 @@ export default function Home({
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
-      {/* ⬅️ Left quick buttons (Cards / Suits / Pets) */}
+      {/* Left quick buttons (Cards / Suits / Pets) */}
       <LeftQuickNav />
 
-      {/* Mascot + Pet side-by-side */}
-      <div className="mt-1 flex items-center justify-center gap-4">
-        {/* Equipped suit / mascot */}
+      {/* Mascot centered, pet below (smaller) */}
+      <div className="mt-2 flex flex-col items-center justify-center gap-2">
+        {/* Mascot / suit */}
         <img
           src={suitImg}
           alt="Equipped suit"
@@ -119,20 +121,14 @@ export default function Home({
           draggable={false}
         />
 
-        {/* Pet (half size of mascot) + ability text */}
+        {/* Pet under mascot, half-ish size, no text here */}
         {pet && (
-          <div className="flex flex-col items-center max-w-[150px]">
-            <img
-              src={pet.img}
-              alt={pet.name}
-              className="w-24 h-24 object-contain select-none drop-shadow-[0_8px_20px_rgba(0,255,170,0.25)]"
-              draggable={false}
-            />
-            <div className="mt-1 text-[10px] leading-snug text-emerald-200 text-center">
-              <span className="font-semibold">{pet.name}</span>
-              <span className="text-emerald-300"> • {pet.effect}</span>
-            </div>
-          </div>
+          <img
+            src={pet.img}
+            alt={pet.name}
+            className="w-24 h-24 object-contain select-none drop-shadow-[0_8px_20px_rgba(0,255,170,0.25)]"
+            draggable={false}
+          />
         )}
       </div>
 
