@@ -60,34 +60,52 @@ export default function CardChest({
   }
 
   return (
-    <>
+    <div className="space-y-4">
       {/* Summary */}
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2 text-sm">
-        <div className="flex justify-between">
-          <span className="text-slate-300">Total cards owned</span>
-          <span className="font-semibold text-emerald-300">
-            {totalCardsOwned}
-          </span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-slate-300">Coupons available</span>
-          <span className="font-semibold text-emerald-300">
-            {couponsAvailable}
-          </span>
-        </div>
-        <div className="flex justify-between text-xs text-slate-400">
-          <span>Coupons earned</span>
-          <span>
-            {couponsEarned} (1 / {tapsPerCoupon} taps)
-          </span>
-        </div>
-        <div className="mt-2">
-          <div className="text-xs text-slate-400 mb-1">
-            Next coupon in:
+      <section className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-emerald-900/40 via-slate-900/80 to-black/90 p-4 space-y-3 shadow-lg shadow-emerald-500/10">
+        <div className="flex items-center justify-between">
+          <div className="text-xs font-semibold tracking-wide text-emerald-300/80 uppercase">
+            Chest Overview
           </div>
-          <div className="w-full h-2 rounded-full bg-black/40 overflow-hidden">
+          <div className="text-[11px] text-slate-400">
+            🎟 1 coupon / {tapsPerCoupon} taps
+          </div>
+        </div>
+
+        <div className="flex justify-between text-sm">
+          <div className="space-y-1">
+            <div className="text-slate-300 text-xs uppercase tracking-wide">
+              Total Cards
+            </div>
+            <div className="text-lg font-bold text-emerald-300">
+              {totalCardsOwned}
+            </div>
+          </div>
+          <div className="space-y-1 text-right">
+            <div className="text-slate-300 text-xs uppercase tracking-wide">
+              Coupons
+            </div>
+            <div className="text-lg font-bold text-emerald-300">
+              {couponsAvailable}
+            </div>
+            <div className="text-[11px] text-slate-400">
+              Earned: {couponsEarned}
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-2">
+          <div className="flex justify-between text-[11px] text-slate-400 mb-1">
+            <span>Next coupon progress</span>
+            <span>
+              {tapsToNextCoupon === 0
+                ? "Next tap = +1 coupon"
+                : `${tapsToNextCoupon} taps left`}
+            </span>
+          </div>
+          <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden">
             <div
-              className="h-full bg-emerald-400"
+              className="h-full bg-gradient-to-r from-emerald-400 to-cyan-400"
               style={{
                 width: `${
                   ((tapsTowardNext || tapsPerCoupon) / tapsPerCoupon) * 100
@@ -95,22 +113,27 @@ export default function CardChest({
               }}
             />
           </div>
-          <div className="mt-1 text-[11px] text-slate-400 text-right">
-            {tapsToNextCoupon === 0
-              ? "Ready – next tap gives a coupon!"
-              : `${tapsToNextCoupon} tap(s) left`}
-          </div>
         </div>
       </section>
 
       {/* Drop rates */}
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <div className="text-sm text-slate-300 mb-2">Drop Rates</div>
+      <section className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/70 to-black/90 p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm text-slate-200 font-semibold">
+            Drop rates
+          </div>
+          <div className="text-[11px] text-slate-500">
+            Chances per card
+          </div>
+        </div>
         <div className="grid grid-cols-2 gap-1 text-sm">
           {DROPS.map((d) => (
-            <div key={d.r} className="flex justify-between">
+            <div
+              key={d.r}
+              className="flex justify-between text-xs text-slate-300"
+            >
               <span className="capitalize">{d.r}</span>
-              <span className="tabular-nums">{d.p}%</span>
+              <span className="tabular-nums text-emerald-300">{d.p}%</span>
             </div>
           ))}
         </div>
@@ -119,42 +142,60 @@ export default function CardChest({
       {/* Open buttons */}
       <section className="space-y-2">
         <button
-          className={`w-full rounded-2xl py-3 text-sm font-semibold transition ${
+          className={`w-full rounded-2xl py-3 text-sm font-semibold shadow-md shadow-emerald-500/20 transition 
+          flex items-center justify-center gap-2
+          ${
             couponsAvailable >= 1
-              ? "bg-emerald-500 text-emerald-950 active:scale-[0.98]"
-              : "bg-white/10 text-slate-500"
+              ? "bg-emerald-500 text-emerald-950 active:scale-[0.97] hover:bg-emerald-400"
+              : "bg-white/5 text-slate-500 border border-white/10 cursor-not-allowed"
           }`}
           disabled={couponsAvailable < 1}
           onClick={() => openCards(1, 1)}
         >
-          Open 1 Card (Cost: 1 coupon)
+          <span>Open 1 Card</span>
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-900/50 text-emerald-100">
+            Cost: 1 coupon
+          </span>
         </button>
 
         <button
-          className={`w-full rounded-2xl py-3 text-sm font-semibold transition ${
+          className={`w-full rounded-2xl py-3 text-sm font-semibold shadow-md shadow-emerald-400/25 transition 
+          flex items-center justify-center gap-2
+          ${
             couponsAvailable >= 10
-              ? "bg-emerald-400 text-emerald-950 active:scale-[0.98]"
-              : "bg-white/10 text-slate-500"
+              ? "bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-900 active:scale-[0.97] hover:from-emerald-300 hover:to-cyan-300"
+              : "bg-white/5 text-slate-500 border border-white/10 cursor-not-allowed"
           }`}
           disabled={couponsAvailable < 10}
           onClick={() => openCards(10, 10)}
         >
-          Open 10 Cards (Cost: 10 coupons)
+          <span>Open 10 Cards</span>
+          <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/20 text-slate-900">
+            Best value • 10 coupons
+          </span>
         </button>
 
-        <p className="text-[11px] text-slate-400 mt-1">
-          You earn 1 coupon for every {tapsPerCoupon} taps in the main
-          game.
+        <p className="text-[11px] text-slate-500 mt-1 text-center">
+          Tap in the main game to stack coupons, then blast them here for big pulls.
         </p>
       </section>
 
       {/* Last pulled cards */}
-      <section className="rounded-2xl border border-white/10 bg-white/5 p-4">
-        <div className="text-sm text-slate-300 mb-2">Last pull</div>
+      <section className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950/80 to-black p-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm text-slate-200 font-semibold">
+            Last pull
+          </div>
+          {lastPulled.length > 0 && (
+            <div className="text-[11px] text-slate-500">
+              {lastPulled.length} card{lastPulled.length > 1 ? "s" : ""}
+            </div>
+          )}
+        </div>
 
         {lastPulled.length === 0 ? (
           <div className="text-xs text-slate-500">
-            Open the chest to see your cards.
+            Open a chest to see your latest cards here.
           </div>
         ) : (
           <div
@@ -174,6 +215,6 @@ export default function CardChest({
           </div>
         )}
       </section>
-    </>
+    </div>
   );
 }
