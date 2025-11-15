@@ -56,7 +56,7 @@ type RewardSlot = {
   desc: string;
   kind: RewardKind;
   weight: number;
-  petId?: string; // for jackpot slices
+  petId?: string; // for jackpot slices, to show a tiny pet icon
 };
 
 const REWARDS: RewardSlot[] = [
@@ -121,7 +121,7 @@ const REWARDS: RewardSlot[] = [
   },
 ];
 
-// map jackpot kind → pet image
+// map jackpot kind → pet image (if found)
 const petIconByKind: Partial<Record<RewardKind, string>> = (() => {
   const byId = (id: string) => PETS.find((p) => p.id === id)?.img;
   return {
@@ -248,6 +248,8 @@ export default function Spin(p: Props) {
 
     const segments = REWARDS.length;
     const anglePer = 360 / segments;
+
+    // angle of the chosen segment center
     const targetSegmentAngle = idx * anglePer + anglePer / 2;
 
     const baseRot = wheelRotation % 360;
@@ -265,6 +267,9 @@ export default function Spin(p: Props) {
       setPendingIndex(null);
     }, 2100);
   }
+
+  const segments = REWARDS.length;
+  const anglePer = 360 / segments;
 
   return (
     <div className="max-w-xl mx-auto p-4 flex flex-col gap-4">
@@ -294,66 +299,33 @@ export default function Spin(p: Props) {
         {/* WHEEL */}
         <div className="flex flex-col items-center gap-4 mt-1">
           <div className="relative w-64 h-64 sm:w-72 sm:h-72">
-            {/* Outer glow */}
-            <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_0%,rgba(16,185,129,0.35),transparent_55%)] pointer-events-none" />
+            {/* Outer glow ring */}
+            <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_50%_0%,rgba(16,185,129,0.35),transparent_60%)]" />
 
-            {/* Main wheel that spins */}
+            {/* Main spinning wheel */}
             <div
-              className="absolute inset-[8%] rounded-full bg-slate-950/95 border-2 border-emerald-500/70 shadow-[0_0_40px_rgba(16,185,129,0.55)] overflow-hidden transition-transform duration-[2000ms] ease-out"
+              className="absolute inset-[10%] rounded-full bg-slate-950/95 border border-emerald-500/40 shadow-[0_0_40px_rgba(16,185,129,0.45)] overflow-hidden transition-transform duration-[2000ms] ease-out"
               style={{ transform: `rotate(${wheelRotation}deg)` }}
             >
-              {/* Jackpot glowing slices (backgrounds) */}
+              {/* inner hub */}
+              <div className="absolute inset-[32%] rounded-full bg-black/80 border border-white/10" />
+
+              {/* slice guide lines */}
+              {Array.from({ length: segments }).map((_, i) => (
+                <div
+                  key={`line-${i}`}
+                  className="absolute left-1/2 top-1/2 w-px h-[46%] bg-emerald-500/18"
+                  style={{
+                    transform: `translate(-50%, -50%) rotate(${
+                      i * anglePer
+                    }deg)`,
+                  }}
+                />
+              ))}
+
+              {/* SEGMENTS */}
               {REWARDS.map((r, index) => {
-                const isJackpot =
-                  r.kind === "jackpot_legendary" ||
-                  r.kind === "jackpot_mythic" ||
-                  r.kind === "jackpot_ultimate";
-                if (!isJackpot) return null;
-
-                const segments = REWARDS.length;
-                const anglePer = 360 / segments;
                 const angle = index * anglePer;
-
-                return (
-                  <div
-                    key={`jp-bg-${r.id}`}
-                    className="absolute inset-0"
-                    style={{
-                      transform: `rotate(${angle}deg)`,
-                      transformOrigin: "50% 50%",
-                    }}
-                  >
-                    {/* radial bar that looks like a glowing slice */}
-                    <div className="absolute left-1/2 top-[16%] -translate-x-1/2 w-[42%] h-[68%] rounded-full bg-gradient-to-b from-amber-300/70 via-amber-400/35 to-transparent shadow-[0_0_35px_rgba(250,204,21,0.75)]" />
-                  </div>
-                );
-              })}
-
-              {/* Slice dividers (thick radial lines) */}
-              {REWARDS.map((_, index) => {
-                const segments = REWARDS.length;
-                const anglePer = 360 / segments;
-                const angle = index * anglePer;
-                return (
-                  <div
-                    key={`divider-${index}`}
-                    className="absolute inset-0"
-                    style={{
-                      transform: `rotate(${angle}deg)`,
-                      transformOrigin: "50% 50%",
-                    }}
-                  >
-                    <div className="absolute left-1/2 top-[18%] w-[2px] h-[64%] bg-emerald-500/40 origin-top" />
-                  </div>
-                );
-              })}
-
-              {/* Segment content */}
-              {REWARDS.map((r, index) => {
-                const segments = REWARDS.length;
-                const anglePer = 360 / segments;
-                const angle = index * anglePer + anglePer / 2;
-
                 const isJackpot =
                   r.kind === "jackpot_legendary" ||
                   r.kind === "jackpot_mythic" ||
@@ -369,40 +341,39 @@ export default function Spin(p: Props) {
                     key={r.id}
                     className="absolute left-1/2 top-1/2"
                     style={{
-                      transform: `rotate(${angle}deg) translate(0, -40%)`,
-                      transformOrigin: "50% 50%",
+                      transform: `translate(-50%, -50%) rotate(${angle}deg)`,
                     }}
                   >
-                    {isJackpot ? (
-                      <div
-                        className="flex flex-col items-center justify-center"
-                        style={{ transform: `rotate(${-angle}deg)` }}
-                      >
+                    {/* Glowing jackpot slice + pet icon */}
+                    {isJackpot && (
+                      <div className="relative flex justify-center">
+                        {/* thin glowing slice from center to rim */}
+                        <div className="w-[54px] h-[118px] sm:w-[64px] sm:h-[138px] origin-bottom -translate-y-[12%] bg-[radial-gradient(circle_at_50%_0%,rgba(250,204,21,0.95),rgba(250,204,21,0))] rounded-full opacity-90 shadow-[0_0_26px_rgba(250,204,21,0.9)]" />
+
                         {icon && (
-                          <img
-                            src={icon}
-                            alt={r.label}
-                            className="w-11 h-11 sm:w-12 sm:h-12 object-contain rounded-full shadow-[0_0_18px_rgba(0,0,0,0.85)]"
-                          />
+                          <div className="absolute top-[22%] -translate-y-1/2 w-11 h-11 sm:w-12 sm:h-12 rounded-full border-[2px] border-amber-300 shadow-[0_0_18px_rgba(250,204,21,0.9)] overflow-hidden bg-black/80">
+                            <img
+                              src={icon}
+                              alt={r.label}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
                         )}
-                        <div className="mt-1 text-[10px] sm:text-[11px] text-amber-100 font-semibold tracking-wide">
-                          {r.label.toUpperCase()}
-                        </div>
-                      </div>
-                    ) : (
-                      <div
-                        className="flex items-center justify-center px-3 py-1 rounded-full border border-white/20 bg-black/70 text-[10px] sm:text-[11px] text-slate-100 font-medium shadow-[0_0_12px_rgba(15,23,42,0.6)]"
-                        style={{ transform: `rotate(${-angle}deg)` }}
-                      >
-                        {r.label.toUpperCase()}
                       </div>
                     )}
+
+                    {/* Reward label in inner ring (kept upright) */}
+                    <div
+                      className="absolute left-1/2 top-1/2 text-[9px] px-2 py-1 rounded-full bg-black/60 border border-white/10 text-slate-100 whitespace-nowrap"
+                      style={{
+                        transform: `translate(-50%, -50%) rotate(${-angle}deg) translate(0, -40%)`,
+                      }}
+                    >
+                      {r.label.toUpperCase()}
+                    </div>
                   </div>
                 );
               })}
-
-              {/* Center hub */}
-              <div className="absolute inset-[30%] rounded-full bg-black/85 border border-slate-700/80 shadow-inner" />
             </div>
           </div>
 
