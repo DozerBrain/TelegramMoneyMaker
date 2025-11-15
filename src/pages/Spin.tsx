@@ -300,7 +300,7 @@ export default function Spin(p: Props) {
             <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_0%,rgba(16,185,129,0.35),transparent_55%)]" />
             {/* Main wheel that spins */}
             <div
-              className="absolute inset-[10%] rounded-full bg-slate-950/90 border border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.35)] overflow-hidden transition-transform duration-[2000ms] ease-out"
+              className="absolute inset-[10%] rounded-full bg-slate-950/90 border-4 border-emerald-500/60 shadow-[0_0_40px_rgba(16,185,129,0.35)] overflow-hidden transition-transform duration-[2000ms] ease-out"
               style={{ transform: `rotate(${wheelRotation}deg)` }}
             >
               {/* center circle */}
@@ -324,30 +324,33 @@ export default function Spin(p: Props) {
                 return (
                   <div
                     key={r.id}
-                    className="absolute inset-0"
-                    style={{ transform: `rotate(${angle}deg)` }}
+                    className="absolute left-1/2 top-1/2"
+                    style={{
+                      transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0, -78%)`,
+                      transformOrigin: "50% 50%",
+                    }}
                   >
-                    {/* Position pill near outer edge; keep upright */}
                     <div
-                      className="absolute left-1/2 top-[12%] -translate-x-1/2"
-                      style={{ transform: `rotate(${-angle}deg)` }}
+                      className={`flex flex-col items-center justify-center px-2 py-1 rounded-full border-2 whitespace-nowrap ${
+                        isJackpot
+                          ? "border-amber-400 bg-amber-500/20 text-amber-100 font-semibold"
+                          : "border-white/30 bg-black/60 text-slate-100"
+                      }`}
+                      style={{
+                        // keep pill upright
+                        transform: `rotate(${-angle}deg)`,
+                      }}
                     >
-                      <div
-                        className={`flex items-center gap-1 text-[9px] px-2 py-1 rounded-full border whitespace-nowrap ${
-                          isJackpot
-                            ? "border-amber-400 bg-amber-500/20 text-amber-200 font-semibold"
-                            : "border-white/10 bg-black/50 text-slate-100"
-                        }`}
-                      >
-                        {icon && (
-                          <img
-                            src={icon}
-                            alt={r.label}
-                            className="w-4 h-4 rounded-full object-contain"
-                          />
-                        )}
-                        <span>{r.label.toUpperCase()}</span>
-                      </div>
+                      {icon && (
+                        <img
+                          src={icon}
+                          alt={r.label}
+                          className="w-7 h-7 rounded-full object-contain mb-0.5"
+                        />
+                      )}
+                      <span className={icon ? "text-[8px]" : "text-[9px]"}>
+                        {r.label.toUpperCase()}
+                      </span>
                     </div>
                   </div>
                 );
