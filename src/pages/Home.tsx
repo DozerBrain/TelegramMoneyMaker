@@ -21,7 +21,7 @@ type Props = {
   tapValue: number;
   multi: number;
 
-  // suit (for image only)
+  // suit display
   currentSuitName: string;
   setCurrentSuitName: (v: string) => void;
 
@@ -42,6 +42,7 @@ export default function Home({
   tapValue,
   multi,
   currentSuitName,
+  // setCurrentSuitName, // currently not used, but kept in props for future
   suitMult,
   petTapMult,
   cardMultAll,
@@ -71,15 +72,11 @@ export default function Home({
     await submitScore(newScore, profile);
   }
 
-  // ---------- Tap handler with full multipliers ----------
+  // ---------- Tap handler WITH FULL MATH ----------
   function onMainTap() {
-    const tapMultTotal =
-      suitMult * petTapMult * cardMultAll * globalMult;
-
-    const gain = Math.max(
-      1,
-      Math.floor(tapValue * multi * tapMultTotal)
-    );
+    const totalTapMult = suitMult * petTapMult * cardMultAll * globalMult;
+    const rawGain = tapValue * multi * totalTapMult;
+    const gain = Math.max(1, Math.floor(rawGain));
 
     setTaps((t) => t + 1);
     setTotalEarnings((t) => t + gain);
