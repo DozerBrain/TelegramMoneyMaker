@@ -277,26 +277,19 @@ function ChestTab(
   );
 }
 
-/* ------------ COLLECTION TAB (NFT-like) ------------- */
-function CollectionTab({ cards }: { cards: CardInstance[] }) {
-  const grouped = useMemo(() => {
-    const map: Record<Rarity, CardInstance[]> = {
-      common: [],
-      uncommon: [],
-      rare: [],
-      epic: [],
-      legendary: [],
-      mythic: [],
-      ultimate: [],
-    };
-    for (const c of cards) {
-      map[c.rarity].push(c);
-    }
-    return map;
-  }, [cards]);
+/* ------------ COLLECTION SUMMARY (per rarity row) ------------- */
 
-  const total = cards.length;
+type Grouped = Record<Rarity, CardInstance[]>;
 
+function CollectionSummary({
+  grouped,
+  total,
+  onOpenRarity,
+}: {
+  grouped: Grouped;
+  total: number;
+  onOpenRarity: (r: Rarity) => void;
+}) {
   if (total === 0) {
     return (
       <section className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
@@ -317,28 +310,87 @@ function CollectionTab({ cards }: { cards: CardInstance[] }) {
         const list = grouped[r];
         if (!list.length) return null;
 
+        const preview = list[0];
+
         return (
-          <div key={r} className="space-y-2">
-            <div className="flex justify-between items-center text-xs text-slate-300 px-1">
-              <span>{RARITY_LABEL[r]}</span>
-              <span className="font-mono text-emerald-300">
+          <button
+            key={r}
+            onClick={() => onOpenRarity(r)}
+            className="w-full text-left rounded-2xl border border-white/10 bg-white/5 p-3 flex gap-3 items-center active:scale-[0.99] transition"
+          >
+            <div className="w-24">
+              <CardFrame
+                rarity={r}
+                imgSrc={ART[r]}
+                serial={preview.serial}
+                className="w-full"
+              />
+            </div>
+            <div className="flex-1 flex justify-between items-center">
+              <div>
+                <div className="text-sm font-semibold text-slate-100">
+                  {RARITY_LABEL[r]}
+                </div>
+                <div className="text-[11px] text-slate-400">
+                  Tap to view all {RARITY_LABEL[r]} cards
+                </div>
+              </div>
+              <div className="text-xs font-mono text-emerald-300">
                 x{list.length}
-              </span>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              {list.map((card) => (
-                <CardFrame
-                  key={card.id}
-                  rarity={card.rarity}
-                  imgSrc={ART[card.rarity]}
-                  serial={card.serial}
-                  className="w-full"
-                />
-              ))}
-            </div>
-          </div>
+          </button>
         );
       })}
+    </section>
+  );
+}
+
+/* ------------ COLLECTION DETAIL FOR ONE RARITY ------------- */
+
+function CollectionRarityDetail({
+  rarity,
+  cards,
+  onBack,
+}: {
+  rarity: Rarity;
+  cards: CardInstance[];
+  onBack: () => void;
+}) {
+  const label = RARITY_LABEL[rarity];
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        <button
+          onClick={onBack}
+          className="px-3 py-1 rounded-xl bg-white/10 text-xs text-slate-200"
+        >
+          ← Back
+        </button>
+        <h3 className="text-lg font-semibold text-emerald-300">
+          {label} cards
+        </h3>
+      </div>
+
+      <div className="text-xs text-slate-400 px-1 flex justify-between">
+        <span>{label}</span>
+        <span className="font-mono text-emerald-300">
+          x{cards.length}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {cards.map((card) => (
+          <CardFrame
+            key={card.id}
+            rarity={card.rarity}
+            imgSrc={ART[card.rarity]}
+            serial={card.serial}
+            className="w-full"
+          />
+        ))}
+      </div>
     </section>
   );
 }
@@ -347,6 +399,37 @@ function CollectionTab({ cards }: { cards: CardInstance[] }) {
 export default function CardsPage(props: Props) {
   const [tab, setTab] = useState<"chest" | "collection">("chest");
   const [lastPulled, setLastPulled] = useState<CardInstance[]>([]);
+
+  // collection view state
+  const [collectionView, setCollectionView] = useState<
+    "summary" | "rarity"
+  >("summary");
+  const [activeRarity, setActiveRarity] = useState<Rarity>("common");
+
+  // group cards by rarity once
+  const grouped: Grouped = useMemo(() => {
+    const map: Grouped = {
+      common: [],
+      uncommon: [],
+      rare: [],
+      epic: [],
+      legendary: [],
+      mythic: [],
+      ultimate: [],
+    };
+    for (const c of props.cards) {
+      map[c.rarity].push(c);
+    }
+    return map;
+  }, [props.cards]);
+
+  const totalCards = props.cards.length;
+
+  // when switching to Collection tab, default to summary
+  function goCollectionTab() {
+    setTab("collection");
+    setCollectionView("summary");
+  }
 
   return (
     <div className="p-4 pb-24 space-y-4">
@@ -359,10 +442,7 @@ export default function CardsPage(props: Props) {
         <TabButton active={tab === "chest"} onClick={() => setTab("chest")}>
           Chest
         </TabButton>
-        <TabButton
-          active={tab === "collection"}
-          onClick={() => setTab("collection")}
-        >
+        <TabButton active={tab === "collection"} onClick={goCollectionTab}>
           Collection
         </TabButton>
       </div>
@@ -375,8 +455,21 @@ export default function CardsPage(props: Props) {
             lastPulled={lastPulled}
             setLastPulled={setLastPulled}
           />
+        ) : collectionView === "summary" ? (
+          <CollectionSummary
+            grouped={grouped}
+            total={totalCards}
+            onOpenRarity={(r) => {
+              setActiveRarity(r);
+              setCollectionView("rarity");
+            }}
+          />
         ) : (
-          <CollectionTab cards={props.cards} />
+          <CollectionRarityDetail
+            rarity={activeRarity}
+            cards={grouped[activeRarity]}
+            onBack={() => setCollectionView("summary")}
+          />
         )}
       </div>
     </div>
