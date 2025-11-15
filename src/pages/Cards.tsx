@@ -1,7 +1,7 @@
 // src/pages/Cards.tsx
 import React, { useMemo, useState } from "react";
 import CardFrame, { Rarity } from "../components/CardFrame";
-import type { CardCollection } from "../App";
+import type { CardInstance } from "../App";
 
 /* ------------ Art paths: use your /public/cards/*.png files ------------- */
 const ART: Record<Rarity, string> = {
@@ -97,10 +97,8 @@ const RARITY_LABEL: Record<Rarity, string> = {
 /* ------------ Props from App ------------- */
 type Props = {
   taps: number;
-  collection: CardCollection;
-  setCollection: (
-    c: CardCollection | ((c: CardCollection) => CardCollection)
-  ) => void;
+  cards: CardInstance[];
+  setCards: (v: CardInstance[] | ((prev: CardInstance[]) => CardInstance[])) => void;
   couponsAvailable: number;
   couponsSpent: number;
   setCouponsSpent: (v: number | ((p: number) => number)) => void;
@@ -108,18 +106,16 @@ type Props = {
 };
 
 /* ------------ CHEST TAB ------------- */
-function ChestTab(props: Props & {
-  lastPulled: { rarity: Rarity; serial: string }[];
-  setLastPulled: (
-    v:
-      | { rarity: Rarity; serial: string }[]
-      | ((prev: { rarity: Rarity; serial: string }[]) => { rarity: Rarity; serial: string }[])
-  ) => void;
-}) {
+function ChestTab(
+  props: Props & {
+    lastPulled: CardInstance[];
+    setLastPulled: (v: CardInstance[] | ((p: CardInstance[]) => CardInstance[])) => void;
+  }
+) {
   const {
     taps,
-    collection,
-    setCollection,
+    cards,
+    setCards,
     couponsAvailable,
     couponsSpent,
     setCouponsSpent,
@@ -137,36 +133,27 @@ function ChestTab(props: Props & {
   const tapsToNextCoupon =
     tapsPerCoupon - (tapsTowardNext === 0 ? 0 : tapsTowardNext);
 
-  const totalCardsOwned = useMemo(
-    () =>
-      collection.common +
-      collection.uncommon +
-      collection.rare +
-      collection.epic +
-      collection.legendary +
-      collection.mythic +
-      collection.ultimate,
-    [collection]
-  );
-
-  function addCard(r: Rarity) {
-    setCollection((prev) => ({
-      ...prev,
-      [r]: (prev as any)[r] + 1,
-    }));
-  }
+  const totalCardsOwned = cards.length;
 
   function openCards(costCoupons: number, count: number) {
     if (couponsAvailable < costCoupons) return;
 
-    const pulled: { rarity: Rarity; serial: string }[] = [];
+    const pulled: CardInstance[] = [];
+    const now = Date.now();
 
     for (let i = 0; i < count; i++) {
       const r = rollRarity();
-      addCard(r);
-      pulled.push({ rarity: r, serial: nextSerial(r) });
+      const serial = nextSerial(r);
+      const card: CardInstance = {
+        id: `card_${now}_${i}_${Math.random().toString(36).slice(2, 8)}`,
+        rarity: r,
+        serial,
+        obtainedAt: now,
+      };
+      pulled.push(card);
     }
 
+    setCards((prev) => [...prev, ...pulled]);
     setCouponsSpent((prev) => prev + costCoupons);
     setLastPulled(pulled);
   }
@@ -274,9 +261,9 @@ function ChestTab(props: Props & {
               lastPulled.length > 1 ? "grid-cols-2" : "grid-cols-1"
             }`}
           >
-            {lastPulled.map((card, idx) => (
+            {lastPulled.map((card) => (
               <CardFrame
-                key={card.serial + idx}
+                key={card.id}
                 rarity={card.rarity}
                 imgSrc={ART[card.rarity]}
                 serial={card.serial}
@@ -290,29 +277,25 @@ function ChestTab(props: Props & {
   );
 }
 
-/* ------------ COLLECTION TAB ------------- */
-function CollectionTab({ collection }: { collection: CardCollection }) {
-  const rows = useMemo(
-    () =>
-      RARITY_ORDER.map((r) => ({
-        rarity: r,
-        label: RARITY_LABEL[r],
-        count: (collection as any)[r] as number,
-      })),
-    [collection]
-  );
+/* ------------ COLLECTION TAB (NFT-like) ------------- */
+function CollectionTab({ cards }: { cards: CardInstance[] }) {
+  const grouped = useMemo(() => {
+    const map: Record<Rarity, CardInstance[]> = {
+      common: [],
+      uncommon: [],
+      rare: [],
+      epic: [],
+      legendary: [],
+      mythic: [],
+      ultimate: [],
+    };
+    for (const c of cards) {
+      map[c.rarity].push(c);
+    }
+    return map;
+  }, [cards]);
 
-  const total = useMemo(
-    () =>
-      collection.common +
-      collection.uncommon +
-      collection.rare +
-      collection.epic +
-      collection.legendary +
-      collection.mythic +
-      collection.ultimate,
-    [collection]
-  );
+  const total = cards.length;
 
   if (total === 0) {
     return (
@@ -330,27 +313,32 @@ function CollectionTab({ collection }: { collection: CardCollection }) {
         <span className="font-semibold text-emerald-300">{total}</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {rows.map((row) => (
-          <div
-            key={row.rarity}
-            className="rounded-2xl border border-white/10 bg-white/5 p-3 flex flex-col gap-2"
-          >
-            <CardFrame
-              rarity={row.rarity}
-              imgSrc={ART[row.rarity]}
-              serial={`${row.label} • x${row.count}`}
-              className="w-full"
-            />
-            <div className="flex justify-between items-center text-xs text-slate-300">
-              <span>{row.label}</span>
+      {RARITY_ORDER.map((r) => {
+        const list = grouped[r];
+        if (!list.length) return null;
+
+        return (
+          <div key={r} className="space-y-2">
+            <div className="flex justify-between items-center text-xs text-slate-300 px-1">
+              <span>{RARITY_LABEL[r]}</span>
               <span className="font-mono text-emerald-300">
-                x{row.count}
+                x{list.length}
               </span>
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              {list.map((card) => (
+                <CardFrame
+                  key={card.id}
+                  rarity={card.rarity}
+                  imgSrc={ART[card.rarity]}
+                  serial={card.serial}
+                  className="w-full"
+                />
+              ))}
+            </div>
           </div>
-        ))}
-      </div>
+        );
+      })}
     </section>
   );
 }
@@ -358,9 +346,7 @@ function CollectionTab({ collection }: { collection: CardCollection }) {
 /* ------------ MAIN PAGE ------------- */
 export default function CardsPage(props: Props) {
   const [tab, setTab] = useState<"chest" | "collection">("chest");
-  const [lastPulled, setLastPulled] = useState<
-    { rarity: Rarity; serial: string }[]
-  >([]);
+  const [lastPulled, setLastPulled] = useState<CardInstance[]>([]);
 
   return (
     <div className="p-4 pb-24 space-y-4">
@@ -390,7 +376,7 @@ export default function CardsPage(props: Props) {
             setLastPulled={setLastPulled}
           />
         ) : (
-          <CollectionTab collection={props.collection} />
+          <CollectionTab cards={props.cards} />
         )}
       </div>
     </div>
