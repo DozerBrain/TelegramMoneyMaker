@@ -1,7 +1,6 @@
 // src/components/TopBar.tsx
-import React, { useMemo } from "react";
-import { loadSave } from "../lib/storage";
-import { getTelegramUser, tgDisplayName } from "../lib/telegram";
+import React from "react";
+import { formatMoneyShort } from "../lib/format";
 
 type Props = {
   taps: number;
@@ -9,85 +8,68 @@ type Props = {
   autoPerSec: number;
 };
 
+const RANK_TARGET = 1_000_000; // next milestone shown on the right
+
 export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
-  const s = loadSave();
-  // some builds used `totalEarnings`; otherwise use score
-  const totalEarnings = (s as any).totalEarnings ?? s.score ?? 0;
-
-  // Prefer Telegram identity (inside TG), fallback to initials
-  const tgUser = getTelegramUser();
-  const name = tgDisplayName(tgUser);
-  const initials = useMemo(() => {
-    const parts = name.trim().split(/\s+/).slice(0, 2);
-    return parts.map((p) => p[0]?.toUpperCase() || "").join("") || "P";
-  }, [name]);
-
-  // % toward next order of magnitude (1, 10, 100, 1k, 10k…)
-  const nextTarget = Math.max(1, Math.pow(10, Math.ceil(Math.log10(Math.max(1, totalEarnings)))));
-  const pct = Math.max(0, Math.min(100, Math.floor((totalEarnings / nextTarget) * 100)));
-
-  const openProfile = () => { location.hash = "#/profile"; };
-  const openLeaderboard = () => { location.hash = "#/leaderboard"; };
+  const rankPct = Math.max(
+    0,
+    Math.min(100, Math.floor((taps / RANK_TARGET) * 100))
+  );
 
   return (
-    <header className="w-full border-b border-white/10 bg-[#0b0f13] text-white">
-      <div className="px-3 py-2">
-        <h1 className="text-center text-lg font-extrabold tracking-wide">
-          <span className="bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-200 bg-clip-text text-transparent">
-            MoneyMaker
-          </span>{" "}
-          <span aria-hidden>💸</span>
-        </h1>
-      </div>
-
-      <div className="px-3 pb-2">
-        <div className="grid grid-cols-3 items-center gap-2">
-          {/* Left stats */}
-          <div className="text-[11px] leading-4 text-white/80">
-            <div>APS <span className="text-emerald-300 font-semibold">{autoPerSec}</span></div>
-            <div>Tap <span className="text-emerald-300 font-semibold">{tapValue}</span></div>
-            <div>Taps <span className="text-white/70">{taps.toLocaleString()}</span></div>
+    <header className="px-4 pt-2 pb-3 bg-[#05070a] border-b border-white/5">
+      <div className="flex items-center gap-3">
+        {/* Left: APS / Tap / Taps */}
+        <div className="flex flex-col text-[11px] text-zinc-300 leading-tight min-w-[80px]">
+          <div>
+            APS{" "}
+            <span className="text-emerald-400 font-semibold">
+              {formatMoneyShort(autoPerSec)}
+            </span>
           </div>
-
-          {/* Center avatar + name */}
-          <div className="flex items-center justify-center gap-2">
-            <button
-              onClick={openProfile}
-              className="relative w-11 h-11 rounded-full overflow-hidden ring-2 ring-emerald-500/50 shadow active:scale-95 transition"
-              title="Open Profile"
-            >
-              {tgUser?.photo_url ? (
-                <img
-                  src={tgUser.photo_url}
-                  alt="avatar"
-                  referrerPolicy="no-referrer"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full grid place-items-center bg-white/5 text-emerald-300 font-bold">
-                  {initials}
-                </div>
-              )}
-            </button>
-            <div className="max-w-[7.5rem] truncate text-sm opacity-90">{name}</div>
+          <div>
+            Tap{" "}
+            <span className="text-emerald-400 font-semibold">
+              {formatMoneyShort(tapValue)}
+            </span>
           </div>
+          <div className="truncate">
+            Taps{" "}
+            <span className="text-emerald-400 font-semibold">
+              {formatMoneyShort(taps)}
+            </span>
+          </div>
+        </div>
 
-          {/* Right rank/progress */}
-          <div className="flex flex-col items-end">
-            <button
-              onClick={openLeaderboard}
-              className="text-xs font-semibold text-emerald-300 hover:text-emerald-200"
-              title="Open Leaderboard"
-            >
-              Rank • {pct}%
-            </button>
-            <div className="w-28 h-2 bg-white/10 rounded-full overflow-hidden mt-1">
-              <div
-                className="h-full bg-emerald-500"
-                style={{ width: `${pct}%`, transition: "width .25s ease" }}
-              />
+        {/* Center: Game title + player */}
+        <div className="flex-1 flex flex-col items-center">
+          <div className="text-emerald-400 text-lg font-bold">
+            MoneyMaker 💸
+          </div>
+          <div className="mt-1 flex items-center gap-2 text-[11px] text-zinc-100">
+            <div className="h-7 w-7 rounded-full border border-emerald-500 flex items-center justify-center text-xs font-semibold">
+              P
             </div>
-            <div className="text-[10px] text-white/60 mt-1">Next: {nextTarget.toLocaleString()}</div>
+            <span>Player</span>
+          </div>
+        </div>
+
+        {/* Right: Rank bar */}
+        <div className="flex flex-col items-end text-[11px] text-zinc-300 min-w-[90px]">
+          <div className="flex items-center gap-1">
+            <span>Rank</span>
+            <span className="text-emerald-400 font-semibold">
+              • {rankPct}%
+            </span>
+          </div>
+          <div className="mt-1 w-20 h-2 rounded-full bg-zinc-800 overflow-hidden">
+            <div
+              className="h-full bg-emerald-500"
+              style={{ width: `${rankPct}%` }}
+            />
+          </div>
+          <div className="mt-1 text-[10px] text-zinc-500">
+            Next: {formatMoneyShort(RANK_TARGET)}
           </div>
         </div>
       </div>
