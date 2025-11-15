@@ -1,3 +1,4 @@
+// src/pages/Home.tsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import BanknoteButton from "../components/BanknoteButton";
 import { comboTap } from "../lib/combo";
@@ -20,19 +21,32 @@ type Props = {
   tapValue: number;
   multi: number;
 
-  // suit
+  // suit (for image only)
   currentSuitName: string;
   setCurrentSuitName: (v: string) => void;
+
+  // NEW: multipliers
+  suitMult: number;
+  petTapMult: number;
+  cardMultAll: number;
+  globalMult: number;
 };
 
 export default function Home({
-  balance, setBalance,
-  totalEarnings, setTotalEarnings,
-  taps, setTaps,
-  tapValue, multi,
+  balance,
+  setBalance,
+  totalEarnings,
+  setTotalEarnings,
+  taps,
+  setTaps,
+  tapValue,
+  multi,
   currentSuitName,
+  suitMult,
+  petTapMult,
+  cardMultAll,
+  globalMult,
 }: Props) {
-
   // ---------- Combo UI ----------
   const [combo, setCombo] = useState(0);
   const [best, setBest] = useState(0);
@@ -57,9 +71,16 @@ export default function Home({
     await submitScore(newScore, profile);
   }
 
-  // ---------- Tap handler ----------
+  // ---------- Tap handler with full multipliers ----------
   function onMainTap() {
-    const gain = Math.max(1, Math.floor(tapValue * multi));
+    const tapMultTotal =
+      suitMult * petTapMult * cardMultAll * globalMult;
+
+    const gain = Math.max(
+      1,
+      Math.floor(tapValue * multi * tapMultTotal)
+    );
+
     setTaps((t) => t + 1);
     setTotalEarnings((t) => t + gain);
     setBalance((b) => {
