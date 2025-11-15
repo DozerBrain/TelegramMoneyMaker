@@ -18,13 +18,15 @@ type Props = {
 
 const COOLDOWN_MS = 1000 * 60 * 60 * 8; // 8 hours
 
-// Small helper to set jackpot flags for pets
-function setJackpotFlag(key: "mm_jp_legendary" | "mm_jp_mythic" | "mm_jp_ultimate") {
+// --- Jackpot flag helpers (for pets unlock) ---
+function setJackpotFlag(
+  key: "mm_jp_legendary" | "mm_jp_mythic" | "mm_jp_ultimate"
+) {
   try {
     localStorage.setItem(key, "1");
     window.dispatchEvent(new Event("mm:save"));
   } catch {
-    // ignore (e.g. private mode)
+    // ignore (private mode etc.)
   }
 }
 
@@ -36,12 +38,109 @@ function fmtTime(ms: number) {
   return `${h}h ${m}m ${ss}s`;
 }
 
+// --- Reward types ---
+type RewardKind =
+  | "cash_small"
+  | "cash_big"
+  | "tap"
+  | "auto"
+  | "multi"
+  | "jackpot_legendary"
+  | "jackpot_mythic"
+  | "jackpot_ultimate";
+
+type RewardSlot = {
+  id: string;
+  label: string;
+  desc: string;
+  kind: RewardKind;
+  weight: number;
+};
+
+// 🎡 Slots around the wheel
+const REWARDS: RewardSlot[] = [
+  {
+    id: "cash_small",
+    label: "Cash Boost",
+    desc: "Small cash boost",
+    kind: "cash_small",
+    weight: 30,
+  },
+  {
+    id: "tap_up",
+    label: "+Tap",
+    desc: "Increase tap value",
+    kind: "tap",
+    weight: 20,
+  },
+  {
+    id: "auto_up",
+    label: "Auto/sec",
+    desc: "Increase auto income",
+    kind: "auto",
+    weight: 15,
+  },
+  {
+    id: "multi_up",
+    label: "Multi",
+    desc: "Increase global multiplier",
+    kind: "multi",
+    weight: 15,
+  },
+  {
+    id: "cash_big",
+    label: "Big Cash",
+    desc: "Big cash boost",
+    kind: "cash_big",
+    weight: 15,
+  },
+  {
+    id: "jp_legendary",
+    label: "LEGENDARY",
+    desc: "Legendary Jackpot",
+    kind: "jackpot_legendary",
+    weight: 3,
+  },
+  {
+    id: "jp_mythic",
+    label: "MYTHIC",
+    desc: "Mythic Jackpot",
+    kind: "jackpot_mythic",
+    weight: 1,
+  },
+  {
+    id: "jp_ultimate",
+    label: "ULTIMATE",
+    desc: "Ultimate Jackpot",
+    kind: "jackpot_ultimate",
+    weight: 1,
+  },
+];
+
+// Weighted random pick of index
+function pickRewardIndex(): number {
+  const total = REWARDS.reduce((sum, r) => sum + r.weight, 0);
+  let x = Math.random() * total;
+  for (let i = 0; i < REWARDS.length; i++) {
+    x -= REWARDS[i].weight;
+    if (x <= 0) return i;
+  }
+  return REWARDS.length - 1;
+}
+
 export default function Spin(p: Props) {
   const [lastResult, setLastResult] = useState<string | null>(null);
-  const [lastJackpot, setLastJackpot] = useState<"none" | "legendary" | "mythic" | "ultimate">("none");
+  const [lastJackpot, setLastJackpot] =
+    useState<"none" | "legendary" | "mythic" | "ultimate">("none");
+
+  const [isSpinning, setIsSpinning] = useState(false);
+  const [wheelRotation, setWheelRotation] = useState(0);
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
 
   const now = Date.now();
-  const remaining = p.spinCooldownEndsAt ? Math.max(0, p.spinCooldownEndsAt - now) : 0;
+  const remaining = p.spinCooldownEndsAt
+    ? Math.max(0, p.spinCooldownEndsAt - now)
+    : 0;
   const canSpin = remaining === 0;
 
   const cooldownLabel = useMemo(
@@ -49,70 +148,80 @@ export default function Spin(p: Props) {
     [canSpin, remaining]
   );
 
-  function spinOnce() {
-    if (!canSpin) return;
-
+  // Apply reward effects AFTER animation
+  function applyReward(idx: number) {
+    const r = REWARDS[idx];
     let msg = "";
     let jackpot: "none" | "legendary" | "mythic" | "ultimate" = "none";
 
-    const r = Math.random();
-
-    // 🎰 JACKPOT TIERS (very low chance)
-    // ~0.05% ultimate, ~0.2% mythic, ~1% legendary total ~1.25%
-    if (r < 0.0005) {
-      // ULTIMATE JACKPOT
-      jackpot = "ultimate";
-      setJackpotFlag("mm_jp_ultimate");
-
-      // Massive reward: big cash + big global multi boost
-      const cash = Math.max(5_000_000, Math.floor(p.balance * 0.25));
-      p.setBalance(p.balance + cash);
-      p.setMulti(parseFloat((p.multi * 2).toFixed(2)));
-
-      msg = `🐉 ULTIMATE JACKPOT! +${formatMoneyShort(cash)} & x2 global multi`;
-    } else if (r < 0.002) {
-      // MYTHIC JACKPOT
-      jackpot = "mythic";
-      setJackpotFlag("mm_jp_mythic");
-
-      const cash = Math.max(1_000_000, Math.floor(p.balance * 0.12));
-      p.setBalance(p.balance + cash);
-      p.setAutoPerSec(p.autoPerSec + 10);
-
-      msg = `🔥 MYTHIC JACKPOT! +${formatMoneyShort(cash)} & +10 auto/sec`;
-    } else if (r < 0.01) {
-      // LEGENDARY JACKPOT
-      jackpot = "legendary";
-      setJackpotFlag("mm_jp_legendary");
-
-      const cash = Math.max(200_000, Math.floor(p.balance * 0.06));
-      p.setBalance(p.balance + cash);
-      p.setTapValue(p.tapValue + 5);
-
-      msg = `💎 LEGENDARY JACKPOT! +${formatMoneyShort(cash)} & +5 tap value`;
-    } else {
-      // 💰 NORMAL REWARDS
-      // Re-balance probabilities inside the remaining 99%
-      const x = Math.random();
-
-      if (x < 0.45) {
-        // Cash: 2% of balance (min 5k)
+    switch (r.kind) {
+      case "cash_small": {
+        // ~2% of balance, min 5k
         const cash = Math.max(5_000, Math.floor(p.balance * 0.02));
         p.setBalance(p.balance + cash);
-        msg = `💵 Bonus cash +${formatMoneyShort(cash)}`;
-      } else if (x < 0.75) {
-        // Tap upgrade
-        p.setTapValue(p.tapValue + 1);
-        msg = "👆 Tap value +1";
-      } else if (x < 0.95) {
-        // Auto income
-        p.setAutoPerSec(p.autoPerSec + 2);
-        msg = "⚙️ Auto income +2 / sec";
-      } else {
-        // Global multiplier
+        msg = `💵 Cash boost +${formatMoneyShort(cash)}`;
+        break;
+      }
+      case "cash_big": {
+        // ~6% of balance, min 50k
+        const cash = Math.max(50_000, Math.floor(p.balance * 0.06));
+        p.setBalance(p.balance + cash);
+        msg = `💰 Big cash +${formatMoneyShort(cash)}`;
+        break;
+      }
+      case "tap": {
+        const newTap = p.tapValue + 1;
+        p.setTapValue(newTap);
+        msg = `👆 Tap value +1 (now ${newTap})`;
+        break;
+      }
+      case "auto": {
+        const newAuto = p.autoPerSec + 2;
+        p.setAutoPerSec(newAuto);
+        msg = `⚙️ Auto income +2/sec (now ${newAuto})`;
+        break;
+      }
+      case "multi": {
         const newMulti = parseFloat((p.multi * 1.2).toFixed(2));
         p.setMulti(newMulti);
-        msg = `✨ Global multiplier x${newMulti.toFixed(2)}`;
+        msg = `✨ Global multi x${newMulti.toFixed(2)}`;
+        break;
+      }
+      case "jackpot_legendary": {
+        jackpot = "legendary";
+        setJackpotFlag("mm_jp_legendary");
+        const cash = Math.max(200_000, Math.floor(p.balance * 0.06));
+        p.setBalance(p.balance + cash);
+        const newTap = p.tapValue + 5;
+        p.setTapValue(newTap);
+        msg = `💎 LEGENDARY JACKPOT! +${formatMoneyShort(
+          cash
+        )} & Tap +5 (now ${newTap})`;
+        break;
+      }
+      case "jackpot_mythic": {
+        jackpot = "mythic";
+        setJackpotFlag("mm_jp_mythic");
+        const cash = Math.max(1_000_000, Math.floor(p.balance * 0.12));
+        p.setBalance(p.balance + cash);
+        const newAuto = p.autoPerSec + 10;
+        p.setAutoPerSec(newAuto);
+        msg = `🔥 MYTHIC JACKPOT! +${formatMoneyShort(
+          cash
+        )} & Auto +10/sec (now ${newAuto})`;
+        break;
+      }
+      case "jackpot_ultimate": {
+        jackpot = "ultimate";
+        setJackpotFlag("mm_jp_ultimate");
+        const cash = Math.max(5_000_000, Math.floor(p.balance * 0.25));
+        p.setBalance(p.balance + cash);
+        const newMulti = parseFloat((p.multi * 2).toFixed(2));
+        p.setMulti(newMulti);
+        msg = `🐉 ULTIMATE JACKPOT! +${formatMoneyShort(
+          cash
+        )} & Global multi x${newMulti.toFixed(2)}`;
+        break;
       }
     }
 
@@ -121,18 +230,44 @@ export default function Spin(p: Props) {
     setLastJackpot(jackpot);
   }
 
+  function spinOnce() {
+    if (!canSpin || isSpinning) return;
+
+    const idx = pickRewardIndex();
+    setPendingIndex(idx);
+
+    const anglePer = 360 / REWARDS.length;
+    // we want the chosen index to land at the top (pointer position 0deg)
+    const targetSegmentAngle = idx * anglePer + anglePer / 2;
+    const baseRot = wheelRotation % 360;
+    const extraSpins = 4; // number of full spins
+    const targetRotation =
+      baseRot + extraSpins * 360 + (360 - targetSegmentAngle);
+
+    setIsSpinning(true);
+    setWheelRotation(targetRotation);
+
+    // Wait for CSS transition (~2s) then apply reward
+    setTimeout(() => {
+      setIsSpinning(false);
+      if (pendingIndex !== null) {
+        applyReward(pendingIndex);
+      } else {
+        applyReward(idx);
+      }
+      setPendingIndex(null);
+    }, 2100);
+  }
+
   return (
     <div className="max-w-xl mx-auto p-4 flex flex-col gap-4">
       <Card
         title="Daily Spin"
-        right={
-          <div className="badge">
-            Balance: {formatMoneyShort(p.balance)}
-          </div>
-        }
+        right={<div className="badge">Balance: {formatMoneyShort(p.balance)}</div>}
       >
         <p className="opacity-80 mb-2 text-sm">
-          Spin every <b>8 hours</b> for powerful boosts and rare jackpots.
+          Spin every <b>8 hours</b> for boosts and rare jackpots. Legendary,
+          Mythic and Ultimate jackpots help unlock special pets.
         </p>
 
         <div className="flex items-center justify-between text-xs mb-3 text-gray-400">
@@ -140,13 +275,70 @@ export default function Spin(p: Props) {
           <span>Cooldown: {cooldownLabel}</span>
         </div>
 
-        <button
-          onClick={spinOnce}
-          className="btn-primary w-full text-lg"
-          disabled={!canSpin}
-        >
-          {canSpin ? "Spin the Wheel 🎡" : `Cooldown: ${cooldownLabel}`}
-        </button>
+        {/* WHEEL + POINTER */}
+        <div className="flex flex-col items-center gap-4 mt-2">
+          {/* Pointer */}
+          <div className="relative mb-1">
+            <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-l-transparent border-r-transparent border-b-emerald-400 drop-shadow" />
+          </div>
+
+          {/* Wheel */}
+          <div className="relative w-64 h-64 rounded-full border border-white/15 bg-slate-950/80 shadow-[0_0_40px_rgba(16,185,129,0.35)] overflow-hidden">
+            <div
+              className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-900/40 via-slate-900 to-black flex items-center justify-center transition-transform duration-[2000ms] ease-out"
+              style={{ transform: `rotate(${wheelRotation}deg)` }}
+            >
+              {/* Segments as labels around circle */}
+              {REWARDS.map((r, index) => {
+                const anglePer = 360 / REWARDS.length;
+                const angle = index * anglePer;
+                const isJackpot =
+                  r.kind === "jackpot_legendary" ||
+                  r.kind === "jackpot_mythic" ||
+                  r.kind === "jackpot_ultimate";
+
+                return (
+                  <div
+                    key={r.id}
+                    className="absolute left-1/2 top-1/2 origin-bottom"
+                    style={{
+                      transform: `rotate(${angle}deg) translateX(-50%) translateY(-90%)`,
+                    }}
+                  >
+                    <div
+                      className={`text-[10px] px-2 py-1 rounded-full border ${
+                        isJackpot
+                          ? "border-amber-400 bg-amber-500/20 text-amber-200 font-semibold"
+                          : "border-white/10 bg-black/40 text-slate-100"
+                      }`}
+                      style={{
+                        transform: "rotate(-90deg)", // keep label readable
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {r.label}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Spin button */}
+          <button
+            onClick={spinOnce}
+            className={`btn-primary w-full text-lg ${
+              (!canSpin || isSpinning) && "opacity-60 cursor-not-allowed"
+            }`}
+            disabled={!canSpin || isSpinning}
+          >
+            {canSpin
+              ? isSpinning
+                ? "Spinning..."
+                : "Spin the Wheel 🎡"
+              : `Cooldown: ${cooldownLabel}`}
+          </button>
+        </div>
 
         {/* Last result */}
         <div className="mt-4 rounded-xl bg-black/40 border border-white/10 p-3 text-sm">
@@ -168,13 +360,13 @@ export default function Spin(p: Props) {
 
         {/* Info list */}
         <ul className="list-disc pl-6 mt-4 text-sm opacity-80 space-y-1">
-          <li>💵 Scaled cash rewards based on your balance</li>
-          <li>👆 Permanent tap upgrades</li>
-          <li>⚙️ Auto income boosts</li>
-          <li>✨ Global multiplier boosts</li>
-          <li>💎 Legendary / 🔥 Mythic / 🐉 Ultimate jackpots for rare pets</li>
+          <li>💵 Cash rewards scale with your balance.</li>
+          <li>👆 Tap upgrades are permanent.</li>
+          <li>⚙️ Auto/sec boosts passive income.</li>
+          <li>✨ Multiplier boosts ALL income.</li>
+          <li>💎 Legendary / 🔥 Mythic / 🐉 Ultimate jackpots unlock rare pets.</li>
         </ul>
       </Card>
     </div>
   );
-    }
+}
