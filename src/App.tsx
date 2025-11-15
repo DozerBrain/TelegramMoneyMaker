@@ -93,6 +93,10 @@ export default function App() {
   const [couponBoostLevel, setCouponBoostLevel] = useState<number>(
     initial.couponBoostLevel ?? 0
   );
+  // Bulk open discount: each level reduces 10-card chest cost by 1 (min 5)
+  const [bulkDiscountLevel, setBulkDiscountLevel] = useState<number>(
+    initial.bulkDiscountLevel ?? 0
+  );
 
   // Suits / pets
   const [equippedSuitId, setEquippedSuitId] = useState<string | null>(
@@ -246,6 +250,7 @@ export default function App() {
       critMult,
       autoBonusMult,
       couponBoostLevel,
+      bulkDiscountLevel,
 
       // Suits / pets
       bestSuitName,
@@ -276,6 +281,7 @@ export default function App() {
     critMult,
     autoBonusMult,
     couponBoostLevel,
+    bulkDiscountLevel,
     bestSuitName,
     equippedSuitId,
     equippedPetId,
@@ -401,6 +407,8 @@ export default function App() {
             setAutoBonusMult={setAutoBonusMult}
             couponBoostLevel={couponBoostLevel}
             setCouponBoostLevel={setCouponBoostLevel}
+            bulkDiscountLevel={bulkDiscountLevel}
+            setBulkDiscountLevel={setBulkDiscountLevel}
           />
         )}
 
@@ -433,6 +441,7 @@ export default function App() {
             couponsSpent={couponsSpent}
             setCouponsSpent={setCouponsSpent}
             tapsPerCoupon={TAPS_PER_COUPON}
+            bulkDiscountLevel={bulkDiscountLevel}
           />
         )}
 
