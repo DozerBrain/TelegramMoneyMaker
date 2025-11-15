@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from "react";
 import Card from "../components/Card";
 import { formatMoneyShort } from "../lib/format";
+import { PETS } from "../data/pets";
 
 type Props = {
   balance: number;
@@ -55,6 +56,7 @@ type RewardSlot = {
   desc: string;
   kind: RewardKind;
   weight: number;
+  petId?: string; // for jackpot slices, to show a tiny pet icon
 };
 
 const REWARDS: RewardSlot[] = [
@@ -95,26 +97,39 @@ const REWARDS: RewardSlot[] = [
   },
   {
     id: "jp_legendary",
-    label: "LEGENDARY",
+    label: "Legendary",
     desc: "Legendary Jackpot",
     kind: "jackpot_legendary",
     weight: 3,
+    petId: "unicorn", // Unicorn Pegasus
   },
   {
     id: "jp_mythic",
-    label: "MYTHIC",
+    label: "Mythic",
     desc: "Mythic Jackpot",
     kind: "jackpot_mythic",
     weight: 1,
+    petId: "goblin", // Fourarms Goblin
   },
   {
     id: "jp_ultimate",
-    label: "ULTIMATE",
+    label: "Ultimate",
     desc: "Ultimate Jackpot",
     kind: "jackpot_ultimate",
     weight: 1,
+    petId: "dragon", // Crypto Dragon
   },
 ];
+
+// map jackpot kind → pet image (if found)
+const petIconByKind: Partial<Record<RewardKind, string>> = (() => {
+  const byId = (id: string) => PETS.find((p) => p.id === id)?.img;
+  return {
+    jackpot_legendary: byId("unicorn") || "",
+    jackpot_mythic: byId("goblin") || "",
+    jackpot_ultimate: byId("dragon") || "",
+  };
+})();
 
 function pickRewardIndex(): number {
   const total = REWARDS.reduce((sum, r) => sum + r.weight, 0);
@@ -234,7 +249,7 @@ export default function Spin(p: Props) {
     const segments = REWARDS.length;
     const anglePer = 360 / segments;
 
-    // which angle should land at the pointer (top)
+    // angle of the chosen segment center
     const targetSegmentAngle = idx * anglePer + anglePer / 2;
 
     const baseRot = wheelRotation % 360;
@@ -247,11 +262,8 @@ export default function Spin(p: Props) {
 
     setTimeout(() => {
       setIsSpinning(false);
-      if (pendingIndex !== null) {
-        applyReward(pendingIndex);
-      } else {
-        applyReward(idx);
-      }
+      const finalIdx = pendingIndex ?? idx;
+      applyReward(finalIdx);
       setPendingIndex(null);
     }, 2100);
   }
@@ -300,26 +312,40 @@ export default function Spin(p: Props) {
                   r.kind === "jackpot_mythic" ||
                   r.kind === "jackpot_ultimate";
 
+                const icon =
+                  isJackpot && petIconByKind[r.kind]
+                    ? petIconByKind[r.kind]
+                    : null;
+
                 return (
                   <div
                     key={r.id}
                     className="absolute left-1/2 top-1/2"
                     style={{
-                      transform: `rotate(${angle}deg) translateY(-42%)`,
+                      // 1) center this element, 2) rotate, 3) push outward
+                      transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0, -42%)`,
                       transformOrigin: "50% 50%",
                     }}
                   >
                     <div
-                      className={`text-[9px] px-2 py-1 rounded-full border whitespace-nowrap ${
+                      className={`flex items-center gap-1 text-[9px] px-2 py-1 rounded-full border whitespace-nowrap ${
                         isJackpot
                           ? "border-amber-400 bg-amber-500/20 text-amber-200 font-semibold"
                           : "border-white/10 bg-black/50 text-slate-100"
                       }`}
                       style={{
+                        // keep pill upright
                         transform: `rotate(${-angle}deg)`,
                       }}
                     >
-                      {r.label}
+                      {icon && (
+                        <img
+                          src={icon}
+                          alt={r.label}
+                          className="w-4 h-4 rounded-full object-contain"
+                        />
+                      )}
+                      <span>{r.label.toUpperCase()}</span>
                     </div>
                   </div>
                 );
