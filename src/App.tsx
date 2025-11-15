@@ -22,123 +22,29 @@ import { useInterval } from "./lib/useInterval";
 import { achievements } from "./data/achievements";
 import { initTelegramUI } from "./lib/telegram";
 
-import { PETS } from "./data/pets";
+// Data
 import { suits } from "./data/suits";
 import { getEquippedPet, getEquippedSuit } from "./lib/storage";
+
+// Income math
+import {
+  computeCardMultAll,
+  computeSuitMult,
+  computePetMultipliers,
+  TAPS_PER_COUPON,
+} from "./incomeMath";
 
 // Types
 import type { Tab } from "./types";
 import type { Rarity as CardRarity } from "./components/CardFrame";
 
-/** One NFT-like card instance */
+/** One NFT-like card instance stored in save */
 export type CardInstance = {
-  id: string;        // unique per card
-  rarity: CardRarity;
-  serial: string;    // "#LG-0001 | MNYMKR v1.0"
-  obtainedAt: number;
+  id: string;           // unique id
+  rarity: CardRarity;   // "common" | "uncommon" | ...
+  serial: string;       // "#UL-0003 | MNYMKR v1.0"
+  obtainedAt: number;   // timestamp
 };
-
-// Card bonus from owned cards
-function computeCardMultAll(cards: CardInstance[]): number {
-  let common = 0,
-    uncommon = 0,
-    rare = 0,
-    epic = 0,
-    legendary = 0,
-    mythic = 0,
-    ultimate = 0;
-
-  for (const c of cards) {
-    switch (c.rarity) {
-      case "common":
-        common++;
-        break;
-      case "uncommon":
-        uncommon++;
-        break;
-      case "rare":
-        rare++;
-        break;
-      case "epic":
-        epic++;
-        break;
-      case "legendary":
-        legendary++;
-        break;
-      case "mythic":
-        mythic++;
-        break;
-      case "ultimate":
-        ultimate++;
-        break;
-    }
-  }
-
-  const bonusPercent =
-    0.5 * common +
-    1.0 * uncommon +
-    2.0 * rare +
-    4.0 * epic +
-    7.0 * legendary +
-    10.0 * mythic +
-    15.0 * ultimate;
-
-  return 1 + bonusPercent / 100;
-}
-
-// Suit multiplier
-function computeSuitMult(equippedSuitId: string | null): number {
-  if (!equippedSuitId) return 1;
-  const suit = suits.find((s) => s.id === equippedSuitId);
-  return suit?.bonus ?? 1;
-}
-
-// Pet multipliers
-function computePetMultipliers(equippedPetId: string | null) {
-  // Defaults (no pet)
-  let petTapMult = 1;
-  let petAutoMult = 1;
-  let globalMult = 1;
-
-  if (!equippedPetId) {
-    return { petTapMult, petAutoMult, globalMult };
-  }
-
-  const pet = PETS.find((p) => p.id === equippedPetId);
-  if (!pet) {
-    return { petTapMult, petAutoMult, globalMult };
-  }
-
-  switch (pet.id) {
-    case "mouse":
-      petTapMult = 1.02;
-      break;
-    case "cat":
-      petTapMult = 1.05;
-      break;
-    case "dog":
-      petTapMult = 1.1;
-      break;
-    case "eagle":
-      petTapMult = 1.05;
-      break;
-    case "unicorn":
-      petAutoMult = 1.3;
-      break;
-    case "goblin":
-      petTapMult = 1.5;
-      petAutoMult = 1.1;
-      break;
-    case "dragon":
-      globalMult = 2.0; // +100% all income
-      break;
-  }
-
-  return { petTapMult, petAutoMult, globalMult };
-}
-
-// 1 coupon per 100 taps
-const TAPS_PER_COUPON = 100;
 
 export default function App() {
   // Load last save once (normalize with fallbacks)
@@ -192,7 +98,7 @@ export default function App() {
     { done: boolean; claimed: boolean }
   >);
 
-  // NEW: NFT-like cards + coupons
+  // NFT-like cards + coupons
   const [cards, setCards] = useState<CardInstance[]>(
     (Array.isArray(s.cards) ? s.cards : []) as CardInstance[]
   );
@@ -208,13 +114,16 @@ export default function App() {
     initTelegramUI();
   }, []);
 
-  // Sync equipped pet/suit with storage when "mm:save" (Pets/Suits UI) fires
+  // Sync equipped pet/suit with storage when Pets/Suits UI saves
   useEffect(() => {
     const syncEquip = () => {
       try {
         const pet = getEquippedPet();
         const suitId = getEquippedSuit();
-        if (pet !== undefined) setEquippedPetId(pet ?? null);
+
+        if (pet !== undefined) {
+          setEquippedPetId(pet ?? null);
+        }
         if (suitId !== undefined) {
           setEquippedSuitId(suitId ?? null);
           const suit = suits.find((su) => su.id === (suitId ?? "starter"));
@@ -224,17 +133,21 @@ export default function App() {
         // ignore
       }
     };
+
     window.addEventListener("mm:save", syncEquip as any);
     window.addEventListener("storage", syncEquip as any);
-    // initial sync once
+
+    // initial sync
     syncEquip();
+
     return () => {
       window.removeEventListener("mm:save", syncEquip as any);
       window.removeEventListener("storage", syncEquip as any);
     };
   }, []);
 
-  // Derived multipliers
+  /* ---------- DERIVED MULTIPLIERS ---------- */
+
   const suitMult = useMemo(
     () => computeSuitMult(equippedSuitId ?? "starter"),
     [equippedSuitId]
@@ -250,14 +163,15 @@ export default function App() {
     [cards]
   );
 
-  // Coupons based on taps & spent
+  // Coupons from taps
   const couponsEarned = useMemo(
     () => Math.floor(taps / TAPS_PER_COUPON),
     [taps]
   );
   const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
 
-  // Passive income tick (autoPerSec each second with multipliers)
+  /* ---------- PASSIVE INCOME (AUTO) WITH FULL MATH ---------- */
+
   useInterval(() => {
     if (autoPerSec > 0) {
       const gain = Math.max(
@@ -278,7 +192,8 @@ export default function App() {
     }
   }, 1000);
 
-  // Re-check achievements when key stats change
+  /* ---------- ACHIEVEMENTS ---------- */
+
   useEffect(() => {
     const ctx = { taps, balance, totalEarnings, bestSuitName };
     setAchState((prev) => {
@@ -292,7 +207,8 @@ export default function App() {
     });
   }, [taps, balance, totalEarnings, bestSuitName]);
 
-  // Persist save whenever important things change
+  /* ---------- SAVE GAME ---------- */
+
   useEffect(() => {
     // derive collection counts from cards for backwards compatibility
     let common = 0,
@@ -302,6 +218,7 @@ export default function App() {
       legendary = 0,
       mythic = 0,
       ultimate = 0;
+
     for (const c of cards) {
       switch (c.rarity) {
         case "common":
@@ -387,6 +304,8 @@ export default function App() {
     s.quests,
   ]);
 
+  /* ---------- NAVIGATION ---------- */
+
   // Hash navigation (TopBar sets #/profile or #/leaderboard)
   useEffect(() => {
     const applyHash = () => {
@@ -410,7 +329,8 @@ export default function App() {
     return () => window.removeEventListener("MM_GOTO", onGoto as EventListener);
   }, []);
 
-  // Export / Import / Reset
+  /* ---------- SAVE EXPORT / IMPORT / RESET ---------- */
+
   function doExport() {
     try {
       const snapshot = loadSave();
@@ -457,6 +377,8 @@ export default function App() {
     });
     setBalance((b) => b + reward);
   }
+
+  /* ---------- RENDER ---------- */
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0f13]">
