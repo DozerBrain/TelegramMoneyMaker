@@ -7,15 +7,20 @@ import CardCollection from "../components/cards/CardCollection";
 type Props = {
   taps: number;
   cards: CardInstance[];
-  setCards: (v: CardInstance[] | ((prev: CardInstance[]) => CardInstance[])) => void;
+  setCards: (
+    v: CardInstance[] | ((prev: CardInstance[]) => CardInstance[])
+  ) => void;
   couponsAvailable: number;
   couponsSpent: number;
   setCouponsSpent: (v: number | ((p: number) => number)) => void;
   tapsPerCoupon: number;
+  bulkDiscountLevel: number;
 };
 
 function TabButton(
-  props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }
+  props: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+    active?: boolean;
+  }
 ) {
   const { active, className = "", ...rest } = props;
   return (
@@ -37,9 +42,7 @@ export default function CardsPage(props: Props) {
 
   return (
     <div className="p-4 pb-24 space-y-4">
-      <h2 className="text-2xl font-semibold text-emerald-400">
-        Cards
-      </h2>
+      <h2 className="text-2xl font-semibold text-emerald-400">Cards</h2>
 
       {/* Tabs */}
       <div className="mt-3 flex gap-2">
