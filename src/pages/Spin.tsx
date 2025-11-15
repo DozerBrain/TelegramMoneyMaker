@@ -18,7 +18,7 @@ type Props = {
 
 const COOLDOWN_MS = 1000 * 60 * 60 * 8; // 8 hours
 
-// --- Jackpot flag helpers (for pets unlock) ---
+// ---- Jackpot flags (for pets) ----
 function setJackpotFlag(
   key: "mm_jp_legendary" | "mm_jp_mythic" | "mm_jp_ultimate"
 ) {
@@ -26,7 +26,7 @@ function setJackpotFlag(
     localStorage.setItem(key, "1");
     window.dispatchEvent(new Event("mm:save"));
   } catch {
-    // ignore (private mode etc.)
+    // ignore
   }
 }
 
@@ -38,7 +38,7 @@ function fmtTime(ms: number) {
   return `${h}h ${m}m ${ss}s`;
 }
 
-// --- Reward types ---
+// ---- Reward types ----
 type RewardKind =
   | "cash_small"
   | "cash_big"
@@ -57,7 +57,6 @@ type RewardSlot = {
   weight: number;
 };
 
-// 🎡 Slots around the wheel
 const REWARDS: RewardSlot[] = [
   {
     id: "cash_small",
@@ -117,7 +116,6 @@ const REWARDS: RewardSlot[] = [
   },
 ];
 
-// Weighted random pick of index
 function pickRewardIndex(): number {
   const total = REWARDS.reduce((sum, r) => sum + r.weight, 0);
   let x = Math.random() * total;
@@ -148,7 +146,6 @@ export default function Spin(p: Props) {
     [canSpin, remaining]
   );
 
-  // Apply reward effects AFTER animation
   function applyReward(idx: number) {
     const r = REWARDS[idx];
     let msg = "";
@@ -156,14 +153,12 @@ export default function Spin(p: Props) {
 
     switch (r.kind) {
       case "cash_small": {
-        // ~2% of balance, min 5k
         const cash = Math.max(5_000, Math.floor(p.balance * 0.02));
         p.setBalance(p.balance + cash);
         msg = `💵 Cash boost +${formatMoneyShort(cash)}`;
         break;
       }
       case "cash_big": {
-        // ~6% of balance, min 50k
         const cash = Math.max(50_000, Math.floor(p.balance * 0.06));
         p.setBalance(p.balance + cash);
         msg = `💰 Big cash +${formatMoneyShort(cash)}`;
@@ -236,18 +231,20 @@ export default function Spin(p: Props) {
     const idx = pickRewardIndex();
     setPendingIndex(idx);
 
-    const anglePer = 360 / REWARDS.length;
-    // we want the chosen index to land at the top (pointer position 0deg)
+    const segments = REWARDS.length;
+    const anglePer = 360 / segments;
+
+    // which angle should land at the pointer (top)
     const targetSegmentAngle = idx * anglePer + anglePer / 2;
+
     const baseRot = wheelRotation % 360;
-    const extraSpins = 4; // number of full spins
+    const extraSpins = 4;
     const targetRotation =
       baseRot + extraSpins * 360 + (360 - targetSegmentAngle);
 
     setIsSpinning(true);
     setWheelRotation(targetRotation);
 
-    // Wait for CSS transition (~2s) then apply reward
     setTimeout(() => {
       setIsSpinning(false);
       if (pendingIndex !== null) {
@@ -275,22 +272,28 @@ export default function Spin(p: Props) {
           <span>Cooldown: {cooldownLabel}</span>
         </div>
 
-        {/* WHEEL + POINTER */}
-        <div className="flex flex-col items-center gap-4 mt-2">
-          {/* Pointer */}
-          <div className="relative mb-1">
-            <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-l-transparent border-r-transparent border-b-emerald-400 drop-shadow" />
-          </div>
+        {/* POINTER */}
+        <div className="flex justify-center mb-1">
+          <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-l-transparent border-r-transparent border-b-emerald-400 drop-shadow" />
+        </div>
 
-          {/* Wheel */}
-          <div className="relative w-64 h-64 rounded-full border border-white/15 bg-slate-950/80 shadow-[0_0_40px_rgba(16,185,129,0.35)] overflow-hidden">
+        {/* WHEEL */}
+        <div className="flex flex-col items-center gap-4 mt-1">
+          <div className="relative w-64 h-64 sm:w-72 sm:h-72">
+            {/* Outer glow */}
+            <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_0%,rgba(16,185,129,0.35),transparent_55%)]" />
+            {/* Main wheel that spins */}
             <div
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-900/40 via-slate-900 to-black flex items-center justify-center transition-transform duration-[2000ms] ease-out"
+              className="absolute inset-[10%] rounded-full bg-slate-950/90 border border-emerald-500/30 shadow-[0_0_40px_rgba(16,185,129,0.35)] overflow-hidden transition-transform duration-[2000ms] ease-out"
               style={{ transform: `rotate(${wheelRotation}deg)` }}
             >
-              {/* Segments as labels around circle */}
+              {/* center circle */}
+              <div className="absolute inset-[35%] rounded-full bg-black/70 border border-white/10" />
+
+              {/* Segments labels around rim */}
               {REWARDS.map((r, index) => {
-                const anglePer = 360 / REWARDS.length;
+                const segments = REWARDS.length;
+                const anglePer = 360 / segments;
                 const angle = index * anglePer;
                 const isJackpot =
                   r.kind === "jackpot_legendary" ||
@@ -300,20 +303,20 @@ export default function Spin(p: Props) {
                 return (
                   <div
                     key={r.id}
-                    className="absolute left-1/2 top-1/2 origin-bottom"
+                    className="absolute left-1/2 top-1/2"
                     style={{
-                      transform: `rotate(${angle}deg) translateX(-50%) translateY(-90%)`,
+                      transform: `rotate(${angle}deg) translateY(-42%)`,
+                      transformOrigin: "50% 50%",
                     }}
                   >
                     <div
-                      className={`text-[10px] px-2 py-1 rounded-full border ${
+                      className={`text-[9px] px-2 py-1 rounded-full border whitespace-nowrap ${
                         isJackpot
                           ? "border-amber-400 bg-amber-500/20 text-amber-200 font-semibold"
-                          : "border-white/10 bg-black/40 text-slate-100"
+                          : "border-white/10 bg-black/50 text-slate-100"
                       }`}
                       style={{
-                        transform: "rotate(-90deg)", // keep label readable
-                        whiteSpace: "nowrap",
+                        transform: `rotate(${-angle}deg)`,
                       }}
                     >
                       {r.label}
@@ -324,7 +327,7 @@ export default function Spin(p: Props) {
             </div>
           </div>
 
-          {/* Spin button */}
+          {/* Button */}
           <button
             onClick={spinOnce}
             className={`btn-primary w-full text-lg ${
@@ -340,7 +343,7 @@ export default function Spin(p: Props) {
           </button>
         </div>
 
-        {/* Last result */}
+        {/* Last result box */}
         <div className="mt-4 rounded-xl bg-black/40 border border-white/10 p-3 text-sm">
           <div className="text-xs text-gray-400 mb-1">Last result</div>
           <div className="text-[13px] text-white min-h-[1.2em]">
