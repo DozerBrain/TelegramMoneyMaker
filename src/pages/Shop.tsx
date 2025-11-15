@@ -1,53 +1,170 @@
-import Card from "../components/Card";
-import { fmt } from "../lib/format";
+// src/pages/Shop.tsx
+import React from "react";
 
 type Props = {
-  balance:number; setBalance:(n:number)=>void;
-  tapValue:number; setTapValue:(n:number)=>void;
-  autoPerSec:number; setAutoPerSec:(n:number)=>void;
-  multi:number; setMulti:(n:number)=>void;
+  balance: number;
+  setBalance: (v: number | ((p: number) => number)) => void;
+
+  tapValue: number;
+  setTapValue: (v: number | ((p: number) => number)) => void;
+
+  autoPerSec: number;
+  setAutoPerSec: (v: number | ((p: number) => number)) => void;
+
+  multi: number;
+  setMulti: (v: number | ((p: number) => number)) => void;
 };
 
-export default function Shop(p:Props){
-  const items = [
-    { id:"tap+1",  name:"+1 per tap",     desc:"Increase tap value by 1",   price: 100,     onBuy:()=>p.setTapValue(p.tapValue+1)},
-    { id:"tap+5",  name:"+5 per tap",     desc:"Increase tap value by 5",   price: 1_000,   onBuy:()=>p.setTapValue(p.tapValue+5)},
-    { id:"auto+1", name:"+1 auto / sec",  desc:"Earn passively each second",price: 5_000,   onBuy:()=>p.setAutoPerSec(p.autoPerSec+1)},
-    { id:"x1.5",   name:"x1.5 multiplier",desc:"Multiply all earnings",     price: 25_000,  onBuy:()=>p.setMulti(parseFloat((p.multi*1.5).toFixed(2)))},
-    { id:"x2",     name:"x2 multiplier",  desc:"Big boost to all earnings", price: 250_000, onBuy:()=>p.setMulti(parseFloat((p.multi*2).toFixed(2)))},
+// ---------- Money formatter (K / M / B / T / Q) ----------
+function formatMoneyShort(value: number): string {
+  if (!Number.isFinite(value)) return "∞";
+
+  const abs = Math.abs(value);
+  const sign = value < 0 ? "-" : "";
+
+  const UNITS: { v: number; s: string }[] = [
+    { v: 1e15, s: "Q" }, // Quadrillion
+    { v: 1e12, s: "T" }, // Trillion
+    { v: 1e9, s: "B" },  // Billion
+    { v: 1e6, s: "M" },  // Million
+    { v: 1e3, s: "K" },  // Thousand
   ];
 
-  function tryBuy(price:number, onBuy:()=>void){
-    if (p.balance < price) return;
-    p.setBalance(p.balance - price);
-    onBuy();
+  for (const u of UNITS) {
+    if (abs >= u.v) {
+      const num = abs / u.v;
+      let str = num.toFixed(2);
+      // remove trailing .00 / .0
+      if (str.endsWith("00")) str = str.slice(0, -3);
+      else if (str.endsWith("0")) str = str.slice(0, -1);
+      return `${sign}${str}${u.s}`;
+    }
   }
 
-  return (
-    <div className="max-w-xl mx-auto p-4 flex flex-col gap-4">
-      <Card title="Upgrades" right={<div className="badge">Balance: ${fmt(p.balance)}</div>}>
-        <div className="grid grid-cols-1 gap-3">
-          {items.map(it=>(
-            <div key={it.id} className="flex items-center justify-between bg-white/5 rounded-xl p-3">
-              <div>
-                <div className="font-semibold">{it.name}</div>
-                <div className="text-sm opacity-70">{it.desc}</div>
-              </div>
-              <button
-                className="btn-ghost"
-                onClick={()=>tryBuy(it.price, it.onBuy)}
-                disabled={p.balance < it.price}
-              >
-                ${fmt(it.price)}
-              </button>
-            </div>
-          ))}
-        </div>
-      </Card>
+  // < 1000 -> show full, with commas
+  return `${sign}${Math.floor(abs).toLocaleString()}`;
+}
 
-      <Card title="Tips">
-        <p className="opacity-90 text-sm">Stack multipliers and auto income, then tap to rocket into the Millionaire and Crypto King suits.</p>
-      </Card>
+// ---------- Upgrade card component ----------
+type UpgradeProps = {
+  title: string;
+  description: string;
+  price: number;
+  disabled?: boolean;
+  onBuy: () => void;
+};
+
+function UpgradeCard({ title, description, price, disabled, onBuy }: UpgradeProps) {
+  const canAfford = !disabled;
+
+  return (
+    <div className="rounded-3xl bg-zinc-900/80 px-4 py-3 flex items-center justify-between mb-3">
+      <div className="flex flex-col">
+        <span className="text-white font-semibold text-base">{title}</span>
+        <span className="text-xs text-zinc-400 mt-0.5">{description}</span>
+      </div>
+      <button
+        onClick={onBuy}
+        disabled={!canAfford}
+        className={
+          "px-3 py-2 rounded-2xl text-sm font-semibold min-w-[90px] text-center " +
+          (canAfford
+            ? "bg-emerald-500 text-emerald-950 active:scale-[0.97] transition"
+            : "bg-zinc-700/70 text-zinc-400 cursor-not-allowed")
+        }
+      >
+        ${formatMoneyShort(price)}
+      </button>
+    </div>
+  );
+}
+
+// ---------- Page ----------
+export default function Shop({
+  balance,
+  setBalance,
+  tapValue,
+  setTapValue,
+  autoPerSec,
+  setAutoPerSec,
+  multi,
+  setMulti,
+}: Props) {
+  // base prices (same as before)
+  const priceTap1 = 100;
+  const priceTap5 = 1_000;
+  const priceAuto1 = 5_000;
+  const priceMult15 = 25_000;
+  const priceMult2 = 250_000;
+
+  const canBuy = (cost: number) => balance >= cost;
+
+  const buy = (cost: number, action: () => void) => {
+    if (!canBuy(cost)) return;
+    setBalance((b) => b - cost);
+    action();
+  };
+
+  return (
+    <div className="p-4 pb-24">
+      <div className="mb-4 rounded-3xl bg-zinc-800/90 px-4 py-3 flex items-center justify-between">
+        <span className="text-zinc-300 text-sm">Balance:</span>
+        <span className="text-white font-semibold text-sm">
+          ${formatMoneyShort(balance)}
+        </span>
+      </div>
+
+      <h2 className="text-lg font-semibold text-white mb-3">Upgrades</h2>
+
+      <UpgradeCard
+        title="+1 per tap"
+        description="Increase tap value by 1"
+        price={priceTap1}
+        disabled={!canBuy(priceTap1)}
+        onBuy={() =>
+          buy(priceTap1, () => setTapValue((v) => v + 1))
+        }
+      />
+
+      <UpgradeCard
+        title="+5 per tap"
+        description="Increase tap value by 5"
+        price={priceTap5}
+        disabled={!canBuy(priceTap5)}
+        onBuy={() =>
+          buy(priceTap5, () => setTapValue((v) => v + 5))
+        }
+      />
+
+      <UpgradeCard
+        title="+1 auto / sec"
+        description="Earn passively each second"
+        price={priceAuto1}
+        disabled={!canBuy(priceAuto1)}
+        onBuy={() =>
+          buy(priceAuto1, () => setAutoPerSec((v) => v + 1))
+        }
+      />
+
+      <UpgradeCard
+        title="x1.5 multiplier"
+        description="Multiply all earnings"
+        price={priceMult15}
+        disabled={!canBuy(priceMult15)}
+        onBuy={() =>
+          buy(priceMult15, () => setMulti((v) => v * 1.5))
+        }
+      />
+
+      <UpgradeCard
+        title="x2 multiplier"
+        description="Big boost to all earnings"
+        price={priceMult2}
+        disabled={!canBuy(priceMult2)}
+        onBuy={() =>
+          buy(priceMult2, () => setMulti((v) => v * 2))
+        }
+      />
     </div>
   );
 }
