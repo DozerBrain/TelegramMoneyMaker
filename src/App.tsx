@@ -66,19 +66,45 @@ export default function App() {
   const initial = useMemo(() => (loadSave() as any) || {}, []);
 
   // Core state
-  const [balance, setBalance] = useState<number>(initial.balance ?? initial.score ?? 0);
-  const [totalEarnings, setTotalEarnings] = useState<number>(initial.totalEarnings ?? initial.score ?? 0);
+  const [balance, setBalance] = useState<number>(
+    initial.balance ?? initial.score ?? 0
+  );
+  const [totalEarnings, setTotalEarnings] = useState<number>(
+    initial.totalEarnings ?? initial.score ?? 0
+  );
   const [taps, setTaps] = useState<number>(initial.taps ?? initial.tap ?? 0);
   const [tapValue, setTapValue] = useState<number>(initial.tapValue ?? 1);
-  const [autoPerSec, setAutoPerSec] = useState<number>(initial.autoPerSec ?? 0);
+  const [autoPerSec, setAutoPerSec] = useState<number>(
+    initial.autoPerSec ?? 0
+  );
   const [multi, setMulti] = useState<number>(initial.multi ?? 1);
 
-  // Suits / pets
-  const [equippedSuitId, setEquippedSuitId] = useState<string | null>(initial.equippedSuit ?? null);
-  const [bestSuitName, setBestSuitName] = useState<string>(
-    suits.find((su) => su.id === (initial.equippedSuit ?? "starter"))?.name ?? "Starter"
+  // 🔥 New long-term stats
+  // Crit stored as fraction (0.05 = 5%)
+  const [critChance, setCritChance] = useState<number>(
+    initial.critChance ?? 0
   );
-  const [equippedPetId, setEquippedPetId] = useState<string | null>(initial.equippedPet ?? null);
+  const [critMult, setCritMult] = useState<number>(initial.critMult ?? 5); // x5 base
+  // Auto income booster (1.0 = no bonus)
+  const [autoBonusMult, setAutoBonusMult] = useState<number>(
+    initial.autoBonusMult ?? 1
+  );
+  // Coupon generator: each level = +10% coupon gain
+  const [couponBoostLevel, setCouponBoostLevel] = useState<number>(
+    initial.couponBoostLevel ?? 0
+  );
+
+  // Suits / pets
+  const [equippedSuitId, setEquippedSuitId] = useState<string | null>(
+    initial.equippedSuit ?? null
+  );
+  const [bestSuitName, setBestSuitName] = useState<string>(
+    suits.find((su) => su.id === (initial.equippedSuit ?? "starter"))?.name ??
+      "Starter"
+  );
+  const [equippedPetId, setEquippedPetId] = useState<string | null>(
+    initial.equippedPet ?? null
+  );
 
   // Spin
   const [spinCooldownEndsAt, setSpinCooldownEndsAt] = useState<number | null>(
@@ -94,7 +120,9 @@ export default function App() {
   const [cards, setCards] = useState<CardInstance[]>(
     Array.isArray(initial.cards) ? initial.cards : []
   );
-  const [couponsSpent, setCouponsSpent] = useState<number>(initial.couponsSpent ?? 0);
+  const [couponsSpent, setCouponsSpent] = useState<number>(
+    initial.couponsSpent ?? 0
+  );
 
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
@@ -142,19 +170,20 @@ export default function App() {
     () => computePetMultipliers(equippedPetId),
     [equippedPetId]
   );
-  const cardMultAll = useMemo(
-    () => computeCardMultAll(cards),
-    [cards]
-  );
+  const cardMultAll = useMemo(() => computeCardMultAll(cards), [cards]);
 
-  // Coupons
+  // Coupons – with coupon generator bonus
+  const effectiveTapsPerCoupon = useMemo(
+    () => TAPS_PER_COUPON / (1 + couponBoostLevel * 0.1),
+    [couponBoostLevel]
+  );
   const couponsEarned = useMemo(
-    () => Math.floor(taps / TAPS_PER_COUPON),
-    [taps]
+    () => Math.floor(taps / effectiveTapsPerCoupon),
+    [taps, effectiveTapsPerCoupon]
   );
   const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
 
-  // Auto income
+  // Auto income (includes autoBonusMult now)
   useInterval(() => {
     if (autoPerSec <= 0) return;
 
@@ -163,6 +192,7 @@ export default function App() {
       Math.floor(
         autoPerSec *
           multi *
+          autoBonusMult *
           suitMult *
           petAutoMult *
           cardMultAll *
@@ -211,6 +241,12 @@ export default function App() {
       autoPerSec,
       multi,
 
+      // New stats
+      critChance,
+      critMult,
+      autoBonusMult,
+      couponBoostLevel,
+
       // Suits / pets
       bestSuitName,
       equippedSuit: equippedSuitId ?? prev.equippedSuit ?? null,
@@ -236,6 +272,10 @@ export default function App() {
     tapValue,
     autoPerSec,
     multi,
+    critChance,
+    critMult,
+    autoBonusMult,
+    couponBoostLevel,
     bestSuitName,
     equippedSuitId,
     equippedPetId,
@@ -265,7 +305,8 @@ export default function App() {
       setTab(ce.detail.goto);
     };
     window.addEventListener("MM_GOTO", onGoto as EventListener);
-    return () => window.removeEventListener("MM_GOTO", onGoto as EventListener);
+    return () =>
+      window.removeEventListener("MM_GOTO", onGoto as EventListener);
   }, []);
 
   // Handlers for More page
@@ -337,6 +378,8 @@ export default function App() {
             cardMultAll={cardMultAll}
             globalMult={globalMult}
             equippedPetId={equippedPetId}
+            critChance={critChance}
+            critMult={critMult}
           />
         )}
 
@@ -350,6 +393,14 @@ export default function App() {
             setAutoPerSec={setAutoPerSec}
             multi={multi}
             setMulti={setMulti}
+            critChance={critChance}
+            setCritChance={setCritChance}
+            critMult={critMult}
+            setCritMult={setCritMult}
+            autoBonusMult={autoBonusMult}
+            setAutoBonusMult={setAutoBonusMult}
+            couponBoostLevel={couponBoostLevel}
+            setCouponBoostLevel={setCouponBoostLevel}
           />
         )}
 
