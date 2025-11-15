@@ -336,6 +336,7 @@ export default function App() {
             petTapMult={petTapMult}
             cardMultAll={cardMultAll}
             globalMult={globalMult}
+            equippedPetId={equippedPetId}
           />
         )}
 
