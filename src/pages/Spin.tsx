@@ -27,7 +27,7 @@ function setJackpotFlag(
     localStorage.setItem(key, "1");
     window.dispatchEvent(new Event("mm:save"));
   } catch {
-    // ignore storage errors
+    // ignore
   }
 }
 
@@ -56,45 +56,13 @@ type RewardSlot = {
   desc: string;
   kind: RewardKind;
   weight: number;
-  petId?: string; // for jackpot slices, to show a tiny pet icon
+  petId?: string; // for jackpot slices
 };
 
+// Spread jackpots around the wheel (style C)
 const REWARDS: RewardSlot[] = [
-  {
-    id: "cash_small",
-    label: "Cash",
-    desc: "Small cash boost",
-    kind: "cash_small",
-    weight: 30,
-  },
-  {
-    id: "tap_up",
-    label: "+Tap",
-    desc: "Increase tap value",
-    kind: "tap",
-    weight: 20,
-  },
-  {
-    id: "auto_up",
-    label: "Auto/sec",
-    desc: "Increase auto income",
-    kind: "auto",
-    weight: 15,
-  },
-  {
-    id: "multi_up",
-    label: "Multi",
-    desc: "Increase global multiplier",
-    kind: "multi",
-    weight: 15,
-  },
-  {
-    id: "cash_big",
-    label: "Big Cash",
-    desc: "Big cash boost",
-    kind: "cash_big",
-    weight: 15,
-  },
+  { id: "cash_small_1", label: "Cash", desc: "Small cash boost", kind: "cash_small", weight: 15 },
+  { id: "tap_up", label: "+Tap", desc: "Increase tap value", kind: "tap", weight: 15 },
   {
     id: "jp_legendary",
     label: "Legendary",
@@ -103,6 +71,8 @@ const REWARDS: RewardSlot[] = [
     weight: 3,
     petId: "unicorn", // Unicorn Pegasus
   },
+  { id: "auto_up", label: "Auto/sec", desc: "Increase auto income", kind: "auto", weight: 15 },
+  { id: "cash_big", label: "Big Cash", desc: "Big cash boost", kind: "cash_big", weight: 15 },
   {
     id: "jp_mythic",
     label: "Mythic",
@@ -111,6 +81,7 @@ const REWARDS: RewardSlot[] = [
     weight: 1,
     petId: "goblin", // Fourarms Goblin
   },
+  { id: "multi_up", label: "Multi", desc: "Global multiplier", kind: "multi", weight: 15 },
   {
     id: "jp_ultimate",
     label: "Ultimate",
@@ -141,6 +112,48 @@ function pickRewardIndex(): number {
   return REWARDS.length - 1;
 }
 
+// ---- SVG helpers for real slices ----
+function degToRad(deg: number) {
+  return (deg * Math.PI) / 180;
+}
+
+function polarToCartesian(
+  cx: number,
+  cy: number,
+  r: number,
+  angleDeg: number
+) {
+  const angleRad = degToRad(angleDeg - 90); // 0° at top
+  return {
+    x: cx + r * Math.cos(angleRad),
+    y: cy + r * Math.sin(angleRad),
+  };
+}
+
+// Donut slice path (outer + inner radius)
+function buildSlicePath(
+  cx: number,
+  cy: number,
+  rInner: number,
+  rOuter: number,
+  startAngle: number,
+  endAngle: number
+) {
+  const outerStart = polarToCartesian(cx, cy, rOuter, startAngle);
+  const outerEnd = polarToCartesian(cx, cy, rOuter, endAngle);
+  const innerEnd = polarToCartesian(cx, cy, rInner, endAngle);
+  const innerStart = polarToCartesian(cx, cy, rInner, startAngle);
+  const largeArcFlag = endAngle - startAngle <= 180 ? 0 : 1;
+
+  return [
+    `M ${outerStart.x} ${outerStart.y}`,
+    `A ${rOuter} ${rOuter} 0 ${largeArcFlag} 1 ${outerEnd.x} ${outerEnd.y}`,
+    `L ${innerEnd.x} ${innerEnd.y}`,
+    `A ${rInner} ${rInner} 0 ${largeArcFlag} 0 ${innerStart.x} ${innerStart.y}`,
+    "Z",
+  ].join(" ");
+}
+
 export default function Spin(p: Props) {
   const [lastResult, setLastResult] = useState<string | null>(null);
   const [lastJackpot, setLastJackpot] =
@@ -148,6 +161,7 @@ export default function Spin(p: Props) {
 
   const [isSpinning, setIsSpinning] = useState(false);
   const [wheelRotation, setWheelRotation] = useState(0);
+  const [pendingIndex, setPendingIndex] = useState<number | null>(null);
 
   const now = Date.now();
   const remaining = p.spinCooldownEndsAt
@@ -159,9 +173,6 @@ export default function Spin(p: Props) {
     () => (canSpin ? "Ready" : fmtTime(remaining)),
     [canSpin, remaining]
   );
-
-  const segments = REWARDS.length;
-  const anglePer = 360 / segments;
 
   function applyReward(idx: number) {
     const r = REWARDS[idx];
@@ -246,23 +257,37 @@ export default function Spin(p: Props) {
     if (!canSpin || isSpinning) return;
 
     const idx = pickRewardIndex();
+    setPendingIndex(idx);
 
-    // angle of the chosen segment center
+    const segments = REWARDS.length;
+    const anglePer = 360 / segments;
+
+    // angle of the chosen slice center (0° at top)
     const targetSegmentAngle = idx * anglePer + anglePer / 2;
 
     const baseRot = wheelRotation % 360;
-    const extraSpins = 4;
+    const extraSpins = 4; // full spins before landing
     const targetRotation =
       baseRot + extraSpins * 360 + (360 - targetSegmentAngle);
 
     setIsSpinning(true);
     setWheelRotation(targetRotation);
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       setIsSpinning(false);
-      applyReward(idx);
+      const finalIdx = pendingIndex ?? idx;
+      applyReward(finalIdx);
+      setPendingIndex(null);
     }, 2100);
   }
+
+  const segments = REWARDS.length;
+  const anglePer = 360 / segments;
+
+  const cx = 100;
+  const cy = 100;
+  const rOuter = 90;
+  const rInner = 40;
 
   return (
     <div className="max-w-xl mx-auto p-4 flex flex-col gap-4">
@@ -284,145 +309,158 @@ export default function Spin(p: Props) {
           <span>Cooldown: {cooldownLabel}</span>
         </div>
 
-        {/* POINTER */}
+        {/* Pointer */}
         <div className="flex justify-center mb-1">
           <div className="w-0 h-0 border-l-[10px] border-r-[10px] border-b-[14px] border-l-transparent border-r-transparent border-b-emerald-400 drop-shadow" />
         </div>
 
-        {/* WHEEL */}
-        <div className="flex flex-col items-center gap-4 mt-1">
-          <div className="relative w-64 h-64 sm:w-72 sm:h-72">
+        {/* SVG wheel with real slices */}
+        <div className="flex justify-center mt-1 mb-4">
+          <svg
+            viewBox="0 0 200 200"
+            className="w-64 h-64 sm:w-72 sm:h-72"
+          >
+            <defs>
+              <radialGradient id="mm-spin-glow" cx="50%" cy="20%" r="70%">
+                <stop offset="0%" stopColor="rgba(16,185,129,0.35)" />
+                <stop offset="60%" stopColor="rgba(16,185,129,0.1)" />
+                <stop offset="100%" stopColor="transparent" />
+              </radialGradient>
+              <radialGradient id="mm-jackpot-fill" cx="50%" cy="40%" r="80%">
+                <stop offset="0%" stopColor="#facc15" />
+                <stop offset="60%" stopColor="#f59e0b" />
+                <stop offset="100%" stopColor="#92400e" />
+              </radialGradient>
+            </defs>
+
             {/* Outer glow */}
-            <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_0%,rgba(16,185,129,0.35),transparent_55%)]" />
+            <circle
+              cx={cx}
+              cy={cy}
+              r={rOuter}
+              fill="url(#mm-spin-glow)"
+            />
 
-            {/* Main wheel that spins */}
-            <div
-              className="absolute inset-[12%] rounded-full bg-slate-950/95 border border-emerald-500/40 shadow-[0_0_40px_rgba(16,185,129,0.5)] overflow-hidden transition-transform duration-[2000ms] ease-out"
-              style={{ transform: `rotate(${wheelRotation}deg)` }}
+            {/* Dark base */}
+            <circle
+              cx={cx}
+              cy={cy}
+              r={rOuter - 6}
+              fill="#020617"
+              stroke="#10b981"
+              strokeWidth={1}
+            />
+
+            {/* Rotating group */}
+            <g
+              transform={`rotate(${wheelRotation} ${cx} ${cy})`}
+              style={{ transition: "transform 2000ms ease-out" }}
             >
-              {/* subtle inner ring */}
-              <div className="absolute inset-[18%] rounded-full border border-emerald-500/25" />
-
-              {/* thin glowing jackpot slices */}
-              {REWARDS.map((r, index) => {
-                const isJackpot =
-                  r.kind === "jackpot_legendary" ||
-                  r.kind === "jackpot_mythic" ||
-                  r.kind === "jackpot_ultimate";
-                if (!isJackpot) return null;
-
-                const angle = index * anglePer;
-
-                return (
-                  <div
-                    key={r.id + "_slice"}
-                    className="absolute left-1/2 top-1/2"
-                    style={{
-                      transform: `translate(-50%, -50%) rotate(${angle}deg)`,
-                      transformOrigin: "50% 50%",
-                    }}
-                  >
-                    <div
-                      className="w-0 h-0"
-                      style={{
-                        borderLeft: "5px solid transparent",
-                        borderRight: "5px solid transparent",
-                        borderBottom:
-                          "120px solid rgba(250, 204, 21, 0.45)", // amber-300
-                        filter:
-                          "drop-shadow(0 0 8px rgba(250, 204, 21, 0.9)) drop-shadow(0 0 16px rgba(250, 204, 21, 0.5))",
-                      }}
-                    />
-                  </div>
+              {/* Slices */}
+              {REWARDS.map((slot, index) => {
+                const startAngle = index * anglePer;
+                const endAngle = startAngle + anglePer;
+                const d = buildSlicePath(
+                  cx,
+                  cy,
+                  rInner,
+                  rOuter - 8,
+                  startAngle,
+                  endAngle
                 );
-              })}
-
-              {/* radial divider lines */}
-              {Array.from({ length: segments }).map((_, i) => {
-                const angle = i * anglePer;
-                return (
-                  <div
-                    key={`line_${i}`}
-                    className="absolute left-1/2 top-1/2"
-                    style={{
-                      transform: `translate(-50%, -50%) rotate(${angle}deg)`,
-                      transformOrigin: "50% 50%",
-                    }}
-                  >
-                    <div className="w-[1px] h-[44%] bg-emerald-500/20 translate-y-[-8%]" />
-                  </div>
-                );
-              })}
-
-              {/* center hub */}
-              <div className="absolute inset-[36%] rounded-full bg-black/80 border border-white/10 shadow-[0_0_25px_rgba(0,0,0,0.9)]" />
-
-              {/* reward labels / jackpot pet icons */}
-              {REWARDS.map((r, index) => {
-                const angle = index * anglePer;
                 const isJackpot =
-                  r.kind === "jackpot_legendary" ||
-                  r.kind === "jackpot_mythic" ||
-                  r.kind === "jackpot_ultimate";
+                  slot.kind === "jackpot_legendary" ||
+                  slot.kind === "jackpot_mythic" ||
+                  slot.kind === "jackpot_ultimate";
+
+                const fill = isJackpot ? "url(#mm-jackpot-fill)" : "#020617";
+                const stroke = isJackpot ? "#facc15" : "#111827";
+                const strokeWidth = isJackpot ? 2 : 1;
+
+                // center point for label / icon
+                const midAngle = startAngle + anglePer / 2;
+                const labelRadius = (rInner + (rOuter - 8)) / 2;
+                const center = polarToCartesian(
+                  cx,
+                  cy,
+                  labelRadius,
+                  midAngle
+                );
 
                 const icon =
-                  isJackpot && petIconByKind[r.kind]
-                    ? petIconByKind[r.kind]
+                  isJackpot && petIconByKind[slot.kind]
+                    ? petIconByKind[slot.kind]
                     : null;
 
-                const radiusTranslate = isJackpot ? -82 : -72;
-
                 return (
-                  <div
-                    key={r.id}
-                    className="absolute left-1/2 top-1/2"
-                    style={{
-                      transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0, ${radiusTranslate}%)`,
-                      transformOrigin: "50% 50%",
-                    }}
-                  >
-                    {isJackpot && icon ? (
-                      <div
-                        className="flex flex-col items-center"
-                        style={{ transform: `rotate(${-angle}deg)` }}
-                      >
-                        <div className="w-12 h-12 rounded-full border-2 border-amber-300 overflow-hidden shadow-[0_0_14px_rgba(251,191,36,0.9)]">
-                          <img
-                            src={icon}
-                            alt={r.label}
-                            className="w-full h-full object-contain"
-                          />
-                        </div>
-                      </div>
+                  <g key={slot.id}>
+                    <path d={d} fill={fill} stroke={stroke} strokeWidth={strokeWidth} />
+
+                    {icon ? (
+                      // Pet icon inside jackpot slice
+                      <g>
+                        <circle
+                          cx={center.x}
+                          cy={center.y}
+                          r={11}
+                          fill="rgba(0,0,0,0.6)"
+                          stroke="#facc15"
+                          strokeWidth={1.5}
+                        />
+                        <image
+                          href={icon}
+                          x={center.x - 10}
+                          y={center.y - 10}
+                          width={20}
+                          height={20}
+                          preserveAspectRatio="xMidYMid slice"
+                          style={{ borderRadius: "9999px" }}
+                        />
+                      </g>
                     ) : (
-                      <div
-                        className="px-3 py-1 rounded-full border border-white/10 bg-black/60 text-[10px] text-slate-100 whitespace-nowrap"
-                        style={{ transform: `rotate(${-angle}deg)` }}
+                      // Text label for normal rewards
+                      <text
+                        x={center.x}
+                        y={center.y}
+                        fill="#e5e7eb"
+                        fontSize={7.5}
+                        textAnchor="middle"
+                        dominantBaseline="middle"
                       >
-                        {r.label.toUpperCase()}
-                      </div>
+                        {slot.label.toUpperCase()}
+                      </text>
                     )}
-                  </div>
+                  </g>
                 );
               })}
-            </div>
-          </div>
 
-          {/* Button */}
-          <button
-            onClick={spinOnce}
-            className={`btn-primary w-full text-lg ${
-              (!canSpin || isSpinning) && "opacity-60 cursor-not-allowed"
-            }`}
-            disabled={!canSpin || isSpinning}
-          >
-            {canSpin
-              ? isSpinning
-                ? "Spinning..."
-                : "Spin the Wheel 🎡"
-              : `Cooldown: ${cooldownLabel}`}
-          </button>
+              {/* inner hub */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r={rInner - 6}
+                fill="#020617"
+                stroke="#0f172a"
+                strokeWidth={2}
+              />
+            </g>
+          </svg>
         </div>
+
+        {/* Spin button */}
+        <button
+          onClick={spinOnce}
+          className={`btn-primary w-full text-lg ${
+            (!canSpin || isSpinning) && "opacity-60 cursor-not-allowed"
+          }`}
+          disabled={!canSpin || isSpinning}
+        >
+          {canSpin
+            ? isSpinning
+              ? "Spinning..."
+              : "Spin the Wheel 🎡"
+            : `Cooldown: ${cooldownLabel}`}
+        </button>
 
         {/* Last result box */}
         <div className="mt-4 rounded-xl bg-black/40 border border-white/10 p-3 text-sm">
