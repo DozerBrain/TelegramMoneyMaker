@@ -27,6 +27,9 @@ type Props = {
 
   couponBoostLevel: number;
   setCouponBoostLevel: (n: number) => void;
+
+  bulkDiscountLevel: number;
+  setBulkDiscountLevel: (n: number) => void;
 };
 
 type Upgrade = {
@@ -43,6 +46,7 @@ const MAX_CRIT_CHANCE = 0.2; // 20%
 const MAX_CRIT_MULT = 20;
 const MAX_AUTO_BONUS = 3; // x3 auto
 const MAX_COUPON_LEVEL = 10; // +100% coupons
+const MAX_BULK_DISCOUNT = 5; // 10 -> 5 coupons
 
 export default function Shop({
   balance,
@@ -61,18 +65,26 @@ export default function Shop({
   setAutoBonusMult,
   couponBoostLevel,
   setCouponBoostLevel,
+  bulkDiscountLevel,
+  setBulkDiscountLevel,
 }: Props) {
   const critLevel = Math.round(critChance * 100); // in %
   const autoBonusLevel = Math.round((autoBonusMult - 1) * 10); // each = +0.1
-  const multiLevel = multi; // just for cost scaling
+  const multiLevel = multi;
 
   // ---- Dynamic costs (balanced for long-term play) ----
   const costTap1 = Math.max(100, tapValue * 50); // +1 tap
   const costTap5 = Math.max(1000, tapValue * 200); // +5 tap
   const costAuto1 = Math.max(5000, (autoPerSec + 1) * 3000); // +1 APS
 
-  const costMultSmall = Math.max(25_000, Math.floor((multiLevel + 1) * 40_000)); // +0.5x
-  const costMultBig = Math.max(250_000, Math.floor((multiLevel + 1) * 150_000)); // +1x
+  const costMultSmall = Math.max(
+    25_000,
+    Math.floor((multiLevel + 1) * 40_000)
+  ); // +0.5x
+  const costMultBig = Math.max(
+    250_000,
+    Math.floor((multiLevel + 1) * 150_000)
+  ); // +1x
 
   const costCritChance = Math.max(
     1_000_000,
@@ -80,7 +92,7 @@ export default function Shop({
   );
   const costCritPower = Math.max(
     5_000_000,
-    (Math.max(0, critMult - 4)) * 5_000_000
+    Math.max(1, critMult - 4) * 5_000_000
   );
 
   const costAutoBoost = Math.max(
@@ -92,6 +104,16 @@ export default function Shop({
     2_000_000,
     (couponBoostLevel + 1) * 2_000_000
   );
+
+  const costBulkDiscount = Math.max(
+    5_000_000,
+    (bulkDiscountLevel + 1) * 5_000_000
+  );
+
+  const tenPackCost = Math.max(
+    10 - bulkDiscountLevel,
+    10 - MAX_BULK_DISCOUNT
+  ); // 10 -> 5
 
   const upgrades: Upgrade[] = [
     {
@@ -191,6 +213,17 @@ export default function Shop({
       onBuy: () =>
         setCouponBoostLevel(
           Math.min(MAX_COUPON_LEVEL, couponBoostLevel + 1)
+        ),
+    },
+    {
+      id: "bulkDiscount",
+      title: "Bulk chest discount",
+      desc: `10-card chest cost: ${tenPackCost} coupons`,
+      cost: costBulkDiscount,
+      disabled: bulkDiscountLevel >= MAX_BULK_DISCOUNT,
+      onBuy: () =>
+        setBulkDiscountLevel(
+          Math.min(MAX_BULK_DISCOUNT, bulkDiscountLevel + 1)
         ),
     },
   ];
