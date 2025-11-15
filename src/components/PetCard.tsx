@@ -6,6 +6,8 @@ import {
   setOwnedPets,
   getEquippedPet,
   setEquippedPet,
+  getTap,
+  getCollection,
 } from "../lib/storage";
 
 const rarityColor: Record<Pet["rarity"], string> = {
@@ -17,6 +19,71 @@ const rarityColor: Record<Pet["rarity"], string> = {
   Mythic: "border-red-500",
   Ultimate: "border-rose-500",
 };
+
+// 🔐 Jackpot flags (will be set later from Spin.tsx)
+function hasLegendaryJackpot(): boolean {
+  try {
+    return localStorage.getItem("mm_jp_legendary") === "1";
+  } catch {
+    return false;
+  }
+}
+function hasMythicJackpot(): boolean {
+  try {
+    return localStorage.getItem("mm_jp_mythic") === "1";
+  } catch {
+    return false;
+  }
+}
+function hasUltimateJackpot(): boolean {
+  try {
+    return localStorage.getItem("mm_jp_ultimate") === "1";
+  } catch {
+    return false;
+  }
+}
+
+// 🔐 Check if the player has met the unlock condition for this pet
+function canUnlockPet(petId: string): boolean {
+  const taps = getTap();
+  const col = getCollection() as any;
+
+  const legendaryCount = (col.legendary ?? 0) as number;
+  const mythicCount = (col.mythic ?? 0) as number;
+
+  switch (petId) {
+    case "mouse":
+      // 1. Mouse — 100 taps
+      return taps >= 100;
+
+    case "cat":
+      // 2. Cat — 1,000 taps
+      return taps >= 1_000;
+
+    case "dog":
+      // 3. Dog — 10,000 taps
+      return taps >= 10_000;
+
+    case "eagle":
+      // 4. Golden Eagle — open a Legendary card
+      return legendaryCount > 0;
+
+    case "unicorn":
+      // 5. Unicorn Pegasus — Mythic card OR Jackpot (Legendary tier)
+      return mythicCount > 0 || hasLegendaryJackpot();
+
+    case "goblin":
+      // 6. Fourarms Goblin — spin Jackpot (Mythic tier)
+      return hasMythicJackpot();
+
+    case "dragon":
+      // 7. Crypto Dragon — spin Jackpot (Ultimate tier)
+      return hasUltimateJackpot();
+
+    default:
+      return false;
+  }
+}
 
 export default function PetCard({ pet }: { pet: Pet }) {
   const [, bump] = useState(0);
@@ -35,6 +102,7 @@ export default function PetCard({ pet }: { pet: Pet }) {
 
   const owned = getOwnedPets().includes(pet.id);
   const equipped = getEquippedPet() === pet.id;
+  const unlockable = !owned && canUnlockPet(pet.id);
 
   const equip = () => {
     if (!owned) return;
@@ -44,7 +112,8 @@ export default function PetCard({ pet }: { pet: Pet }) {
 
   const markOwned = () => {
     if (owned) return;
-    setOwnedPets([...new Set([...getOwnedPets(), pet.id])]);
+    if (!canUnlockPet(pet.id)) return; // safety: don’t unlock if condition not met
+    setOwnedPets(Array.from(new Set([...getOwnedPets(), pet.id])));
     window.dispatchEvent(new Event("mm:save"));
   };
 
@@ -77,9 +146,15 @@ export default function PetCard({ pet }: { pet: Pet }) {
       {!owned ? (
         <button
           onClick={markOwned}
-          className="mt-2 px-3 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm transition"
+          disabled={!unlockable}
+          className={
+            "mt-2 px-3 py-1 rounded-lg text-sm transition " +
+            (unlockable
+              ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+              : "bg-zinc-800 text-zinc-500 cursor-not-allowed")
+          }
         >
-          Unlock
+          {unlockable ? "Unlock" : "Locked"}
         </button>
       ) : (
         <button
