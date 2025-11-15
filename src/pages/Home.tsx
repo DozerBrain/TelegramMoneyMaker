@@ -6,6 +6,7 @@ import { getProfile } from "../lib/profile";
 import { submitScore } from "../lib/leaderboard";
 import LeftQuickNav from "../components/LeftQuickNav";
 import { PETS } from "../data/pets";
+import { formatMoneyShort } from "../lib/format";
 
 type Props = {
   // balances & totals
@@ -53,7 +54,6 @@ export default function Home({
   globalMult,
   equippedPetId,
 }: Props) {
-  // ---------- Combo UI ----------
   const [combo, setCombo] = useState(0);
   const [best, setBest] = useState(0);
 
@@ -66,7 +66,6 @@ export default function Home({
     return () => window.removeEventListener("combo:update", onCombo as any);
   }, []);
 
-  // ---------- Leaderboard submit (throttled) ----------
   const profile = useMemo(() => getProfile(), []);
   const lastPushRef = useRef(0);
 
@@ -77,7 +76,6 @@ export default function Home({
     await submitScore(newScore, profile);
   }
 
-  // ---------- Tap handler with full math ----------
   function onMainTap() {
     const totalTapMult = suitMult * petTapMult * cardMultAll * globalMult;
     const rawGain = tapValue * multi * totalTapMult;
@@ -95,7 +93,6 @@ export default function Home({
     comboTap();
   }
 
-  // ---------- View helpers ----------
   const suitImg = useMemo(() => {
     const name = (currentSuitName || "starter").toLowerCase();
     return `/suits/${name}.png`;
@@ -108,13 +105,11 @@ export default function Home({
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
-      {/* Left quick buttons (Cards / Suits / Pets) */}
       <LeftQuickNav />
 
       {/* Mascot centered; pet anchored bottom-right of mascot */}
       <div className="mt-2 flex items-center justify-center">
         <div className="relative">
-          {/* Mascot / suit */}
           <img
             src={suitImg}
             alt="Equipped suit"
@@ -122,7 +117,6 @@ export default function Home({
             draggable={false}
           />
 
-          {/* Pet: smaller, bottom-right, overlapping slightly */}
           {pet && (
             <img
               src={pet.img}
@@ -134,23 +128,20 @@ export default function Home({
         </div>
       </div>
 
-      {/* Tap button */}
       <div className="mt-5">
         <BanknoteButton onTap={onMainTap} size={140} />
       </div>
 
-      {/* Combo badge */}
       {combo > 0 && (
         <div className="mt-2 text-emerald-300 text-sm font-semibold">
           Combo x{combo} <span className="text-zinc-400">• Best {best}</span>
         </div>
       )}
 
-      {/* Balance readout */}
       <div className="mt-3 text-white/90 text-sm">
         Balance:{" "}
         <span className="text-emerald-400 font-semibold">
-          ${balance.toLocaleString()}
+          ${formatMoneyShort(balance)}
         </span>
       </div>
     </div>
