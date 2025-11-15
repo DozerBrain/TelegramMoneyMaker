@@ -1,53 +1,31 @@
 // src/pages/Shop.tsx
 import React from "react";
+import Card from "../components/Card";
 import { formatMoneyShort } from "../lib/format";
 
 type Props = {
   balance: number;
-  setBalance: (v: number | ((p: number) => number)) => void;
+  setBalance: (n: number) => void;
 
   tapValue: number;
-  setTapValue: (v: number | ((p: number) => number)) => void;
+  setTapValue: (n: number) => void;
 
   autoPerSec: number;
-  setAutoPerSec: (v: number | ((p: number) => number)) => void;
+  setAutoPerSec: (n: number) => void;
 
   multi: number;
-  setMulti: (v: number | ((p: number) => number)) => void;
+  setMulti: (n: number) => void;
 };
 
-type UpgradeProps = {
+type Upgrade = {
+  id: string;
   title: string;
-  description: string;
-  price: number;
-  disabled?: boolean;
-  onBuy: () => void;
+  desc: string;
+  cost: number;
+  buy: () => void;
 };
 
-function UpgradeCard({ title, description, price, disabled, onBuy }: UpgradeProps) {
-  const canAfford = !disabled;
-
-  return (
-    <div className="rounded-3xl bg-zinc-900/80 px-4 py-3 flex items-center justify-between mb-3">
-      <div className="flex flex-col">
-        <span className="text-white font-semibold text-base">{title}</span>
-        <span className="text-xs text-zinc-400 mt-0.5">{description}</span>
-      </div>
-      <button
-        onClick={onBuy}
-        disabled={!canAfford}
-        className={
-          "px-3 py-2 rounded-2xl text-sm font-semibold min-w-[90px] text-center " +
-          (canAfford
-            ? "bg-emerald-500 text-emerald-950 active:scale-[0.97] transition"
-            : "bg-zinc-700/70 text-zinc-400 cursor-not-allowed")
-        }
-      >
-        ${formatMoneyShort(price)}
-      </button>
-    </div>
-  );
-}
+const MAX_MULTI = 1000; // hard cap so it never goes insane again
 
 export default function Shop({
   balance,
@@ -59,70 +37,111 @@ export default function Shop({
   multi,
   setMulti,
 }: Props) {
-  const priceTap1 = 100;
-  const priceTap5 = 1_000;
-  const priceAuto1 = 5_000;
-  const priceMult15 = 25_000;
-  const priceMult2 = 250_000;
+  // ---- Dynamic costs (balanced for long-term play) ----
+  const costTap1 = Math.max(100, tapValue * 100); // +1 tap
+  const costTap5 = Math.max(1000, tapValue * 400); // +5 tap
+  const costAuto1 = Math.max(5000, (autoPerSec + 1) * 2500); // +1 APS
 
-  const canBuy = (cost: number) => balance >= cost;
+  // Multiplier upgrades get expensive fast
+  const costMultSmall = Math.max(25_000, Math.floor(multi * 50_000)); // +0.5x
+  const costMultBig = Math.max(250_000, Math.floor(multi * 200_000)); // +1x
 
-  const buy = (cost: number, action: () => void) => {
-    if (!canBuy(cost)) return;
-    setBalance((b) => b - cost);
-    action();
-  };
+  const upgrades: Upgrade[] = [
+    {
+      id: "tap+1",
+      title: "+1 per tap",
+      desc: "Increase tap value by 1",
+      cost: costTap1,
+      buy: () => setTapValue(tapValue + 1),
+    },
+    {
+      id: "tap+5",
+      title: "+5 per tap",
+      desc: "Increase tap value by 5",
+      cost: costTap5,
+      buy: () => setTapValue(tapValue + 5),
+    },
+    {
+      id: "auto+1",
+      title: "+1 auto / sec",
+      desc: "Earn passively each second",
+      cost: costAuto1,
+      buy: () => setAutoPerSec(autoPerSec + 1),
+    },
+    {
+      id: "mult+0.5",
+      title: "+0.5x multiplier",
+      desc: "Increase all earnings by 50%",
+      cost: costMultSmall,
+      buy: () =>
+        setMulti(
+          Math.min(
+            MAX_MULTI,
+            // additive instead of multiplicative
+            parseFloat((multi + 0.5).toFixed(2))
+          )
+        ),
+    },
+    {
+      id: "mult+1",
+      title: "+1x multiplier",
+      desc: "Big boost to all earnings",
+      cost: costMultBig,
+      buy: () =>
+        setMulti(
+          Math.min(
+            MAX_MULTI,
+            parseFloat((multi + 1).toFixed(2))
+          )
+        ),
+    },
+  ];
+
+  function handleBuy(u: Upgrade) {
+    if (balance < u.cost) return;
+    setBalance(balance - u.cost);
+    u.buy();
+  }
 
   return (
-    <div className="p-4 pb-24">
-      <div className="mb-4 rounded-3xl bg-zinc-800/90 px-4 py-3 flex items-center justify-between">
-        <span className="text-zinc-300 text-sm">Balance:</span>
-        <span className="text-white font-semibold text-sm">
-          ${formatMoneyShort(balance)}
-        </span>
-      </div>
-
-      <h2 className="text-lg font-semibold text-white mb-3">Upgrades</h2>
-
-      <UpgradeCard
-        title="+1 per tap"
-        description="Increase tap value by 1"
-        price={priceTap1}
-        disabled={!canBuy(priceTap1)}
-        onBuy={() => buy(priceTap1, () => setTapValue((v) => v + 1))}
-      />
-
-      <UpgradeCard
-        title="+5 per tap"
-        description="Increase tap value by 5"
-        price={priceTap5}
-        disabled={!canBuy(priceTap5)}
-        onBuy={() => buy(priceTap5, () => setTapValue((v) => v + 5))}
-      />
-
-      <UpgradeCard
-        title="+1 auto / sec"
-        description="Earn passively each second"
-        price={priceAuto1}
-        disabled={!canBuy(priceAuto1)}
-        onBuy={() => buy(priceAuto1, () => setAutoPerSec((v) => v + 1))}
-      />
-
-      <UpgradeCard
-        title="x1.5 multiplier"
-        description="Multiply all earnings"
-        price={priceMult15}
-        disabled={!canBuy(priceMult15)}
-        onBuy={() => buy(priceMult15, () => setMulti((v) => v * 1.5))}
-      />
-
-      <UpgradeCard
-        title="x2 multiplier"
-        description="Big boost to all earnings"
-        price={priceMult2}
-        disabled={!canBuy(priceMult2)}
-        onBuy={() => buy(priceMult2, () => setMulti((v) => v * 2))}
-      />
+    <div className="max-w-xl mx-auto p-4 space-y-4">
+      <Card
+        title="Upgrades"
+        right={
+          <span className="text-sm text-emerald-300">
+            Balance: ${formatMoneyShort(balance)}
+          </span>
+        }
+      >
+        <div className="space-y-3">
+          {upgrades.map((u) => {
+            const affordable = balance >= u.cost;
+            return (
+              <div
+                key={u.id}
+                className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3"
+              >
+                <div className="text-sm">
+                  <div className="font-semibold text-white">{u.title}</div>
+                  <div className="text-xs text-white/60">{u.desc}</div>
+                </div>
+                <button
+                  onClick={() => handleBuy(u)}
+                  disabled={!affordable}
+                  className={`min-w-[90px] px-4 py-2 rounded-full text-sm font-semibold
+                    ${
+                      affordable
+                        ? "bg-emerald-500 text-emerald-950 active:scale-[0.97]"
+                        : "bg-zinc-700 text-zinc-400 opacity-60"
+                    }`}
+                >
+                  ${formatMoneyShort(u.cost)}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
     </div>
   );
 }
