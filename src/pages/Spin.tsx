@@ -272,7 +272,11 @@ export default function Spin(p: Props) {
     <div className="max-w-xl mx-auto p-4 flex flex-col gap-4">
       <Card
         title="Daily Spin"
-        right={<div className="badge">Balance: {formatMoneyShort(p.balance)}</div>}
+        right={
+          <div className="badge">
+            Balance: {formatMoneyShort(p.balance)}
+          </div>
+        }
       >
         <p className="opacity-80 mb-2 text-sm">
           Spin every <b>8 hours</b> for boosts and rare jackpots. Legendary,
@@ -320,32 +324,30 @@ export default function Spin(p: Props) {
                 return (
                   <div
                     key={r.id}
-                    className="absolute left-1/2 top-1/2"
-                    style={{
-                      // 1) center this element, 2) rotate, 3) push outward
-                      transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0, -80%)`,
-                      transformOrigin: "50% 50%",
-                    }}
+                    className="absolute inset-0"
+                    style={{ transform: `rotate(${angle}deg)` }}
                   >
+                    {/* Position pill near outer edge; keep upright */}
                     <div
-                      className={`flex items-center gap-1 text-[9px] px-2 py-1 rounded-full border whitespace-nowrap ${
-                        isJackpot
-                          ? "border-amber-400 bg-amber-500/20 text-amber-200 font-semibold"
-                          : "border-white/10 bg-black/50 text-slate-100"
-                      }`}
-                      style={{
-                        // keep pill upright
-                        transform: `rotate(${-angle}deg)`,
-                      }}
+                      className="absolute left-1/2 top-[12%] -translate-x-1/2"
+                      style={{ transform: `rotate(${-angle}deg)` }}
                     >
-                      {icon && (
-                        <img
-                          src={icon}
-                          alt={r.label}
-                          className="w-4 h-4 rounded-full object-contain"
-                        />
-                      )}
-                      <span>{r.label.toUpperCase()}</span>
+                      <div
+                        className={`flex items-center gap-1 text-[9px] px-2 py-1 rounded-full border whitespace-nowrap ${
+                          isJackpot
+                            ? "border-amber-400 bg-amber-500/20 text-amber-200 font-semibold"
+                            : "border-white/10 bg-black/50 text-slate-100"
+                        }`}
+                      >
+                        {icon && (
+                          <img
+                            src={icon}
+                            alt={r.label}
+                            className="w-4 h-4 rounded-full object-contain"
+                          />
+                        )}
+                        <span>{r.label.toUpperCase()}</span>
+                      </div>
                     </div>
                   </div>
                 );
