@@ -1,5 +1,5 @@
 import Card from "../components/Card";
-import { fmt } from "../lib/format";
+import { formatMoneyShort } from "../lib/format";
 
 type Props = {
   balance:number; setBalance:(n:number)=>void;
