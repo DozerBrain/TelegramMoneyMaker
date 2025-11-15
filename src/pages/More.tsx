@@ -78,8 +78,8 @@ export default function More({
           Taps: <b>{formatMoneyShort(taps)}</b>
         </div>
         <div className="text-sm opacity-80">
-          Tap Value: <b>{formatMoneyShort(tapValue)}</b> • Multiplier:{" "}
-          <b>{multi}x</b>
+          Tap Value: <b>{formatMoneyShort(tapValue)}</b> • Multiplier:
+<b>{formatMoneyShort(multi)}x</b>
         </div>
         <div className="text-sm opacity-80">
           Auto/sec: <b>{formatMoneyShort(autoPerSec)}</b>
