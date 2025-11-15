@@ -55,30 +55,78 @@ function rollRarity(): Rarity {
   return "common";
 }
 
+/* ------------ Small UI helpers ------------- */
+function TabButton(
+  props: React.ButtonHTMLAttributes<HTMLButtonElement> & { active?: boolean }
+) {
+  const { active, className = "", ...rest } = props;
+  return (
+    <button
+      {...rest}
+      className={`px-4 py-2 rounded-xl text-sm font-semibold transition
+        ${
+          active
+            ? "bg-emerald-500 text-emerald-950"
+            : "bg-white/10 text-slate-200 hover:bg-white/15"
+        }
+        ${className}`}
+    />
+  );
+}
+
+const RARITY_ORDER: Rarity[] = [
+  "common",
+  "uncommon",
+  "rare",
+  "epic",
+  "legendary",
+  "mythic",
+  "ultimate",
+];
+
+const RARITY_LABEL: Record<Rarity, string> = {
+  common: "Common",
+  uncommon: "Uncommon",
+  rare: "Rare",
+  epic: "Epic",
+  legendary: "Legendary",
+  mythic: "Mythic",
+  ultimate: "Ultimate",
+};
+
 /* ------------ Props from App ------------- */
 type Props = {
   taps: number;
   collection: CardCollection;
-  setCollection: (c: CardCollection | ((c: CardCollection) => CardCollection)) => void;
+  setCollection: (
+    c: CardCollection | ((c: CardCollection) => CardCollection)
+  ) => void;
   couponsAvailable: number;
   couponsSpent: number;
   setCouponsSpent: (v: number | ((p: number) => number)) => void;
   tapsPerCoupon: number;
 };
 
-/* ------------ Page ------------- */
-export default function CardsPage({
-  taps,
-  collection,
-  setCollection,
-  couponsAvailable,
-  couponsSpent,
-  setCouponsSpent,
-  tapsPerCoupon,
-}: Props) {
-  const [lastPulled, setLastPulled] = useState<
-    { rarity: Rarity; serial: string }[]
-  >([]);
+/* ------------ CHEST TAB ------------- */
+function ChestTab(props: Props & {
+  lastPulled: { rarity: Rarity; serial: string }[];
+  setLastPulled: (
+    v:
+      | { rarity: Rarity; serial: string }[]
+      | ((prev: { rarity: Rarity; serial: string }[]) => { rarity: Rarity; serial: string }[])
+  ) => void;
+}) {
+  const {
+    taps,
+    collection,
+    setCollection,
+    couponsAvailable,
+    couponsSpent,
+    setCouponsSpent,
+    tapsPerCoupon,
+    lastPulled,
+    setLastPulled,
+  } = props;
 
   const couponsEarned = useMemo(
     () => Math.floor(taps / tapsPerCoupon),
@@ -124,11 +172,7 @@ export default function CardsPage({
   }
 
   return (
-    <div className="p-4 pb-24 space-y-4">
-      <h2 className="text-2xl font-semibold text-emerald-400">
-        Card Chest
-      </h2>
-
+    <>
       {/* Summary */}
       <section className="rounded-2xl border border-white/10 bg-white/5 p-4 space-y-2 text-sm">
         <div className="flex justify-between">
@@ -242,6 +286,113 @@ export default function CardsPage({
           </div>
         )}
       </section>
+    </>
+  );
+}
+
+/* ------------ COLLECTION TAB ------------- */
+function CollectionTab({ collection }: { collection: CardCollection }) {
+  const rows = useMemo(
+    () =>
+      RARITY_ORDER.map((r) => ({
+        rarity: r,
+        label: RARITY_LABEL[r],
+        count: (collection as any)[r] as number,
+      })),
+    [collection]
+  );
+
+  const total = useMemo(
+    () =>
+      collection.common +
+      collection.uncommon +
+      collection.rare +
+      collection.epic +
+      collection.legendary +
+      collection.mythic +
+      collection.ultimate,
+    [collection]
+  );
+
+  if (total === 0) {
+    return (
+      <section className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
+        You don&apos;t own any cards yet. Earn coupons by tapping and
+        open the chest to start your collection.
+      </section>
+    );
+  }
+
+  return (
+    <section className="space-y-3">
+      <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex justify-between items-center text-sm">
+        <span className="text-slate-300">Total cards</span>
+        <span className="font-semibold text-emerald-300">{total}</span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {rows.map((row) => (
+          <div
+            key={row.rarity}
+            className="rounded-2xl border border-white/10 bg-white/5 p-3 flex flex-col gap-2"
+          >
+            <CardFrame
+              rarity={row.rarity}
+              imgSrc={ART[row.rarity]}
+              serial={`${row.label} • x${row.count}`}
+              className="w-full"
+            />
+            <div className="flex justify-between items-center text-xs text-slate-300">
+              <span>{row.label}</span>
+              <span className="font-mono text-emerald-300">
+                x{row.count}
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ------------ MAIN PAGE ------------- */
+export default function CardsPage(props: Props) {
+  const [tab, setTab] = useState<"chest" | "collection">("chest");
+  const [lastPulled, setLastPulled] = useState<
+    { rarity: Rarity; serial: string }[]
+  >([]);
+
+  return (
+    <div className="p-4 pb-24 space-y-4">
+      <h2 className="text-2xl font-semibold text-emerald-400">
+        Cards
+      </h2>
+
+      {/* Tabs */}
+      <div className="mt-3 flex gap-2">
+        <TabButton active={tab === "chest"} onClick={() => setTab("chest")}>
+          Chest
+        </TabButton>
+        <TabButton
+          active={tab === "collection"}
+          onClick={() => setTab("collection")}
+        >
+          Collection
+        </TabButton>
+      </div>
+
+      {/* Content */}
+      <div className="mt-4 space-y-4">
+        {tab === "chest" ? (
+          <ChestTab
+            {...props}
+            lastPulled={lastPulled}
+            setLastPulled={setLastPulled}
+          />
+        ) : (
+          <CollectionTab collection={props.collection} />
+        )}
+      </div>
     </div>
   );
 }
