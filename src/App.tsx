@@ -429,7 +429,7 @@ export default function App() {
 
         {tab === "leaderboard" && <LeaderboardPage />}
         {tab === "profile" && <ProfilePage />}
-        {tab === "suits" && <SuitsPage />}
+        {tab === "suits" && <SuitsPage balance={balance} />}
         {tab === "pets" && <PetsPage />}
 
         {tab === "cards" && (
