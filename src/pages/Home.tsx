@@ -4,7 +4,8 @@ import BanknoteButton from "../components/BanknoteButton";
 import { comboTap } from "../lib/combo";
 import { getProfile } from "../lib/profile";
 import { submitScore } from "../lib/leaderboard";
-import LeftQuickNav from "../components/LeftQuickNav"; // ⬅️ LEFT BUTTONS
+import LeftQuickNav from "../components/LeftQuickNav";
+import { PETS } from "../data/pets";
 
 type Props = {
   // balances & totals
@@ -25,11 +26,14 @@ type Props = {
   currentSuitName: string;
   setCurrentSuitName: (v: string) => void;
 
-  // NEW: multipliers
+  // multipliers
   suitMult: number;
   petTapMult: number;
   cardMultAll: number;
   globalMult: number;
+
+  // NEW: which pet is equipped
+  equippedPetId: string | null;
 };
 
 export default function Home({
@@ -42,11 +46,12 @@ export default function Home({
   tapValue,
   multi,
   currentSuitName,
-  // setCurrentSuitName, // currently not used, but kept in props for future
+  // setCurrentSuitName, // not used yet
   suitMult,
   petTapMult,
   cardMultAll,
   globalMult,
+  equippedPetId,
 }: Props) {
   // ---------- Combo UI ----------
   const [combo, setCombo] = useState(0);
@@ -94,18 +99,42 @@ export default function Home({
     return `/suits/${name}.png`;
   }, [currentSuitName]);
 
+  const pet = useMemo(
+    () => PETS.find((p) => p.id === equippedPetId) ?? null,
+    [equippedPetId]
+  );
+
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
       {/* ⬅️ Left quick buttons (Cards / Suits / Pets) */}
       <LeftQuickNav />
 
-      {/* Equipped suit / mascot */}
-      <img
-        src={suitImg}
-        alt="Equipped suit"
-        className="w-56 h-auto object-contain select-none drop-shadow-[0_10px_30px_rgba(0,255,170,0.15)]"
-        draggable={false}
-      />
+      {/* Mascot + Pet side-by-side */}
+      <div className="mt-1 flex items-center justify-center gap-4">
+        {/* Equipped suit / mascot */}
+        <img
+          src={suitImg}
+          alt="Equipped suit"
+          className="w-56 h-auto object-contain select-none drop-shadow-[0_10px_30px_rgba(0,255,170,0.15)]"
+          draggable={false}
+        />
+
+        {/* Pet (half size of mascot) + ability text */}
+        {pet && (
+          <div className="flex flex-col items-center max-w-[150px]">
+            <img
+              src={pet.img}
+              alt={pet.name}
+              className="w-24 h-24 object-contain select-none drop-shadow-[0_8px_20px_rgba(0,255,170,0.25)]"
+              draggable={false}
+            />
+            <div className="mt-1 text-[10px] leading-snug text-emerald-200 text-center">
+              <span className="font-semibold">{pet.name}</span>
+              <span className="text-emerald-300"> • {pet.effect}</span>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Tap button */}
       <div className="mt-3">
