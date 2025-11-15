@@ -323,7 +323,7 @@ export default function Spin(p: Props) {
                     className="absolute left-1/2 top-1/2"
                     style={{
                       // 1) center this element, 2) rotate, 3) push outward
-                      transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0, -42%)`,
+                      transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0, -80%)`,
                       transformOrigin: "50% 50%",
                     }}
                   >
