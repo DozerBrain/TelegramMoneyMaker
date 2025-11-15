@@ -46,7 +46,7 @@ export default function Home({
   tapValue,
   multi,
   currentSuitName,
-  setCurrentSuitName, // kept for future use
+  setCurrentSuitName, // reserved for future
   suitMult,
   petTapMult,
   cardMultAll,
@@ -111,29 +111,31 @@ export default function Home({
       {/* Left quick buttons (Cards / Suits / Pets) */}
       <LeftQuickNav />
 
-      {/* Mascot centered, pet below (smaller) */}
-      <div className="mt-2 flex flex-col items-center justify-center gap-2">
-        {/* Mascot / suit */}
-        <img
-          src={suitImg}
-          alt="Equipped suit"
-          className="w-56 h-auto object-contain select-none drop-shadow-[0_10px_30px_rgba(0,255,170,0.15)]"
-          draggable={false}
-        />
-
-        {/* Pet under mascot, half-ish size, no text here */}
-        {pet && (
+      {/* Mascot centered; pet anchored bottom-right of mascot */}
+      <div className="mt-2 flex items-center justify-center">
+        <div className="relative">
+          {/* Mascot / suit */}
           <img
-            src={pet.img}
-            alt={pet.name}
-            className="w-24 h-24 object-contain select-none drop-shadow-[0_8px_20px_rgba(0,255,170,0.25)]"
+            src={suitImg}
+            alt="Equipped suit"
+            className="w-56 h-auto object-contain select-none drop-shadow-[0_10px_30px_rgba(0,255,170,0.15)]"
             draggable={false}
           />
-        )}
+
+          {/* Pet: smaller, bottom-right, overlapping slightly */}
+          {pet && (
+            <img
+              src={pet.img}
+              alt={pet.name}
+              className="absolute -bottom-4 -right-6 w-24 h-24 object-contain select-none drop-shadow-[0_8px_20px_rgba(0,255,170,0.25)]"
+              draggable={false}
+            />
+          )}
+        </div>
       </div>
 
       {/* Tap button */}
-      <div className="mt-3">
+      <div className="mt-5">
         <BanknoteButton onTap={onMainTap} size={140} />
       </div>
 
