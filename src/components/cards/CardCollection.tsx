@@ -45,9 +45,18 @@ export default function CardCollection({ cards }: Props) {
   function renderSummary() {
     return (
       <section className="space-y-3">
-        <div className="rounded-2xl border border-white/10 bg-white/5 p-4 flex justify-between items-center text-sm">
-          <span className="text-slate-300">Total cards</span>
-          <span className="font-semibold text-emerald-300">{total}</span>
+        <div className="rounded-2xl border border-emerald-500/40 bg-gradient-to-br from-slate-900/80 via-emerald-900/20 to-black p-4 flex justify-between items-center text-sm shadow-lg shadow-emerald-500/10">
+          <div>
+            <div className="text-[11px] text-emerald-300/80 uppercase tracking-wide">
+              Collection Power
+            </div>
+            <div className="text-lg font-semibold text-emerald-200">
+              {total} cards owned
+            </div>
+          </div>
+          <div className="text-[11px] text-slate-400 text-right max-w-[120px]">
+            Higher rarities boost your income more.
+          </div>
         </div>
 
         {RARITY_ORDER.map((r) => {
@@ -63,11 +72,14 @@ export default function CardCollection({ cards }: Props) {
             <button
               key={r}
               onClick={() => handleOpenRarity(r)}
-              className={`w-full text-left rounded-2xl border border-white/10 p-3 flex gap-3 items-center active:scale-[0.99] transition ${
-                hasAny ? "bg-white/5" : "bg-black/40 opacity-80"
-              }`}
+              className={`w-full text-left rounded-2xl border p-3 flex gap-3 items-center active:scale-[0.99] transition
+                ${
+                  hasAny
+                    ? "border-white/12 bg-gradient-to-br from-slate-900/80 to-black hover:border-emerald-400/70"
+                    : "border-white/5 bg-gradient-to-br from-black/80 to-slate-950/80 opacity-80"
+                }`}
             >
-              <div className="w-20">
+              <div className="w-20 shrink-0">
                 <CardFrame
                   rarity={r}
                   imgSrc={ART[r]}
@@ -75,7 +87,7 @@ export default function CardCollection({ cards }: Props) {
                   className="w-full"
                 />
               </div>
-              <div className="flex-1 flex justify-between items-center">
+              <div className="flex-1 flex justify-between items-center gap-3">
                 <div>
                   <div className="text-sm font-semibold text-slate-100">
                     {RARITY_LABEL[r]}
@@ -86,8 +98,10 @@ export default function CardCollection({ cards }: Props) {
                       : `No ${RARITY_LABEL[r]} cards yet`}
                   </div>
                 </div>
-                <div className="text-xs font-mono text-emerald-300">
-                  x{count}
+                <div className="text-right">
+                  <div className="text-xs font-mono text-emerald-300">
+                    x{count}
+                  </div>
                 </div>
               </div>
             </button>
@@ -107,7 +121,7 @@ export default function CardCollection({ cards }: Props) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setView("summary")}
-            className="px-3 py-1 rounded-xl bg-white/10 text-xs text-slate-200"
+            className="px-3 py-1 rounded-xl bg-white/10 text-xs text-slate-200 active:scale-[0.97]"
           >
             ← Back
           </button>
@@ -124,8 +138,9 @@ export default function CardCollection({ cards }: Props) {
         </div>
 
         {list.length === 0 ? (
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-slate-400">
-            You don&apos;t own any {label} cards yet. Keep opening chests!
+          <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950/80 to-black p-4 text-sm text-slate-400">
+            You don&apos;t own any {label} cards yet. Keep opening chests and
+            chasing those drops.
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-3">
@@ -144,5 +159,9 @@ export default function CardCollection({ cards }: Props) {
     );
   }
 
-  return view === "summary" ? renderSummary() : renderRarityDetail();
+  return (
+    <div className="space-y-4">
+      {view === "summary" ? renderSummary() : renderRarityDetail()}
+    </div>
+  );
 }
