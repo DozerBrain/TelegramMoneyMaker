@@ -1,5 +1,6 @@
 // src/pages/More.tsx
 import React, { useState } from "react";
+import { formatMoneyShort } from "../lib/format";
 
 type AchState = Record<string, { done: boolean; claimed: boolean }>;
 
@@ -18,15 +19,25 @@ type Props = {
 };
 
 export default function More({
-  balance, totalEarnings, taps, tapValue, autoPerSec, multi,
-  achievementsState, onClaim, onReset, onExport, onImport,
+  balance,
+  totalEarnings,
+  taps,
+  tapValue,
+  autoPerSec,
+  multi,
+  achievementsState,
+  onClaim,
+  onReset,
+  onExport,
+  onImport,
 }: Props) {
   const [importText, setImportText] = useState("");
   const [importError, setImportError] = useState("");
 
   function niceId(id: string) {
-    return id.replace(/[_-]+/g, " ")
-             .replace(/\b\w/g, c => c.toUpperCase());
+    return id
+      .replace(/[_-]+/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   function claim(id: string) {
@@ -52,19 +63,26 @@ export default function More({
       <section className="space-y-1">
         <h2 className="text-lg font-bold">Your Stats</h2>
         <div className="text-sm opacity-80">
-          Balance: <b className="text-emerald-300">{balance.toLocaleString()}</b>
+          Balance:{" "}
+          <b className="text-emerald-300">
+            ${formatMoneyShort(balance)}
+          </b>
         </div>
         <div className="text-sm opacity-80">
-          Total Earned: <b className="text-emerald-300">{totalEarnings.toLocaleString()}</b>
+          Total Earned:{" "}
+          <b className="text-emerald-300">
+            ${formatMoneyShort(totalEarnings)}
+          </b>
         </div>
         <div className="text-sm opacity-80">
-          Taps: <b>{taps.toLocaleString()}</b>
+          Taps: <b>{formatMoneyShort(taps)}</b>
         </div>
         <div className="text-sm opacity-80">
-          Tap Value: <b>{tapValue}</b> • Multiplier: <b>{multi}x</b>
+          Tap Value: <b>{formatMoneyShort(tapValue)}</b> • Multiplier:{" "}
+          <b>{multi}x</b>
         </div>
         <div className="text-sm opacity-80">
-          Auto/sec: <b>{autoPerSec}</b>
+          Auto/sec: <b>{formatMoneyShort(autoPerSec)}</b>
         </div>
       </section>
 
@@ -78,16 +96,25 @@ export default function More({
         ) : (
           <div className="space-y-2">
             {Object.entries(achievementsState).map(([id, st]) => (
-              <div key={id} className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2">
+              <div
+                key={id}
+                className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2"
+              >
                 <div className="text-sm">
                   <div className="font-semibold">{niceId(id)}</div>
-                  <div className="opacity-70">{st.done ? "Completed" : "In progress"}</div>
+                  <div className="opacity-70">
+                    {st.done ? "Completed" : "In progress"}
+                  </div>
                 </div>
                 <button
                   disabled={!st.done || st.claimed}
                   onClick={() => claim(id)}
                   className={`px-3 py-2 rounded-lg text-sm font-semibold transition
-                    ${st.done && !st.claimed ? "bg-emerald-600 hover:bg-emerald-500" : "bg-white/10 opacity-60"}`}
+                    ${
+                      st.done && !st.claimed
+                        ? "bg-emerald-600 hover:bg-emerald-500"
+                        : "bg-white/10 opacity-60"
+                    }`}
                 >
                   {st.claimed ? "Claimed" : "Claim +100"}
                 </button>
