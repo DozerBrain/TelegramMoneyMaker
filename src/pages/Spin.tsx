@@ -56,13 +56,13 @@ type RewardSlot = {
   desc: string;
   kind: RewardKind;
   weight: number;
-  petId?: string; // for jackpot slices, to show a tiny pet icon
+  petId?: string;
 };
 
 const REWARDS: RewardSlot[] = [
   {
     id: "cash_small",
-    label: "Cash Boost",
+    label: "Cash",
     desc: "Small cash boost",
     kind: "cash_small",
     weight: 30,
@@ -249,7 +249,6 @@ export default function Spin(p: Props) {
     const segments = REWARDS.length;
     const anglePer = 360 / segments;
 
-    // angle of the chosen segment center
     const targetSegmentAngle = idx * anglePer + anglePer / 2;
 
     const baseRot = wheelRotation % 360;
@@ -296,21 +295,40 @@ export default function Spin(p: Props) {
         {/* WHEEL */}
         <div className="flex flex-col items-center gap-4 mt-1">
           <div className="relative w-64 h-64 sm:w-72 sm:h-72">
-            {/* Outer glow */}
+            {/* Outer glow ring */}
             <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_30%_0%,rgba(16,185,129,0.35),transparent_55%)]" />
-            {/* Main wheel that spins */}
+
+            {/* Main wheel */}
             <div
-              className="absolute inset-[10%] rounded-full bg-slate-950/90 border-4 border-emerald-500/60 shadow-[0_0_40px_rgba(16,185,129,0.35)] overflow-hidden transition-transform duration-[2000ms] ease-out"
+              className="absolute inset-[10%] rounded-full bg-slate-950/90 border-[3px] border-emerald-500/70 shadow-[0_0_40px_rgba(16,185,129,0.45)] overflow-hidden transition-transform duration-[2000ms] ease-out"
               style={{ transform: `rotate(${wheelRotation}deg)` }}
             >
-              {/* center circle */}
-              <div className="absolute inset-[35%] rounded-full bg-black/70 border border-white/10" />
+              {/* middle hub */}
+              <div className="absolute inset-[36%] rounded-full bg-black/80 border border-white/10 shadow-inner" />
 
-              {/* Segments labels around rim */}
+              {/* slice separators to feel like real wheel */}
+              {Array.from({ length: REWARDS.length }).map((_, i) => {
+                const segments = REWARDS.length;
+                const anglePer = 360 / segments;
+                const angle = i * anglePer;
+                return (
+                  <div
+                    key={`sep-${i}`}
+                    className="absolute left-1/2 top-1/2 w-[2px] h-[46%] bg-emerald-500/30"
+                    style={{
+                      transform: `translate(-50%, -100%) rotate(${angle}deg)`,
+                      transformOrigin: "50% 100%",
+                    }}
+                  />
+                );
+              })}
+
+              {/* segments */}
               {REWARDS.map((r, index) => {
                 const segments = REWARDS.length;
                 const anglePer = 360 / segments;
-                const angle = index * anglePer;
+                const angle = index * anglePer + anglePer / 2;
+
                 const isJackpot =
                   r.kind === "jackpot_legendary" ||
                   r.kind === "jackpot_mythic" ||
@@ -326,32 +344,38 @@ export default function Spin(p: Props) {
                     key={r.id}
                     className="absolute left-1/2 top-1/2"
                     style={{
-                      transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0, -78%)`,
+                      // center, rotate to slice, then push to rim
+                      transform: `translate(-50%, -50%) rotate(${angle}deg) translate(0, -92%)`,
                       transformOrigin: "50% 50%",
                     }}
                   >
-                    <div
-                      className={`flex flex-col items-center justify-center px-2 py-1 rounded-full border-2 whitespace-nowrap ${
-                        isJackpot
-                          ? "border-amber-400 bg-amber-500/20 text-amber-100 font-semibold"
-                          : "border-white/30 bg-black/60 text-slate-100"
-                      }`}
-                      style={{
-                        // keep pill upright
-                        transform: `rotate(${-angle}deg)`,
-                      }}
-                    >
-                      {icon && (
-                        <img
-                          src={icon}
-                          alt={r.label}
-                          className="w-7 h-7 rounded-full object-contain mb-0.5"
-                        />
-                      )}
-                      <span className={icon ? "text-[8px]" : "text-[9px]"}>
-                        {r.label.toUpperCase()}
-                      </span>
-                    </div>
+                    {isJackpot ? (
+                      // PET PICTURE SLICE
+                      <div
+                        className="flex items-center justify-center"
+                        style={{ transform: `rotate(${-angle}deg)` }}
+                      >
+                        <div className="w-14 h-14 rounded-full border-[3px] border-amber-400 bg-black/80 shadow-[0_0_20px_rgba(251,191,36,0.9)] flex items-center justify-center overflow-hidden">
+                          {icon && (
+                            <img
+                              src={icon}
+                              alt={r.label}
+                              className="w-11 h-11 object-contain"
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      // NORMAL TEXT SLICE
+                      <div
+                        className="flex items-center justify-center"
+                        style={{ transform: `rotate(${-angle}deg)` }}
+                      >
+                        <div className="px-3 py-1 rounded-full border-[2px] border-slate-500/70 bg-black/60 text-[9px] text-slate-50 font-semibold whitespace-nowrap shadow-[0_0_10px_rgba(15,23,42,0.9)]">
+                          {r.label.toUpperCase()}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })}
