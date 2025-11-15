@@ -22,68 +22,66 @@ import { useInterval } from "./lib/useInterval";
 import { achievements } from "./data/achievements";
 import { initTelegramUI } from "./lib/telegram";
 
-// NEW: data + storage for multipliers
 import { PETS } from "./data/pets";
 import { suits } from "./data/suits";
 import { getEquippedPet, getEquippedSuit } from "./lib/storage";
 
 // Types
 import type { Tab } from "./types";
+import type { Rarity as CardRarity } from "./components/CardFrame";
 
-/** Card collection shape for bonuses */
-export type CardCollection = {
-  common: number;
-  uncommon: number;
-  rare: number;
-  epic: number;
-  legendary: number;
-  mythic: number;
-  ultimate: number;
+/** One NFT-like card instance */
+export type CardInstance = {
+  id: string;        // unique per card
+  rarity: CardRarity;
+  serial: string;    // "#LG-0001 | MNYMKR v1.0"
+  obtainedAt: number;
 };
 
-// Helper: safe initial collection
-function normalizeCollection(raw: any): CardCollection {
-  const base: CardCollection = {
-    common: 0,
-    uncommon: 0,
-    rare: 0,
-    epic: 0,
-    legendary: 0,
-    mythic: 0,
-    ultimate: 0,
-  };
-  if (!raw || typeof raw !== "object") return base;
-  return {
-    common: Number(raw.common ?? 0),
-    uncommon: Number(raw.uncommon ?? 0),
-    rare: Number(raw.rare ?? 0),
-    epic: Number(raw.epic ?? 0),
-    legendary: Number(raw.legendary ?? 0),
-    mythic: Number(raw.mythic ?? 0),
-    ultimate: Number(raw.ultimate ?? 0),
-  };
-}
+// Card bonus from owned cards
+function computeCardMultAll(cards: CardInstance[]): number {
+  let common = 0,
+    uncommon = 0,
+    rare = 0,
+    epic = 0,
+    legendary = 0,
+    mythic = 0,
+    ultimate = 0;
 
-// Card bonus from collection
-function computeCardMultAll(collection: CardCollection): number {
-  const {
-    common: Cc,
-    uncommon: Cu,
-    rare: Cr,
-    epic: Ce,
-    legendary: Cl,
-    mythic: Cm,
-    ultimate: Cu2,
-  } = collection;
+  for (const c of cards) {
+    switch (c.rarity) {
+      case "common":
+        common++;
+        break;
+      case "uncommon":
+        uncommon++;
+        break;
+      case "rare":
+        rare++;
+        break;
+      case "epic":
+        epic++;
+        break;
+      case "legendary":
+        legendary++;
+        break;
+      case "mythic":
+        mythic++;
+        break;
+      case "ultimate":
+        ultimate++;
+        break;
+    }
+  }
 
   const bonusPercent =
-    0.5 * Cc +
-    1.0 * Cu +
-    2.0 * Cr +
-    4.0 * Ce +
-    7.0 * Cl +
-    10.0 * Cm +
-    15.0 * Cu2;
+    0.5 * common +
+    1.0 * uncommon +
+    2.0 * rare +
+    4.0 * epic +
+    7.0 * legendary +
+    10.0 * mythic +
+    15.0 * ultimate;
 
   return 1 + bonusPercent / 100;
 }
@@ -119,13 +117,13 @@ function computePetMultipliers(equippedPetId: string | null) {
       petTapMult = 1.05;
       break;
     case "dog":
-      petTapMult = 1.10;
+      petTapMult = 1.1;
       break;
     case "eagle":
       petTapMult = 1.05;
       break;
     case "unicorn":
-      petAutoMult = 1.30;
+      petAutoMult = 1.3;
       break;
     case "goblin":
       petTapMult = 1.5;
@@ -139,14 +137,14 @@ function computePetMultipliers(equippedPetId: string | null) {
   return { petTapMult, petAutoMult, globalMult };
 }
 
-// Taps needed per coupon
+// 1 coupon per 100 taps
 const TAPS_PER_COUPON = 100;
 
 export default function App() {
   // Load last save once (normalize with fallbacks)
   const s: any = useMemo(() => loadSave() as any, []);
 
-  // Core state (with robust fallbacks)
+  // Core state
   const [balance, setBalance] = useState<number>(
     (s.balance ?? s.score ?? 0) as number
   );
@@ -176,7 +174,7 @@ export default function App() {
       "Starter") as string
   );
 
-  // Pets (only ID, everything else derived)
+  // Pets
   const [equippedPetId, setEquippedPetId] = useState<string | null>(
     (s.equippedPet ?? null) as string | null
   );
@@ -194,9 +192,9 @@ export default function App() {
     { done: boolean; claimed: boolean }
   >);
 
-  // NEW: card collection & coupons
-  const [collection, setCollection] = useState<CardCollection>(
-    normalizeCollection(s.collection ?? defaultSave.collection)
+  // NEW: NFT-like cards + coupons
+  const [cards, setCards] = useState<CardInstance[]>(
+    (Array.isArray(s.cards) ? s.cards : []) as CardInstance[]
   );
   const [couponsSpent, setCouponsSpent] = useState<number>(
     (s.couponsSpent ?? 0) as number
@@ -248,8 +246,8 @@ export default function App() {
   );
 
   const cardMultAll = useMemo(
-    () => computeCardMultAll(collection),
-    [collection]
+    () => computeCardMultAll(cards),
+    [cards]
   );
 
   // Coupons based on taps & spent
@@ -258,8 +256,6 @@ export default function App() {
     [taps]
   );
   const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
-  const tapsToNextCoupon =
-    TAPS_PER_COUPON - (taps % TAPS_PER_COUPON || 0 === 0 ? 0 : taps % TAPS_PER_COUPON);
 
   // Passive income tick (autoPerSec each second with multipliers)
   useInterval(() => {
@@ -298,6 +294,50 @@ export default function App() {
 
   // Persist save whenever important things change
   useEffect(() => {
+    // derive collection counts from cards for backwards compatibility
+    let common = 0,
+      uncommon = 0,
+      rare = 0,
+      epic = 0,
+      legendary = 0,
+      mythic = 0,
+      ultimate = 0;
+    for (const c of cards) {
+      switch (c.rarity) {
+        case "common":
+          common++;
+          break;
+        case "uncommon":
+          uncommon++;
+          break;
+        case "rare":
+          rare++;
+          break;
+        case "epic":
+          epic++;
+          break;
+        case "legendary":
+          legendary++;
+          break;
+        case "mythic":
+          mythic++;
+          break;
+        case "ultimate":
+          ultimate++;
+          break;
+      }
+    }
+
+    const collection = {
+      common,
+      uncommon,
+      rare,
+      epic,
+      legendary,
+      mythic,
+      ultimate,
+    };
+
     saveSave({
       ...defaultSave,
 
@@ -323,6 +363,7 @@ export default function App() {
       spinCooldownEndsAt,
       quests: s.quests ?? [],
       achievements: achState,
+      cards,
       couponsSpent,
     } as any);
   }, [
@@ -335,9 +376,9 @@ export default function App() {
     bestSuitName,
     spinCooldownEndsAt,
     achState,
-    collection,
     equippedPetId,
     equippedSuitId,
+    cards,
     couponsSpent,
     s.lastDrop,
     s.ownedPets,
@@ -479,8 +520,8 @@ export default function App() {
         {tab === "cards" && (
           <CardsPage
             taps={taps}
-            collection={collection}
-            setCollection={setCollection}
+            cards={cards}
+            setCards={setCards}
             couponsAvailable={couponsAvailable}
             couponsSpent={couponsSpent}
             setCouponsSpent={setCouponsSpent}
