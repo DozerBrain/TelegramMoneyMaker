@@ -7,12 +7,17 @@ import { ART, rollRarity, nextSerial, DROPS } from "./cardConfig";
 type Props = {
   taps: number;
   cards: CardInstance[];
-  setCards: (v: CardInstance[] | ((prev: CardInstance[]) => CardInstance[])) => void;
+  setCards: (
+    v: CardInstance[] | ((prev: CardInstance[]) => CardInstance[])
+  ) => void;
   couponsAvailable: number;
   couponsSpent: number;
   setCouponsSpent: (v: number | ((p: number) => number)) => void;
   tapsPerCoupon: number;
+  bulkDiscountLevel: number;
 };
+
+const MAX_BULK_DISCOUNT = 5;
 
 export default function CardChest({
   taps,
@@ -22,6 +27,7 @@ export default function CardChest({
   couponsSpent, // kept for future use / clarity
   setCouponsSpent,
   tapsPerCoupon,
+  bulkDiscountLevel,
 }: Props) {
   const [lastPulled, setLastPulled] = useState<CardInstance[]>([]);
 
@@ -35,6 +41,11 @@ export default function CardChest({
     tapsPerCoupon - (tapsTowardNext === 0 ? 0 : tapsTowardNext);
 
   const totalCardsOwned = cards.length;
+
+  const tenPackCost = Math.max(
+    10 - Math.min(bulkDiscountLevel, MAX_BULK_DISCOUNT),
+    10 - MAX_BULK_DISCOUNT
+  ); // 10 -> 5
 
   function openCards(costCoupons: number, count: number) {
     if (couponsAvailable < costCoupons) return;
@@ -162,16 +173,17 @@ export default function CardChest({
           className={`w-full rounded-2xl py-3 text-sm font-semibold shadow-md shadow-emerald-400/25 transition 
           flex items-center justify-center gap-2
           ${
-            couponsAvailable >= 10
+            couponsAvailable >= tenPackCost
               ? "bg-gradient-to-r from-emerald-400 to-cyan-400 text-slate-900 active:scale-[0.97] hover:from-emerald-300 hover:to-cyan-300"
               : "bg-white/5 text-slate-500 border border-white/10 cursor-not-allowed"
           }`}
-          disabled={couponsAvailable < 10}
-          onClick={() => openCards(10, 10)}
+          disabled={couponsAvailable < tenPackCost}
+          onClick={() => openCards(tenPackCost, 10)}
         >
           <span>Open 10 Cards</span>
           <span className="text-[11px] px-2 py-0.5 rounded-full bg-black/20 text-slate-900">
-            Best value • 10 coupons
+            Best value • {tenPackCost} coupon
+            {tenPackCost !== 1 ? "s" : ""}
           </span>
         </button>
 
