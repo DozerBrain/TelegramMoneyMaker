@@ -16,17 +16,15 @@ import PetsPage from "./pages/Pets";
 import SuitsPage from "./pages/Suits";
 import CardsPage from "./pages/Cards";
 
-// Game helpers
+// Storage / helpers
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
 import { useInterval } from "./lib/useInterval";
 import { achievements } from "./data/achievements";
 import { initTelegramUI } from "./lib/telegram";
-
-// Data
 import { suits } from "./data/suits";
 import { getEquippedPet, getEquippedSuit } from "./lib/storage";
 
-// Income math
+// Central income math
 import {
   computeCardMultAll,
   computeSuitMult,
@@ -38,92 +36,83 @@ import {
 import type { Tab } from "./types";
 import type { Rarity as CardRarity } from "./components/CardFrame";
 
-/** One NFT-like card instance stored in save */
 export type CardInstance = {
-  id: string;           // unique id
-  rarity: CardRarity;   // "common" | "uncommon" | ...
-  serial: string;       // "#UL-0003 | MNYMKR v1.0"
-  obtainedAt: number;   // timestamp
+  id: string;
+  rarity: CardRarity;
+  serial: string;
+  obtainedAt: number;
 };
 
+/** Build legacy collection counts from NFT-style cards */
+function buildCollectionFromCards(cards: CardInstance[]) {
+  const counts = {
+    common: 0,
+    uncommon: 0,
+    rare: 0,
+    epic: 0,
+    legendary: 0,
+    mythic: 0,
+    ultimate: 0,
+  };
+
+  for (const c of cards) {
+    counts[c.rarity]++;
+  }
+  return counts;
+}
+
 export default function App() {
-  // Load last save once (normalize with fallbacks)
-  const s: any = useMemo(() => loadSave() as any, []);
+  // Load save once
+  const initial = useMemo(() => (loadSave() as any) || {}, []);
 
   // Core state
-  const [balance, setBalance] = useState<number>(
-    (s.balance ?? s.score ?? 0) as number
-  );
-  const [totalEarnings, setTotalEarnings] = useState<number>(
-    (s.totalEarnings ?? s.score ?? 0) as number
-  );
-  const [taps, setTaps] = useState<number>(
-    (s.taps ?? s.tap ?? 0) as number
-  );
-  const [tapValue, setTapValue] = useState<number>(
-    (s.tapValue ?? 1) as number
-  );
-  const [autoPerSec, setAutoPerSec] = useState<number>(
-    (s.autoPerSec ?? 0) as number
-  );
-  const [multi, setMulti] = useState<number>(
-    (s.multi ?? 1) as number
-  );
+  const [balance, setBalance] = useState<number>(initial.balance ?? initial.score ?? 0);
+  const [totalEarnings, setTotalEarnings] = useState<number>(initial.totalEarnings ?? initial.score ?? 0);
+  const [taps, setTaps] = useState<number>(initial.taps ?? initial.tap ?? 0);
+  const [tapValue, setTapValue] = useState<number>(initial.tapValue ?? 1);
+  const [autoPerSec, setAutoPerSec] = useState<number>(initial.autoPerSec ?? 0);
+  const [multi, setMulti] = useState<number>(initial.multi ?? 1);
 
-  // Suits
-  const [equippedSuitId, setEquippedSuitId] = useState<string | null>(
-    (s.equippedSuit ?? null) as string | null
-  );
+  // Suits / pets
+  const [equippedSuitId, setEquippedSuitId] = useState<string | null>(initial.equippedSuit ?? null);
   const [bestSuitName, setBestSuitName] = useState<string>(
-    (s.bestSuitName ??
-      suits.find((su) => su.id === (s.equippedSuit ?? "starter"))?.name ??
-      "Starter") as string
+    suits.find((su) => su.id === (initial.equippedSuit ?? "starter"))?.name ?? "Starter"
   );
-
-  // Pets
-  const [equippedPetId, setEquippedPetId] = useState<string | null>(
-    (s.equippedPet ?? null) as string | null
-  );
+  const [equippedPetId, setEquippedPetId] = useState<string | null>(initial.equippedPet ?? null);
 
   // Spin
   const [spinCooldownEndsAt, setSpinCooldownEndsAt] = useState<number | null>(
-    (s.spinCooldownEndsAt ?? null) as number | null
+    initial.spinCooldownEndsAt ?? null
   );
 
   // Achievements
   const [achState, setAchState] = useState<
     Record<string, { done: boolean; claimed: boolean }>
-  >((s.achievements ?? {}) as Record<
-    string,
-    { done: boolean; claimed: boolean }
-  >);
+  >(initial.achievements ?? {});
 
-  // NFT-like cards + coupons
+  // Cards / coupons
   const [cards, setCards] = useState<CardInstance[]>(
-    (Array.isArray(s.cards) ? s.cards : []) as CardInstance[]
+    Array.isArray(initial.cards) ? initial.cards : []
   );
-  const [couponsSpent, setCouponsSpent] = useState<number>(
-    (s.couponsSpent ?? 0) as number
-  );
+  const [couponsSpent, setCouponsSpent] = useState<number>(initial.couponsSpent ?? 0);
 
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
 
-  // Telegram Mini App init (safe no-op in normal browsers)
+  // Telegram init
   useEffect(() => {
     initTelegramUI();
   }, []);
 
-  // Sync equipped pet/suit with storage when Pets/Suits UI saves
+  // Sync equipped pet / suit from storage events (Pets/Suits pages)
   useEffect(() => {
     const syncEquip = () => {
       try {
         const pet = getEquippedPet();
         const suitId = getEquippedSuit();
 
-        if (pet !== undefined) {
-          setEquippedPetId(pet ?? null);
-        }
+        if (pet !== undefined) setEquippedPetId(pet ?? null);
+
         if (suitId !== undefined) {
           setEquippedSuitId(suitId ?? null);
           const suit = suits.find((su) => su.id === (suitId ?? "starter"));
@@ -136,8 +125,6 @@ export default function App() {
 
     window.addEventListener("mm:save", syncEquip as any);
     window.addEventListener("storage", syncEquip as any);
-
-    // initial sync
     syncEquip();
 
     return () => {
@@ -146,143 +133,102 @@ export default function App() {
     };
   }, []);
 
-  /* ---------- DERIVED MULTIPLIERS ---------- */
-
+  // Multipliers
   const suitMult = useMemo(
-    () => computeSuitMult(equippedSuitId ?? "starter"),
+    () => computeSuitMult(equippedSuitId),
     [equippedSuitId]
   );
-
   const { petTapMult, petAutoMult, globalMult } = useMemo(
     () => computePetMultipliers(equippedPetId),
     [equippedPetId]
   );
-
   const cardMultAll = useMemo(
     () => computeCardMultAll(cards),
     [cards]
   );
 
-  // Coupons from taps
+  // Coupons
   const couponsEarned = useMemo(
     () => Math.floor(taps / TAPS_PER_COUPON),
     [taps]
   );
   const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
 
-  /* ---------- PASSIVE INCOME (AUTO) WITH FULL MATH ---------- */
-
+  // Auto income
   useInterval(() => {
-    if (autoPerSec > 0) {
-      const gain = Math.max(
-        0,
-        Math.floor(
-          autoPerSec *
-            multi *
-            suitMult *
-            petAutoMult *
-            cardMultAll *
-            globalMult
-        )
-      );
-      if (gain > 0) {
-        setBalance((b) => b + gain);
-        setTotalEarnings((t) => t + gain);
-      }
+    if (autoPerSec <= 0) return;
+
+    const gain = Math.max(
+      0,
+      Math.floor(
+        autoPerSec *
+          multi *
+          suitMult *
+          petAutoMult *
+          cardMultAll *
+          globalMult
+      )
+    );
+
+    if (gain > 0) {
+      setBalance((b) => b + gain);
+      setTotalEarnings((t) => t + gain);
     }
   }, 1000);
 
-  /* ---------- ACHIEVEMENTS ---------- */
-
+  // Achievements checking
   useEffect(() => {
     const ctx = { taps, balance, totalEarnings, bestSuitName };
     setAchState((prev) => {
       const next = { ...prev };
       for (const a of achievements) {
         if (!next[a.id]) next[a.id] = { done: false, claimed: false };
-        if (!next[a.id].done && a.check(ctx))
+        if (!next[a.id].done && a.check(ctx)) {
           next[a.id] = { ...next[a.id], done: true };
+        }
       }
       return next;
     });
   }, [taps, balance, totalEarnings, bestSuitName]);
 
-  /* ---------- SAVE GAME ---------- */
-
+  // Save game (merge with existing save, never wipe)
   useEffect(() => {
-    // derive collection counts from cards for backwards compatibility
-    let common = 0,
-      uncommon = 0,
-      rare = 0,
-      epic = 0,
-      legendary = 0,
-      mythic = 0,
-      ultimate = 0;
-
-    for (const c of cards) {
-      switch (c.rarity) {
-        case "common":
-          common++;
-          break;
-        case "uncommon":
-          uncommon++;
-          break;
-        case "rare":
-          rare++;
-          break;
-        case "epic":
-          epic++;
-          break;
-        case "legendary":
-          legendary++;
-          break;
-        case "mythic":
-          mythic++;
-          break;
-        case "ultimate":
-          ultimate++;
-          break;
-      }
-    }
-
-    const collection = {
-      common,
-      uncommon,
-      rare,
-      epic,
-      legendary,
-      mythic,
-      ultimate,
-    };
+    const prev: any = (loadSave() as any) ?? {};
+    const collection = buildCollectionFromCards(cards);
 
     saveSave({
-      ...defaultSave,
+      ...prev,
 
-      // legacy-compatible mapping
+      // Legacy fields
       score: balance,
       tap: taps,
-      collection,
-      lastDrop: s.lastDrop ?? null,
-      ownedPets: s.ownedPets ?? [],
-      equippedPet: equippedPetId ?? null,
-      ownedSuits: s.ownedSuits ?? [],
-      equippedSuit: equippedSuitId ?? null,
-      profile: s.profile ?? defaultSave.profile,
 
-      // current shape
+      // Core
       balance,
       totalEarnings,
       taps,
       tapValue,
       autoPerSec,
       multi,
+
+      // Suits / pets
       bestSuitName,
-      spinCooldownEndsAt,
-      quests: s.quests ?? [],
+      equippedSuit: equippedSuitId ?? prev.equippedSuit ?? null,
+      equippedPet: equippedPetId ?? prev.equippedPet ?? null,
+
+      // Progression
       achievements: achState,
+      quests: prev.quests ?? [],
+
+      // Cards
       cards,
+      collection,
       couponsSpent,
-    } as any);
+
+      // Spin & profile
+      spinCooldownEndsAt,
+      profile: prev.profile ?? defaultSave.profile,
+    });
   }, [
     balance,
     totalEarnings,
@@ -291,22 +237,15 @@ export default function App() {
     autoPerSec,
     multi,
     bestSuitName,
-    spinCooldownEndsAt,
-    achState,
-    equippedPetId,
     equippedSuitId,
+    equippedPetId,
+    achState,
     cards,
     couponsSpent,
-    s.lastDrop,
-    s.ownedPets,
-    s.ownedSuits,
-    s.profile,
-    s.quests,
+    spinCooldownEndsAt,
   ]);
 
-  /* ---------- NAVIGATION ---------- */
-
-  // Hash navigation (TopBar sets #/profile or #/leaderboard)
+  // Hash navigation
   useEffect(() => {
     const applyHash = () => {
       const h = (location.hash || "").toLowerCase();
@@ -318,7 +257,7 @@ export default function App() {
     return () => window.removeEventListener("hashchange", applyHash);
   }, []);
 
-  // Listen for quick-nav events from LeftQuickNav (Cards / Suits / Pets)
+  // Quick nav events (Cards / Suits / Pets)
   useEffect(() => {
     const onGoto = (e: Event) => {
       const ce = e as CustomEvent<{ goto: Tab }>;
@@ -329,9 +268,8 @@ export default function App() {
     return () => window.removeEventListener("MM_GOTO", onGoto as EventListener);
   }, []);
 
-  /* ---------- SAVE EXPORT / IMPORT / RESET ---------- */
-
-  function doExport() {
+  // Handlers for More page
+  function handleExport() {
     try {
       const snapshot = loadSave();
       const json = JSON.stringify(snapshot, null, 2);
@@ -353,7 +291,7 @@ export default function App() {
     }
   }
 
-  function doImport(raw: string) {
+  function handleImport(raw: string) {
     try {
       const parsed = JSON.parse(raw);
       saveSave(parsed as any);
@@ -363,13 +301,12 @@ export default function App() {
     }
   }
 
-  function doReset() {
+  function handleReset() {
     saveSave({ ...defaultSave } as any);
     location.reload();
   }
 
-  // Claim achievement
-  function claimAchievement(id: string, reward: number) {
+  function handleClaimAchievement(id: string, reward: number) {
     setAchState((prev) => {
       const st = prev[id];
       if (!st?.done || st.claimed) return prev;
@@ -377,8 +314,6 @@ export default function App() {
     });
     setBalance((b) => b + reward);
   }
-
-  /* ---------- RENDER ---------- */
 
   return (
     <div className="min-h-screen flex flex-col bg-[#0b0f13]">
@@ -434,8 +369,6 @@ export default function App() {
 
         {tab === "leaderboard" && <LeaderboardPage />}
         {tab === "profile" && <ProfilePage />}
-
-        {/* Cards / Suits / Pets */}
         {tab === "suits" && <SuitsPage />}
         {tab === "pets" && <PetsPage />}
 
@@ -460,10 +393,10 @@ export default function App() {
             autoPerSec={autoPerSec}
             multi={multi}
             achievementsState={achState}
-            onClaim={claimAchievement}
-            onReset={doReset}
-            onExport={doExport}
-            onImport={doImport}
+            onClaim={handleClaimAchievement}
+            onReset={handleReset}
+            onExport={handleExport}
+            onImport={handleImport}
           />
         )}
       </main>
