@@ -1,8 +1,11 @@
-import { getProfile, setProfile } from "./profile";
+// src/lib/telegram.ts
+import { setProfile } from "./profile";
 
 declare global {
   interface Window {
     Telegram?: any;
+    TelegramWebviewProxy?: any;
+    tgWebAppData?: string;
   }
 }
 
@@ -11,29 +14,46 @@ export function initTelegramUI() {
 
   const debug: any = {
     hasWindow: true,
-    hasTelegram: !!window.Telegram,
+    hasTelegram:
+      !!window.Telegram ||
+      !!window.TelegramWebviewProxy ||
+      !!window.tgWebAppData,
     href: window.location.href,
   };
 
-  const tg = window.Telegram?.WebApp;
+  // Try to get WebApp object (Desktop / iOS usually)
+  const tg = window.Telegram?.WebApp || (window as any).TelegramWebviewProxy;
   debug.hasWebApp = !!tg;
 
-  // 1️⃣ Try Telegram.WebApp normally
-  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    const user = tg.initDataUnsafe.user;
-    applyUser(user);
-    debug.source = "WebApp";
-    localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
-    return;
+  try {
+    if (tg && typeof tg.ready === "function") {
+      tg.ready();
+    }
+  } catch {
+    // ignore
   }
 
-  // 2️⃣ If not available, try reading from URL (Android injects ?tgWebAppData=...)
-  const url = new URL(window.location.href);
-  const encoded = url.searchParams.get("tgWebAppData");
-
-  if (encoded) {
+  // 1) Normal WebApp way: tg.initDataUnsafe.user
+  if (tg && (tg as any).initDataUnsafe && (tg as any).initDataUnsafe.user) {
     try {
+      const user = (tg as any).initDataUnsafe.user;
+      debug.source = "WebApp";
+      applyUser(user);
+      localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
+      return;
+    } catch (e) {
+      debug.webAppError = String(e);
+    }
+  }
+
+  // 2) Android way: ?tgWebAppData=... in URL
+  try {
+    const url = new URL(window.location.href);
+    const encoded = url.searchParams.get("tgWebAppData");
+
+    if (encoded) {
       const params = new URLSearchParams(encoded);
+
       const userId = params.get("user[id]");
       const firstName = params.get("user[first_name]");
       const lastName = params.get("user[last_name]");
@@ -50,19 +70,25 @@ export function initTelegramUI() {
         language_code: lang,
       };
 
-      applyUser(user);
       debug.source = "URL";
-    } catch (e) {
-      debug.error = String(e);
+      applyUser(user);
     }
+  } catch (e) {
+    debug.urlError = String(e);
   }
 
-  localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
+  // Save debug info so we can see what happened
+  try {
+    localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
+  } catch {
+    // ignore
+  }
 }
 
 function applyUser(user: any) {
   if (!user || !user.id) return;
 
+  // Country guess from language
   let country = "US";
   const lang = (user.language_code || "").toLowerCase();
   if (lang.startsWith("ru")) country = "RU";
@@ -71,7 +97,7 @@ function applyUser(user: any) {
   else if (lang.startsWith("pt")) country = "BR";
   else if (lang.startsWith("hi")) country = "IN";
 
-  const fullname =
+  const fullName =
     [user.first_name, user.last_name].filter(Boolean).join(" ") ||
     user.username ||
     "Player";
@@ -80,7 +106,7 @@ function applyUser(user: any) {
     uid: String(user.id),
     userId: String(user.id),
     username: user.username,
-    name: fullname,
+    name: fullName,
     country,
     avatarUrl: user.photo_url,
   });
