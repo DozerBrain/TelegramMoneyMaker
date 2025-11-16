@@ -1,70 +1,86 @@
 // src/lib/profile.ts
 import type { PlayerProfile } from "../types";
 
-export type { PlayerProfile }; // so other files can: import { PlayerProfile } from "../lib/profile";
+export type { PlayerProfile };
 
 const KEY = "mm_profile";
 
-/**
- * Generate a short numeric UID from 1 to 99,999,999 (max 8 digits).
- * Examples: "7", "48291", "90012345"
- */
+/** Short numeric UID: 1..99,999,999 (max 8 digits) */
 function makeUid(): string {
   const n = Math.floor(Math.random() * 99_999_999) + 1;
   return String(n);
 }
 
-/**
- * Load player profile from localStorage.
- * If missing or broken -> create a fresh one with a short numeric UID.
- */
+/** Try to enrich profile with Telegram WebApp user (name + photo) */
+function applyTelegram(profile: PlayerProfile): PlayerProfile {
+  try {
+    const tgUser = (window as any)?.Telegram?.WebApp?.initDataUnsafe?.user;
+    if (!tgUser) return profile;
+
+    const p = { ...profile };
+
+    // Fill name only if it's still generic
+    if ((!p.name || p.name === "Player") && tgUser.first_name) {
+      const last = tgUser.last_name ? ` ${tgUser.last_name}` : "";
+      p.name = `${tgUser.first_name}${last}`;
+    }
+
+    // Avatar
+    if (!p.avatarUrl && tgUser.photo_url) {
+      p.avatarUrl = tgUser.photo_url;
+    }
+
+    return p;
+  } catch {
+    return profile;
+  }
+}
+
 export function getProfile(): PlayerProfile {
+  let p: PlayerProfile | null = null;
+
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
-      const parsed = JSON.parse(raw) as PlayerProfile;
-
-      // --- Fix / migrate old profiles ---
-      // If UID missing or "local", assign a fresh short numeric UID
-      if (!parsed.uid || parsed.uid === "local") {
-        parsed.uid = makeUid();
-      }
-
-      // Legacy aliases (for older code)
-      parsed.userId = parsed.userId || parsed.uid;
-      parsed.username = parsed.username || parsed.name || "Player";
-      parsed.country = parsed.country || (parsed as any).region || "US";
-      parsed.region = parsed.region || parsed.country || "US";
-      parsed.updatedAt = parsed.updatedAt || Date.now();
-
-      localStorage.setItem(KEY, JSON.stringify(parsed));
-      return parsed;
+      p = JSON.parse(raw) as PlayerProfile;
     }
   } catch {
-    // fall through to create a new profile
+    p = null;
   }
 
-  // --- First-time player: create default profile ---
-  const uid = makeUid();
-  const p: PlayerProfile = {
-    uid,
-    userId: uid,
-    name: "Player",
-    username: "Player",
-    country: "US",
-    region: "US",
-    avatarUrl: undefined,
-    updatedAt: Date.now(),
-  };
+  // If nothing or broken, create a new profile
+  if (!p || typeof p !== "object") {
+    p = {
+      uid: makeUid(),
+      userId: "",         // will be filled below
+      name: "Player",
+      username: "Player",
+      country: "US",
+      region: "US",
+      avatarUrl: undefined,
+      updatedAt: Date.now(),
+    };
+  }
 
-  localStorage.setItem(KEY, JSON.stringify(p));
-  return p;
+  // ✅ IMPORTANT: never change an existing UID
+  if (!p.uid) {
+    p.uid = makeUid();
+  }
+
+  // Keep legacy aliases in sync
+  p.userId = p.userId || p.uid;
+  p.username = p.username || p.name || "Player";
+  p.country = p.country || (p as any).region || "US";
+  p.region = p.region || p.country || "US";
+  p.updatedAt = p.updatedAt || Date.now();
+
+  // Add Telegram name/photo if available
+  const withTelegram = applyTelegram(p);
+
+  localStorage.setItem(KEY, JSON.stringify(withTelegram));
+  return withTelegram;
 }
 
-/**
- * Update and save profile.
- * You can pass partial fields: setProfile({ name: "Dozer Brain" })
- */
 export function setProfile(update: Partial<PlayerProfile>) {
   const current = getProfile();
   const merged: PlayerProfile = {
@@ -73,7 +89,7 @@ export function setProfile(update: Partial<PlayerProfile>) {
     updatedAt: Date.now(),
   };
 
-  // Keep aliases in sync
+  // Do NOT touch uid here – keep it stable
   merged.userId = merged.userId || merged.uid;
   merged.username = merged.username || merged.name || "Player";
   merged.region = merged.region || merged.country || "US";
@@ -81,5 +97,5 @@ export function setProfile(update: Partial<PlayerProfile>) {
   localStorage.setItem(KEY, JSON.stringify(merged));
 }
 
-// Legacy name some files might import
+// legacy alias
 export const saveProfile = setProfile;
