@@ -1,9 +1,18 @@
 // src/lib/profile.ts
 import type { PlayerProfile } from "../types";
 
-export type { PlayerProfile }; // re-export so pages can `import { PlayerProfile } from '../lib/profile'`
+export type { PlayerProfile };
 
 const KEY = "mm_profile";
+
+function generateUID() {
+  try {
+    return crypto.randomUUID();
+  } catch {
+    // fallback
+    return "uid_" + Math.random().toString(36).slice(2) + Date.now();
+  }
+}
 
 export function getProfile(): PlayerProfile {
   try {
@@ -13,17 +22,24 @@ export function getProfile(): PlayerProfile {
       if (parsed && typeof parsed === "object") return parsed;
     }
   } catch {}
+
+  // ---- CREATE BRAND NEW PROFILE ----
+  const uid = generateUID();
+
   const p: PlayerProfile = {
-    uid: "local",
+    uid,
     name: "Player",
     country: "US",
     avatarUrl: undefined,
-    // legacy aliases some pages may read
-    userId: "local",
+
+    // legacy fields for the pages that still read them
+    userId: uid,
     username: "Player",
     region: "US",
+
     updatedAt: Date.now(),
   };
+
   localStorage.setItem(KEY, JSON.stringify(p));
   return p;
 }
@@ -34,5 +50,4 @@ export function setProfile(update: Partial<PlayerProfile>) {
   localStorage.setItem(KEY, JSON.stringify(merged));
 }
 
-// legacy name used in some pages
 export const saveProfile = setProfile;
