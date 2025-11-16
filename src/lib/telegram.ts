@@ -1,11 +1,8 @@
-// src/lib/telegram.ts
-import { setProfile } from "./profile";
+import { getProfile, setProfile } from "./profile";
 
 declare global {
   interface Window {
     Telegram?: any;
-    TelegramWebviewProxy?: any;
-    tgWebAppData?: string;
   }
 }
 
@@ -14,81 +11,60 @@ export function initTelegramUI() {
 
   const debug: any = {
     hasWindow: true,
-    hasTelegram:
-      !!window.Telegram ||
-      !!window.TelegramWebviewProxy ||
-      !!window.tgWebAppData,
+    hasTelegram: !!window.Telegram,
     href: window.location.href,
   };
 
-  // Try to get WebApp object (Desktop / iOS usually)
-  const tg = window.Telegram?.WebApp || (window as any).TelegramWebviewProxy;
+  const tg = window.Telegram?.WebApp;
   debug.hasWebApp = !!tg;
 
-  try {
-    if (tg && typeof tg.ready === "function") {
-      tg.ready();
-    }
-  } catch {
-    // ignore
+  // ---- 1) Normal Telegram MiniApp ----
+  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    const user = tg.initDataUnsafe.user;
+    applyUser(user);
+    debug.source = "WebApp";
+    localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
+    return;
   }
 
-  // 1) Normal WebApp way: tg.initDataUnsafe.user
-  if (tg && (tg as any).initDataUnsafe && (tg as any).initDataUnsafe.user) {
+  // ---- 2) Android “URL payload” mode ----
+  const url = new URL(window.location.href);
+  const encoded = url.searchParams.get("tgWebAppData");
+
+  if (encoded) {
     try {
-      const user = (tg as any).initDataUnsafe.user;
-      debug.source = "WebApp";
-      applyUser(user);
-      localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
-      return;
-    } catch (e) {
-      debug.webAppError = String(e);
-    }
-  }
-
-  // 2) Android way: ?tgWebAppData=... in URL
-  try {
-    const url = new URL(window.location.href);
-    const encoded = url.searchParams.get("tgWebAppData");
-
-    if (encoded) {
       const params = new URLSearchParams(encoded);
 
-      const userId = params.get("user[id]");
-      const firstName = params.get("user[first_name]");
-      const lastName = params.get("user[last_name]");
+      const id = params.get("user[id]");
+      const first = params.get("user[first_name]");
+      const last = params.get("user[last_name]");
       const username = params.get("user[username]");
-      const photo = params.get("user[photo_url]");
       const lang = params.get("user[language_code]");
+      const photo = params.get("user[photo_url]");
 
       const user = {
-        id: userId,
-        first_name: firstName,
-        last_name: lastName,
+        id,
+        first_name: first,
+        last_name: last,
         username,
-        photo_url: photo,
         language_code: lang,
+        photo_url: photo,
       };
 
-      debug.source = "URL";
       applyUser(user);
+      debug.source = "URL";
+    } catch (e) {
+      debug.error = String(e);
     }
-  } catch (e) {
-    debug.urlError = String(e);
   }
 
-  // Save debug info so we can see what happened
-  try {
-    localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
-  } catch {
-    // ignore
-  }
+  localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
 }
 
 function applyUser(user: any) {
   if (!user || !user.id) return;
 
-  // Country guess from language
+  // Country detection
   let country = "US";
   const lang = (user.language_code || "").toLowerCase();
   if (lang.startsWith("ru")) country = "RU";
@@ -97,7 +73,7 @@ function applyUser(user: any) {
   else if (lang.startsWith("pt")) country = "BR";
   else if (lang.startsWith("hi")) country = "IN";
 
-  const fullName =
+  const fullname =
     [user.first_name, user.last_name].filter(Boolean).join(" ") ||
     user.username ||
     "Player";
@@ -106,7 +82,7 @@ function applyUser(user: any) {
     uid: String(user.id),
     userId: String(user.id),
     username: user.username,
-    name: fullName,
+    name: fullname,
     country,
     avatarUrl: user.photo_url,
   });
