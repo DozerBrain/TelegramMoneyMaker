@@ -1,14 +1,13 @@
 // src/pages/Profile.tsx
 import React, { useEffect, useState } from "react";
 import { getProfile, setProfile } from "../lib/profile";
-import { getScore } from "../lib/storage";
-import { submitScore } from "../lib/leaderboard";
 
 export default function ProfilePage() {
   const [name, setName] = useState("");
   const [country, setCountry] = useState("US");
   const [uid, setUid] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+  const [tgDebug, setTgDebug] = useState<string>("");
 
   useEffect(() => {
     const p = getProfile();
@@ -16,23 +15,23 @@ export default function ProfilePage() {
     setCountry(p.country || "US");
     setUid(p.uid);
     setAvatarUrl(p.avatarUrl);
+
+    try {
+      const raw = localStorage.getItem("mm_tg_debug");
+      if (raw) setTgDebug(raw);
+      else setTgDebug("no mm_tg_debug key");
+    } catch {
+      setTgDebug("error reading mm_tg_debug");
+    }
   }, []);
 
-  async function handleSave() {
-    // save profile locally
+  function handleSave() {
     setProfile({ name, country });
-
     const p = getProfile();
+    setName(p.name || "Player");
+    setCountry(p.country || "US");
     setUid(p.uid);
     setAvatarUrl(p.avatarUrl);
-
-    // ALSO push score to Firebase leaderboard
-    try {
-      const score = Number(getScore() || 0);
-      await submitScore(score, p);
-    } catch (e) {
-      console.log("submitScore failed", e);
-    }
   }
 
   const initials =
@@ -45,7 +44,7 @@ export default function ProfilePage() {
 
   return (
     <div className="p-4 text-white">
-      {/* Avatar + summary */}
+      {/* Avatar + header */}
       <div className="flex items-center gap-4 mb-6">
         {avatarUrl ? (
           <img
@@ -61,14 +60,12 @@ export default function ProfilePage() {
 
         <div className="text-sm text-white/70">
           <div className="font-semibold text-base">{name}</div>
-          <div className="text-xs text-white/50">ID: {uid}</div>
+          <div className="text-xs text-white/50">ID: {uid || "local"}</div>
         </div>
       </div>
 
       {/* Name */}
-      <label className="block text-sm mb-1 text-white/70">
-        Display name
-      </label>
+      <label className="block text-sm mb-1 text-white/70">Display name</label>
       <input
         className="w-full mb-4 rounded-xl bg-zinc-900/80 border border-white/10 px-3 py-2 text-sm outline-none focus:border-emerald-500"
         value={name}
@@ -76,9 +73,7 @@ export default function ProfilePage() {
       />
 
       {/* Country */}
-      <label className="block text-sm mb-1 text-white/70">
-        Country
-      </label>
+      <label className="block text-sm mb-1 text-white/70">Country</label>
       <select
         className="w-full mb-4 rounded-xl bg-zinc-900/80 border border-white/10 px-3 py-2 text-sm outline-none focus:border-emerald-500"
         value={country}
@@ -94,12 +89,10 @@ export default function ProfilePage() {
       </select>
 
       {/* Player ID (read-only) */}
-      <label className="block text-sm mb-1 text-white/70">
-        Player ID
-      </label>
+      <label className="block text-sm mb-1 text-white/70">Player ID</label>
       <input
         className="w-full mb-6 rounded-xl bg-zinc-900/60 border border-white/10 px-3 py-2 text-sm text-white/60"
-        value={uid}
+        value={uid || "local"}
         readOnly
       />
 
@@ -109,6 +102,12 @@ export default function ProfilePage() {
       >
         Save Profile
       </button>
+
+      {/* 🔍 Tiny debug block */}
+      <div className="mt-4 text-[10px] text-white/40 whitespace-pre-wrap break-all border-t border-white/10 pt-2">
+        <div className="font-semibold mb-1">Telegram debug:</div>
+        {tgDebug || "no debug data"}
+      </div>
     </div>
   );
 }
