@@ -11,21 +11,53 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const p = getProfile();
-    setName(p.name || "Player");
-    setCountry(p.country || "US");
-    setUid(p.uid);
-    setAvatarUrl(p.avatarUrl);
 
+    let nextName = p.name || "Player";
+    let nextCountry = p.country || "US";
+    let nextUid = p.uid || "";
+    let nextAvatar = p.avatarUrl as string | undefined;
+
+    // Try to override with Telegram debug info (finalUid, finalName, etc.)
     try {
       const raw = localStorage.getItem("mm_tg_debug");
-      if (raw) setTgDebug(raw);
+      if (raw) {
+        setTgDebug(raw);
+
+        try {
+          const dbg = JSON.parse(raw);
+
+          if (dbg.finalUid) nextUid = String(dbg.finalUid);
+          if (dbg.finalName) nextName = String(dbg.finalName);
+          if (dbg.finalCountry) nextCountry = String(dbg.finalCountry);
+
+          // if we don't already have avatar in profile, try extract from userJson
+          if (!nextAvatar && dbg.userJson) {
+            try {
+              const u = JSON.parse(dbg.userJson);
+              if (u.photo_url) nextAvatar = u.photo_url;
+            } catch {
+              // ignore JSON error
+            }
+          }
+        } catch {
+          // ignore parse error
+        }
+      }
     } catch {
-      // ignore
+      // ignore storage error
     }
+
+    setName(nextName);
+    setCountry(nextCountry);
+    setUid(nextUid);
+    setAvatarUrl(nextAvatar);
   }, []);
 
   function handleSave() {
+    // Only allow editing name + country manually
     setProfile({ name, country });
+
+    // Re-read profile after save (in case something else changed)
     const p = getProfile();
     setUid(p.uid);
     setAvatarUrl(p.avatarUrl);
@@ -39,12 +71,12 @@ export default function ProfilePage() {
   }
 
   const initials =
-    name
+    (name
       .split(" ")
       .map((n) => n[0])
       .join("")
       .slice(0, 2)
-      .toUpperCase() || "P";
+      .toUpperCase() as string) || "P";
 
   return (
     <div className="p-4 text-white">
@@ -69,9 +101,7 @@ export default function ProfilePage() {
       </div>
 
       {/* Name */}
-      <label className="block text-sm mb-1 text-white/70">
-        Display name
-      </label>
+      <label className="block text-sm mb-1 text-white/70">Display name</label>
       <input
         className="w-full mb-4 rounded-xl bg-zinc-900/80 border border-white/10 px-3 py-2 text-sm outline-none focus:border-emerald-500"
         value={name}
@@ -79,9 +109,7 @@ export default function ProfilePage() {
       />
 
       {/* Country */}
-      <label className="block text-sm mb-1 text-white/70">
-        Country
-      </label>
+      <label className="block text-sm mb-1 text-white/70">Country</label>
       <select
         className="w-full mb-4 rounded-xl bg-zinc-900/80 border border-white/10 px-3 py-2 text-sm outline-none focus:border-emerald-500"
         value={country}
@@ -96,9 +124,7 @@ export default function ProfilePage() {
       </select>
 
       {/* Player ID */}
-      <label className="block text-sm mb-1 text-white/70">
-        Player ID
-      </label>
+      <label className="block text-sm mb-1 text-white/70">Player ID</label>
       <input
         className="w-full mb-6 rounded-xl bg-zinc-900/60 border border-white/10 px-3 py-2 text-sm text-white/60"
         value={uid}
