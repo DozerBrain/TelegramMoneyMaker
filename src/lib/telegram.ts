@@ -1,38 +1,37 @@
 // src/lib/telegram.ts
-import { setProfile, getProfile } from "./profile";
+
+// Safe Telegram WebApp init helper.
+// - If we're inside Telegram: use the real WebApp object.
+// - If we're in a normal browser: do NOTHING (no fake user in production).
 
 export function initTelegramUI() {
+  if (typeof window === "undefined") return;
+
   const w = window as any;
   const tg = w.Telegram?.WebApp;
-  if (!tg) return; // not inside Telegram → no-op
 
-  try {
-    tg.ready();
-    tg.expand();
-  } catch {
-    // ignore errors
+  // ✅ Real Telegram WebApp present
+  if (tg) {
+    try {
+      // Tell Telegram we're ready and expand the app
+      if (typeof tg.ready === "function") tg.ready();
+      if (typeof tg.expand === "function") tg.expand();
+
+      // Optional: make the app match our dark theme if supported
+      if (typeof tg.setBackgroundColor === "function") {
+        tg.setBackgroundColor("#000000");
+      }
+      if (typeof tg.setHeaderColor === "function") {
+        tg.setHeaderColor("#000000");
+      }
+    } catch (e) {
+      console.warn("Telegram WebApp init error:", e);
+    }
+    return;
   }
 
-  // Try to sync Telegram user into our profile once
-  try {
-    const user = tg.initDataUnsafe?.user;
-    if (!user) return;
-
-    const fullUid = String(user.id);
-    const fullName =
-      (user.first_name || "") +
-        (user.last_name ? ` ${user.last_name}` : "") || "";
-    const displayName =
-      fullName || user.username || getProfile().name || "Player";
-
-    setProfile({
-      uid: fullUid,
-      userId: fullUid,
-      name: displayName,
-      username: user.username ?? undefined,
-      avatarUrl: user.photo_url ?? undefined,
-    });
-  } catch {
-    // ignore
-  }
+  // ❗ IMPORTANT:
+  // Do NOT create / override window.Telegram here.
+  // In production we want to fully rely on the real Telegram context.
+  // For local dev you can add a dev-only stub, but keep it disabled in build.
 }
