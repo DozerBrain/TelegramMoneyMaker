@@ -23,6 +23,8 @@ import { achievements } from "./data/achievements";
 import { initTelegramUI } from "./lib/telegram";
 import { suits } from "./data/suits";
 import { getEquippedPet, getEquippedSuit } from "./lib/storage";
+import { getProfile } from "./lib/profile";
+import { submitScore } from "./lib/leaderboard";
 
 // Central income math
 import {
@@ -80,20 +82,16 @@ export default function App() {
   const [multi, setMulti] = useState<number>(initial.multi ?? 1);
 
   // 🔥 New long-term stats
-  // Crit stored as fraction (0.05 = 5%)
   const [critChance, setCritChance] = useState<number>(
     initial.critChance ?? 0
   );
   const [critMult, setCritMult] = useState<number>(initial.critMult ?? 5); // x5 base
-  // Auto income booster (1.0 = no bonus)
   const [autoBonusMult, setAutoBonusMult] = useState<number>(
     initial.autoBonusMult ?? 1
   );
-  // Coupon generator: each level = +10% coupon gain
   const [couponBoostLevel, setCouponBoostLevel] = useState<number>(
     initial.couponBoostLevel ?? 0
   );
-  // Bulk open discount: each level reduces 10-card chest cost by 1 (min 5)
   const [bulkDiscountLevel, setBulkDiscountLevel] = useState<number>(
     initial.bulkDiscountLevel ?? 0
   );
@@ -130,6 +128,11 @@ export default function App() {
 
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
+
+  // 🔼 Track last score we submitted to Firebase (to avoid spam)
+  const [lastSubmittedScore, setLastSubmittedScore] = useState<number>(
+    initial.totalEarnings ?? 0
+  );
 
   // Telegram init
   useEffect(() => {
@@ -209,6 +212,25 @@ export default function App() {
       setTotalEarnings((t) => t + gain);
     }
   }, 1000);
+
+  // 🔥 Auto-submit score to leaderboard
+  useEffect(() => {
+    if (totalEarnings <= 0) return;
+
+    // Only submit if we increased by at least 1000 (tune this later)
+    if (totalEarnings < lastSubmittedScore + 1000) return;
+
+    setLastSubmittedScore(totalEarnings);
+
+    try {
+      const profile = getProfile();
+      submitScore(totalEarnings, profile).catch(() => {
+        // ignore network errors for now
+      });
+    } catch {
+      // ignore
+    }
+  }, [totalEarnings, lastSubmittedScore]);
 
   // Achievements checking
   useEffect(() => {
