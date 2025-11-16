@@ -33,7 +33,7 @@ function applyUserProfile(user: SimpleUser) {
 
   const uid = String(user.id);
 
-  // 🔥 Write everything into our saved profile
+  // 🔥 Save into our profile store
   setProfile({
     uid,
     name,
@@ -66,7 +66,7 @@ export function initTelegramUI() {
       tg.ready?.();
       tg.expand?.();
     } catch {
-      // ignore UI errors
+      // ignore
     }
 
     if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
@@ -83,35 +83,65 @@ export function initTelegramUI() {
     }
   }
 
-  // Helper: decode tgWebAppData from a string (search or hash)
-  const decodeFromPart = (part: string | null | undefined, source: "URL" | "URL_HASH") => {
+  // Helper to decode URL or hash `tgWebAppData`
+  const decodeFromPart = (
+    part: string | null | undefined,
+    source: "URL" | "URL_HASH"
+  ) => {
     if (!part) return;
 
     const idx = part.indexOf("tgWebAppData=");
     if (idx === -1) return;
 
     const q = part.slice(idx + "tgWebAppData=".length);
-    const encoded = q.split("&")[0]; // up to next &
+    const encoded = q.split("&")[0];
 
     try {
       const decoded = decodeURIComponent(encoded);
       debug.decodedTgWebAppData = decoded;
 
       const params = new URLSearchParams(decoded);
-      const id = params.get("user[id]");
-      if (!id) return;
 
-      const u: SimpleUser = {
-        id,
-        first_name: params.get("user[first_name]") || undefined,
-        last_name: params.get("user[last_name]") || undefined,
-        username: params.get("user[username]") || undefined,
-        language_code: params.get("user[language_code]") || undefined,
-        photo_url: params.get("user[photo_url]") || undefined,
-      };
+      let u: SimpleUser | null = null;
 
-      user = u;
-      used = source;
+      // Most common format: user={...JSON...}
+      const userJson = params.get("user");
+      if (userJson) {
+        try {
+          const raw = JSON.parse(userJson);
+          u = {
+            id: raw.id,
+            first_name: raw.first_name,
+            last_name: raw.last_name,
+            username: raw.username,
+            language_code: raw.language_code,
+            photo_url: raw.photo_url,
+          };
+        } catch (e: any) {
+          debug.userJsonParseError = String(e);
+        }
+      }
+
+      // Fallback (older docs style): user[id], user[first_name], ...
+      if (!u) {
+        const id = params.get("user[id]");
+        if (id) {
+          u = {
+            id,
+            first_name: params.get("user[first_name]") || undefined,
+            last_name: params.get("user[last_name]") || undefined,
+            username: params.get("user[username]") || undefined,
+            language_code: params.get("user[language_code]") || undefined,
+            photo_url: params.get("user[photo_url]") || undefined,
+          };
+        }
+      }
+
+      if (u && u.id) {
+        user = u;
+        used = source;
+        debug.userJson = JSON.stringify(u);
+      }
     } catch (e: any) {
       debug.decodeError = String(e);
     }
@@ -130,7 +160,6 @@ export function initTelegramUI() {
   if (user && user.id) {
     debug.hasUser = true;
     debug.userId = String(user.id);
-    debug.userJson = JSON.stringify(user);
 
     const applied = applyUserProfile(user);
     debug.finalUid = applied.uid;
