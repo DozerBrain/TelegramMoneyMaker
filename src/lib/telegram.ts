@@ -7,88 +7,133 @@ declare global {
   }
 }
 
+/**
+ * We retry a few times because on some devices Telegram.WebApp
+ * appears a bit later after the page loads.
+ */
+let alreadyInitialized = false;
+
 export function initTelegramUI() {
   if (typeof window === "undefined") return;
+  if (alreadyInitialized) return;
+  alreadyInitialized = true;
 
-  try {
-    const anyWin = window as any;
-    const tg = anyWin.Telegram?.WebApp;
+  const maxTries = 20; // 20 * 500ms = 10 seconds
+  const delayMs = 500;
 
-    // 🔍 Always write some debug so we know what Telegram looks like
-    const debug: any = {
-      hasWindow: true,
-      hasTelegram: !!anyWin.Telegram,
-      hasWebApp: !!tg,
-    };
+  const tryOnce = (attempt: number) => {
+    const hasWindow = typeof window !== "undefined";
+    const hasTelegram = !!(window as any).Telegram;
+    const hasWebApp = !!(window as any).Telegram?.WebApp;
 
-    if (!tg) {
-      // ❌ Not running as Telegram WebApp – just a normal browser
-      localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
+    // Save debug so we can see what happens on your phone
+    try {
+      localStorage.setItem(
+        "mm_tg_debug",
+        JSON.stringify({
+          attempt,
+          hasWindow,
+          hasTelegram,
+          hasWebApp,
+          href: window.location.href,
+          search: window.location.search,
+        })
+      );
+    } catch {
+      // ignore
+    }
+
+    if (!hasTelegram || !hasWebApp) {
+      // If not ready yet, try again
+      if (attempt < maxTries) {
+        setTimeout(() => tryOnce(attempt + 1), delayMs);
+      }
       return;
     }
 
-    // ✅ We are inside Telegram WebApp
-    tg.ready();
+    const tg = window.Telegram.WebApp;
 
-    const unsafe = tg.initDataUnsafe || {};
-    debug.initDataKeys = Object.keys(unsafe || {});
-
-    const user = unsafe.user;
-    if (!user || !user.id) {
-      // We are in WebApp, but Telegram didn’t give user data
-      debug.hasUser = false;
-      debug.user = user || null;
-      localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
-      return;
+    try {
+      tg.ready();
+    } catch {
+      // ignore
     }
 
-    // 🎯 We have real Telegram user!
-    debug.hasUser = true;
-    debug.user = {
-      id: user.id,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      username: user.username,
-      photo_url: user.photo_url,
-      language_code: user.language_code,
-    };
+    try {
+      const unsafe = tg.initDataUnsafe || {};
+      const user = unsafe.user;
 
-    const existing = getProfile();
+      if (!user || !user.id) {
+        // no user data from Telegram – keep debug
+        try {
+          localStorage.setItem(
+            "mm_tg_debug",
+            JSON.stringify({
+              attempt,
+              hasWindow,
+              hasTelegram,
+              hasWebApp,
+              hasUser: false,
+              unsafe,
+            })
+          );
+        } catch {
+          //
+        }
+        return;
+      }
 
-    const uid = String(user.id); // stable Telegram numeric id
-    const name =
-      [user.first_name, user.last_name].filter(Boolean).join(" ") ||
-      user.username ||
-      existing.name ||
-      "Player";
+      const existing = getProfile();
 
-    const avatarUrl: string | undefined =
-      user.photo_url || existing.avatarUrl;
+      const uid = String(user.id); // Telegram numeric id
+      const name =
+        [user.first_name, user.last_name].filter(Boolean).join(" ") ||
+        user.username ||
+        existing.name ||
+        "Player";
 
-    // Guess country by language, keep existing if set
-    let country = existing.country || "US";
-    const lang = (user.language_code || "").toLowerCase();
-    if (lang.startsWith("ru")) country = "RU";
-    else if (lang.startsWith("tr")) country = "TR";
-    else if (lang.startsWith("de")) country = "DE";
-    else if (lang.startsWith("pt")) country = "BR";
-    else if (lang.startsWith("hi")) country = "IN";
+      const avatarUrl: string | undefined =
+        (user.photo_url as string | undefined) || existing.avatarUrl;
 
-    setProfile({
-      uid,
-      userId: uid,
-      username: user.username || existing.username,
-      name,
-      country,
-      avatarUrl,
-    });
+      // Try to guess country from language_code, otherwise keep existing
+      let country = existing.country || "US";
+      const lang = (user.language_code || "").toLowerCase();
+      if (lang.startsWith("ru")) country = "RU";
+      else if (lang.startsWith("tr")) country = "TR";
+      else if (lang.startsWith("de")) country = "DE";
+      else if (lang.startsWith("pt")) country = "BR";
+      else if (lang.startsWith("hi")) country = "IN";
 
-    // Save final debug
-    localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
-  } catch (err) {
-    localStorage.setItem(
-      "mm_tg_debug",
-      JSON.stringify({ error: String(err) })
-    );
-  }
+      setProfile({
+        uid,
+        userId: uid,
+        username: user.username || existing.username,
+        name,
+        country,
+        avatarUrl,
+      });
+
+      // Save raw user + attempt for debugging
+      try {
+        localStorage.setItem(
+          "mm_tg_debug",
+          JSON.stringify({
+            attempt,
+            hasWindow,
+            hasTelegram,
+            hasWebApp,
+            hasUser: true,
+            user,
+          })
+        );
+      } catch {
+        //
+      }
+    } catch (err) {
+      console.log("Telegram init failed", err);
+    }
+  };
+
+  // start first attempt
+  tryOnce(1);
 }
