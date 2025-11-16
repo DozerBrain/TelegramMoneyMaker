@@ -17,38 +17,50 @@ export default function LeaderboardPage() {
       const data =
         scope === "global"
           ? await topGlobal(100)
-          : await topByCountry(me.country, 100);
-      setRows(data);
+          : await topByCountry(me.country || me.region || "US", 100);
+
+      setRows(Array.isArray(data) ? data : []);
     } finally {
       setLoading(false);
     }
   }
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [scope, me.country]);
+  // Load leaderboard on scope change
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line
+  }, [scope]);
 
   return (
-    <div className="p-4 text-white">
-      {/* Compact header (TopBar already shows title/rank) */}
-      <div className="flex items-center justify-between mb-3">
+    <div className="p-4 text-white space-y-4">
+
+      {/* Header: Scope switcher */}
+      <div className="flex items-center justify-between">
         <div className="flex gap-2">
           <button
-            className={`px-3 py-2 rounded-xl text-sm font-semibold ${
-              scope === "global" ? "bg-emerald-600" : "bg-white/10 hover:bg-white/20"
-            }`}
             onClick={() => setScope("global")}
+            className={`px-3 py-2 rounded-xl text-sm font-semibold transition ${
+              scope === "global"
+                ? "bg-emerald-600"
+                : "bg-white/10 hover:bg-white/20"
+            }`}
           >
             🌍 Global
           </button>
+
           <button
-            className={`px-3 py-2 rounded-xl text-sm font-semibold ${
-              scope === "country" ? "bg-emerald-600" : "bg-white/10 hover:bg-white/20"
-            }`}
             onClick={() => setScope("country")}
+            className={`px-3 py-2 rounded-xl text-sm font-semibold transition ${
+              scope === "country"
+                ? "bg-emerald-600"
+                : "bg-white/10 hover:bg-white/20"
+            }`}
           >
-            🇺🇸 {me.country}
+            🇺🇸 {me.country || me.region || "US"}
           </button>
         </div>
 
+        {/* Refresh */}
         <button
           onClick={load}
           className="px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-sm"
@@ -57,17 +69,18 @@ export default function LeaderboardPage() {
         </button>
       </div>
 
-      {/* Table */}
+      {/* Leaderboard table */}
       <div className="rounded-2xl overflow-hidden border border-white/10">
         <table className="w-full text-sm">
           <thead className="bg-white/5">
             <tr>
-              <th className="text-left px-3 py-2">#</th>
-              <th className="text-left px-3 py-2">Player</th>
-              <th className="text-left px-3 py-2">Country</th>
-              <th className="text-right px-3 py-2">Score</th>
+              <th className="px-3 py-2 text-left">#</th>
+              <th className="px-3 py-2 text-left">Player</th>
+              <th className="px-3 py-2 text-left">Country</th>
+              <th className="px-3 py-2 text-right">Score</th>
             </tr>
           </thead>
+
           <tbody>
             {loading ? (
               <tr>
@@ -78,14 +91,25 @@ export default function LeaderboardPage() {
             ) : rows.length === 0 ? (
               <tr>
                 <td colSpan={4} className="px-3 py-6 text-center text-zinc-400">
-                  No data yet. Be the first to tap!
+                  No players yet. Be the first!
                 </td>
               </tr>
             ) : (
               rows.map((r, i) => {
-                const isMe = r.uid === me.uid;
+                const isMe =
+                  r.uid === me.uid ||
+                  r.uid === me.userId ||
+                  r.uid === me.username;
+
                 return (
-                  <tr key={r.uid} className={isMe ? "bg-emerald-900/30" : "odd:bg-white/5"}>
+                  <tr
+                    key={r.uid}
+                    className={
+                      isMe
+                        ? "bg-emerald-900/30 font-semibold"
+                        : "odd:bg-white/5"
+                    }
+                  >
                     <td className="px-3 py-2">{i + 1}</td>
                     <td className="px-3 py-2">{r.name || "Player"}</td>
                     <td className="px-3 py-2">{r.country || "??"}</td>
@@ -100,8 +124,9 @@ export default function LeaderboardPage() {
         </table>
       </div>
 
-      <div className="mt-3 text-xs text-white/60">
-        You: <span className="font-mono">{me.uid}</span>
+      {/* Footer info */}
+      <div className="text-xs text-white/60">
+        Your ID: <span className="font-mono">{me.uid}</span>
       </div>
     </div>
   );
