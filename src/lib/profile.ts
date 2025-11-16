@@ -1,71 +1,89 @@
 // src/lib/profile.ts
-import type { PlayerProfile } from "../types";
 
-export type { PlayerProfile };
+export type Profile = {
+  /** Stable in-game player ID (we want this to be Telegram user.id when available) */
+  uid: string;
+  /** Raw Telegram user id as string (same as uid, but kept separately in case) */
+  userId?: string;
 
-const KEY = "mm_profile";
+  /** Displayed name in the game */
+  name: string;
 
-/** Generate a short numeric UID (6–8 digits) once per device */
-function generateShortUid(): string {
-  const min = 100000; // 6 digits
-  const max = 99999999; // up to 8 digits
-  const n = Math.floor(min + Math.random() * (max - min));
-  return String(n);
+  /** 2-letter country code like "US", "RU", etc. */
+  country: string;
+
+  /** Optional Telegram username like "DozerBrain" */
+  username?: string;
+
+  /** Avatar URL from Telegram */
+  avatarUrl?: string;
+
+  /** Where this profile data came from: "TG" | "LOCAL" */
+  source?: "TG" | "LOCAL";
+};
+
+const STORAGE_KEY = "moneymaker_profile_v1";
+
+const DEFAULT_PROFILE: Profile = {
+  uid: "", // will be filled on first save
+  name: "Player",
+  country: "US",
+};
+
+/** Load profile from localStorage or return default */
+export function getProfile(): Profile {
+  if (typeof window === "undefined") return { ...DEFAULT_PROFILE };
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_PROFILE };
+    const parsed = JSON.parse(raw) as Partial<Profile>;
+
+    return {
+      ...DEFAULT_PROFILE,
+      ...parsed,
+    };
+  } catch {
+    return { ...DEFAULT_PROFILE };
+  }
 }
 
-export function getProfile(): PlayerProfile {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as PlayerProfile;
-      if (parsed && typeof parsed === "object") {
-        // If old profile had 'local' or missing uid → upgrade once
-        if (!parsed.uid || parsed.uid === "local") {
-          const newUid = generateShortUid();
-          parsed.uid = newUid;
-          parsed.userId = newUid;
-          parsed.region = parsed.region || parsed.country || "US";
-          parsed.updatedAt = Date.now();
-          localStorage.setItem(KEY, JSON.stringify(parsed));
-        }
-        return parsed;
-      }
+/**
+ * Merge new profile data with existing one.
+ * - Never lose Telegram uid/avatar when you only update name / country.
+ * - If uid is still empty, generate one (timestamp-based).
+ */
+export function setProfile(update: Partial<Profile>): Profile {
+  const prev = getProfile();
+
+  // Merge old + new
+  let next: Profile = {
+    ...prev,
+    ...update,
+  };
+
+  // Ensure we always have a uid
+  if (!next.uid) {
+    if (update.uid) {
+      next.uid = String(update.uid);
+    } else if (prev.uid) {
+      next.uid = prev.uid;
+    } else {
+      // Fallback: local-only uid if no Telegram info
+      next.uid = String(Date.now());
     }
-  } catch {
-    // ignore and create new below
   }
 
-  // First-time profile creation
-  const uid = generateShortUid();
-  const p: PlayerProfile = {
-    uid,
-    name: "Player",
-    country: "US",
-    avatarUrl: undefined,
-    userId: uid,
-    username: "Player",
-    region: "US",
-    updatedAt: Date.now(),
-  };
-  localStorage.setItem(KEY, JSON.stringify(p));
-  return p;
+  // If Telegram gave us an id but uid was empty, sync them
+  if (!prev.uid && update.userId && !update.uid) {
+    next.uid = String(update.userId);
+  }
+
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  } catch {
+    // ignore storage errors
+  }
+
+  return next;
 }
-
-export function setProfile(update: Partial<PlayerProfile>) {
-  const current = getProfile();
-
-  // IMPORTANT: never change uid here
-  const merged: PlayerProfile = {
-    ...current,
-    ...update,
-    uid: current.uid,
-    userId: current.userId || current.uid,
-    region: update.region || current.region || current.country || "US",
-    updatedAt: Date.now(),
-  };
-
-  localStorage.setItem(KEY, JSON.stringify(merged));
-}
-
-// legacy alias
-export const saveProfile = setProfile;
