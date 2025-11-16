@@ -10,30 +10,52 @@ declare global {
 export function initTelegramUI() {
   if (typeof window === "undefined") return;
 
-  const tg = window.Telegram?.WebApp;
-  if (!tg) return; // not inside Telegram → do nothing
-
   try {
-    tg.ready();
-  } catch {
-    // ignore
-  }
+    const anyWin = window as any;
+    const tg = anyWin.Telegram?.WebApp;
 
-  try {
-    const unsafe = tg.initDataUnsafe || {};
-    const user = unsafe.user;
+    // 🔍 Always write some debug so we know what Telegram looks like
+    const debug: any = {
+      hasWindow: true,
+      hasTelegram: !!anyWin.Telegram,
+      hasWebApp: !!tg,
+    };
 
-    if (!user || !user.id) {
-      // store something so we can see later if it's empty
-      localStorage.setItem(
-        "mm_tg_debug",
-        JSON.stringify({ hasUser: false, unsafe })
-      );
+    if (!tg) {
+      // ❌ Not running as Telegram WebApp – just a normal browser
+      localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
       return;
     }
 
+    // ✅ We are inside Telegram WebApp
+    tg.ready();
+
+    const unsafe = tg.initDataUnsafe || {};
+    debug.initDataKeys = Object.keys(unsafe || {});
+
+    const user = unsafe.user;
+    if (!user || !user.id) {
+      // We are in WebApp, but Telegram didn’t give user data
+      debug.hasUser = false;
+      debug.user = user || null;
+      localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
+      return;
+    }
+
+    // 🎯 We have real Telegram user!
+    debug.hasUser = true;
+    debug.user = {
+      id: user.id,
+      first_name: user.first_name,
+      last_name: user.last_name,
+      username: user.username,
+      photo_url: user.photo_url,
+      language_code: user.language_code,
+    };
+
     const existing = getProfile();
 
+    const uid = String(user.id); // stable Telegram numeric id
     const name =
       [user.first_name, user.last_name].filter(Boolean).join(" ") ||
       user.username ||
@@ -43,7 +65,7 @@ export function initTelegramUI() {
     const avatarUrl: string | undefined =
       user.photo_url || existing.avatarUrl;
 
-    // Try to guess country from language_code, otherwise keep existing
+    // Guess country by language, keep existing if set
     let country = existing.country || "US";
     const lang = (user.language_code || "").toLowerCase();
     if (lang.startsWith("ru")) country = "RU";
@@ -52,17 +74,21 @@ export function initTelegramUI() {
     else if (lang.startsWith("pt")) country = "BR";
     else if (lang.startsWith("hi")) country = "IN";
 
-    // IMPORTANT: do NOT change uid here, only cosmetic info
     setProfile({
+      uid,
+      userId: uid,
+      username: user.username || existing.username,
       name,
       country,
       avatarUrl,
-      username: user.username || existing.username,
     });
 
-    // Save raw user for debugging (optional)
-    localStorage.setItem("mm_tg_debug", JSON.stringify({ hasUser: true, user }));
+    // Save final debug
+    localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
   } catch (err) {
-    console.log("Telegram init failed", err);
+    localStorage.setItem(
+      "mm_tg_debug",
+      JSON.stringify({ error: String(err) })
+    );
   }
 }
