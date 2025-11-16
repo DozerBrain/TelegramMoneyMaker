@@ -12,6 +12,9 @@ export type Profile = {
   /** 2-letter country code like "US", "RU", etc. */
   country: string;
 
+  /** Optional region / state text ("CA", "Bavaria", etc.) */
+  region?: string;
+
   /** Optional Telegram username like "DozerBrain" */
   username?: string;
 
