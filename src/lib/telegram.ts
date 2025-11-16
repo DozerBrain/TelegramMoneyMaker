@@ -1,134 +1,150 @@
 // src/lib/telegram.ts
-import { getProfile, setProfile } from "./profile";
+import { setProfile } from "./profile";
 
 declare global {
   interface Window {
-    Telegram?: {
-      WebApp?: any;
-    };
+    Telegram?: any;
   }
 }
 
-/**
- * Strong Telegram detection:
- * 1) Use window.Telegram.WebApp.initDataUnsafe.user when available
- * 2) Fallback: parse #tgWebAppData=... from URL on Android
- * 3) Save everything into mm_tg_debug for inspection
- */
-export function initTelegramUI() {
-  if (typeof window === "undefined") return;
+type SimpleUser = {
+  id: string | number;
+  first_name?: string;
+  last_name?: string;
+  username?: string;
+  language_code?: string;
+  photo_url?: string;
+};
 
-  const debug: any = {
-    hasWindow: true,
-    hasTelegram: !!window.Telegram,
-    hasWebApp: !!window.Telegram?.WebApp,
-    href: window.location.href,
-  };
-
-  let user: any | null = null;
-
-  // ---------- 1) Normal Mini App path ----------
-  const tg = window.Telegram?.WebApp;
-  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    try {
-      user = { ...tg.initDataUnsafe.user, _source: "WebApp" };
-      debug.used = "WebApp";
-      debug.hasTelegram = true;
-      debug.hasWebApp = true;
-    } catch (e) {
-      debug.webAppError = String(e);
-    }
-  }
-
-  // ---------- 2) Fallback: parse #tgWebAppData=... ----------
-  if (!user) {
-    try {
-      const url = new URL(window.location.href);
-      const hash = url.hash || "";
-
-      debug.hash = hash;
-
-      // Example: #tgWebAppData=ENCODED_STRING&tgWebAppThemeParams=...
-      const match = hash.match(/tgWebAppData=([^&]+)/);
-      if (match && match[1]) {
-        const encoded = match[1];
-        const decoded = decodeURIComponent(encoded); // 1st decode
-        debug.decodedTgWebAppData = decoded;
-
-        const params = new URLSearchParams(decoded);
-        const rawUser = params.get("user");
-
-        if (rawUser) {
-          // rawUser is JSON encoded again (%7B%22id%22...)
-          const userJson = decodeURIComponent(rawUser);
-          debug.userJson = userJson;
-
-          const parsed = JSON.parse(userJson);
-          user = { ...parsed, _source: "URL_HASH" };
-
-          // If we successfully parsed this, we KNOW it's Telegram
-          debug.used = "URL_HASH";
-          debug.hasTelegram = true;
-          debug.hasWebApp = true;
-        }
-      }
-    } catch (e) {
-      debug.hashError = String(e);
-    }
-  }
-
-  // ---------- 3) Apply user or keep existing profile ----------
-  if (user && user.id) {
-    debug.hasUser = true;
-    debug.userId = user.id;
-    applyUser(user, debug);
-  } else {
-    debug.hasUser = false;
-  }
-
-  // Save debug for Profile page
-  try {
-    localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
-  } catch {
-    // ignore
-  }
-}
-
-/**
- * Merge Telegram user info into our profile model.
- */
-function applyUser(user: any, debug: any) {
-  const existing = getProfile();
-
-  // Country by language, fallback to existing / US
-  let country = existing.country || "US";
+function applyUserProfile(user: SimpleUser) {
   const lang = (user.language_code || "").toLowerCase();
+
+  let country = "US";
   if (lang.startsWith("ru")) country = "RU";
   else if (lang.startsWith("tr")) country = "TR";
   else if (lang.startsWith("de")) country = "DE";
   else if (lang.startsWith("pt")) country = "BR";
   else if (lang.startsWith("hi")) country = "IN";
 
-  const fullName =
+  const name =
     [user.first_name, user.last_name].filter(Boolean).join(" ") ||
-    existing.name ||
     user.username ||
     "Player";
 
-  const avatarUrl = user.photo_url || existing.avatarUrl;
   const uid = String(user.id);
 
-  debug.finalCountry = country;
-  debug.finalName = fullName;
-  debug.finalUid = uid;
-  debug.finalAvatar = avatarUrl;
-
+  // 🔥 Write everything into our saved profile
   setProfile({
     uid,
-    userId: uid,
-    username: user.username || existing.username,
-    name: fullName,
+    name,
     country,
-    avatarUrl,
+    avatarUrl: user.photo_url,
   });
+
+  return { uid, name, country };
+}
+
+export function initTelegramUI() {
+  if (typeof window === "undefined") return;
+
+  const debug: any = {
+    hasWindow: true,
+    hasTelegram: !!window.Telegram,
+    hasWebApp: false,
+    href: window.location.href,
+  };
+
+  let used: "NONE" | "WEBAPP" | "URL" | "URL_HASH" = "NONE";
+  let user: SimpleUser | undefined;
+
+  // --- 1) Try native Telegram WebApp object ---
+  const tg = window.Telegram?.WebApp;
+
+  if (tg) {
+    debug.hasWebApp = true;
+    try {
+      tg.ready?.();
+      tg.expand?.();
+    } catch {
+      // ignore UI errors
+    }
+
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+      const u = tg.initDataUnsafe.user;
+      user = {
+        id: u.id,
+        first_name: u.first_name,
+        last_name: u.last_name,
+        username: u.username,
+        language_code: u.language_code,
+        photo_url: u.photo_url,
+      };
+      used = "WEBAPP";
+    }
+  }
+
+  // Helper: decode tgWebAppData from a string (search or hash)
+  const decodeFromPart = (part: string | null | undefined, source: "URL" | "URL_HASH") => {
+    if (!part) return;
+
+    const idx = part.indexOf("tgWebAppData=");
+    if (idx === -1) return;
+
+    const q = part.slice(idx + "tgWebAppData=".length);
+    const encoded = q.split("&")[0]; // up to next &
+
+    try {
+      const decoded = decodeURIComponent(encoded);
+      debug.decodedTgWebAppData = decoded;
+
+      const params = new URLSearchParams(decoded);
+      const id = params.get("user[id]");
+      if (!id) return;
+
+      const u: SimpleUser = {
+        id,
+        first_name: params.get("user[first_name]") || undefined,
+        last_name: params.get("user[last_name]") || undefined,
+        username: params.get("user[username]") || undefined,
+        language_code: params.get("user[language_code]") || undefined,
+        photo_url: params.get("user[photo_url]") || undefined,
+      };
+
+      user = u;
+      used = source;
+    } catch (e: any) {
+      debug.decodeError = String(e);
+    }
+  };
+
+  // --- 2) Try query string (?tgWebAppData=...) ---
+  if (!user && window.location.search.includes("tgWebAppData=")) {
+    decodeFromPart(window.location.search, "URL");
+  }
+
+  // --- 3) Try hash (#tgWebAppData=...) ---
+  if (!user && window.location.hash.includes("tgWebAppData=")) {
+    decodeFromPart(window.location.hash, "URL_HASH");
+  }
+
+  if (user && user.id) {
+    debug.hasUser = true;
+    debug.userId = String(user.id);
+    debug.userJson = JSON.stringify(user);
+
+    const applied = applyUserProfile(user);
+    debug.finalUid = applied.uid;
+    debug.finalName = applied.name;
+    debug.finalCountry = applied.country;
+  } else {
+    debug.hasUser = false;
+  }
+
+  debug.used = used;
+
+  try {
+    localStorage.setItem("mm_tg_debug", JSON.stringify(debug));
+  } catch {
+    // ignore
+  }
 }
