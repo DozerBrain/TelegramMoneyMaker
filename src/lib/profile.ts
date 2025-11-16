@@ -28,45 +28,39 @@ function readTelegramUser() {
 /**
  * Main profile getter.
  *
- * Priority:
- *   1) existing saved profile (non-"local" uid)
- *   2) Telegram user data (if available)
+ * Order:
+ *   1) existing saved profile with non-"local" uid
+ *   2) Telegram user (if available)
  *   3) fallback "local" guest profile
  */
 export function getProfile(): PlayerProfile {
   let existing: PlayerProfile | null = null;
 
-  // 1) Try to read existing profile from localStorage
+  // 1) read saved profile
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) {
-      existing = JSON.parse(raw) as PlayerProfile;
-    }
+    if (raw) existing = JSON.parse(raw) as PlayerProfile;
   } catch {
     existing = null;
   }
 
-  // If we already have a non-local UID, just return it
   if (existing && existing.uid && existing.uid !== "local") {
     return existing;
   }
 
-  // 2) Try Telegram user
+  // 2) try Telegram
   const tgUser = readTelegramUser();
   if (tgUser) {
-    const fullUid = String(tgUser.id); // keep full for uniqueness
-    const displayName =
+    const fullUid = String(tgUser.id);
+    const fullName =
       (tgUser.first_name || "") +
-        (tgUser.last_name ? ` ${tgUser.last_name}` : "") ||
-      tgUser.username ||
-      existing?.name ||
-      "Player";
+        (tgUser.last_name ? ` ${tgUser.last_name}` : "") || "";
+    const displayName =
+      fullName || tgUser.username || existing?.name || "Player";
 
     const profile: PlayerProfile = {
       uid: fullUid,
       userId: fullUid,
-      // what we show in UI can be a shortened ID if you want:
-      // shortId: fullUid.slice(-8),
       name: displayName,
       username: tgUser.username ?? existing?.username,
       avatarUrl: tgUser.photo_url || existing?.avatarUrl,
@@ -77,14 +71,11 @@ export function getProfile(): PlayerProfile {
 
     try {
       localStorage.setItem(KEY, JSON.stringify(profile));
-    } catch {
-      // ignore write errors
-    }
-
+    } catch {}
     return profile;
   }
 
-  // 3) Fallback: guest "local" profile
+  // 3) fallback guest
   const fallback: PlayerProfile = {
     uid: "local",
     userId: "local",
@@ -98,16 +89,13 @@ export function getProfile(): PlayerProfile {
 
   try {
     localStorage.setItem(KEY, JSON.stringify(fallback));
-  } catch {
-    // ignore
-  }
+  } catch {}
 
   return fallback;
 }
 
 /**
- * Save / update profile fields, but do NOT randomly change uid.
- * If you pass an explicit `uid`, we keep it; otherwise we keep current uid.
+ * Save / update profile fields without changing uid unless you explicitly pass it.
  */
 export function setProfile(update: Partial<PlayerProfile>) {
   const current = getProfile();
@@ -123,10 +111,8 @@ export function setProfile(update: Partial<PlayerProfile>) {
 
   try {
     localStorage.setItem(KEY, JSON.stringify(merged));
-  } catch {
-    // ignore
-  }
+  } catch {}
 }
 
-// Legacy alias some pages might still import
+// legacy alias
 export const saveProfile = setProfile;
