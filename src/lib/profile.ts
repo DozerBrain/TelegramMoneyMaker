@@ -12,9 +12,6 @@ export type Profile = {
   /** 2-letter country code like "US", "RU", etc. */
   country: string;
 
-  /** Optional region / state text ("CA", "Bavaria", etc.) */
-  region?: string;
-
   /** Optional Telegram username like "DozerBrain" */
   username?: string;
 
@@ -24,6 +21,8 @@ export type Profile = {
   /** Where this profile data came from: "TG" | "LOCAL" */
   source?: "TG" | "LOCAL";
 };
+
+export type PlayerProfile = Profile; // 🔥 alias so imports work
 
 const STORAGE_KEY = "moneymaker_profile_v1";
 
@@ -71,6 +70,8 @@ export function setProfile(update: Partial<Profile>): Profile {
       next.uid = String(update.uid);
     } else if (prev.uid) {
       next.uid = prev.uid;
+    } else if (update.userId) {
+      next.uid = String(update.userId);
     } else {
       // Fallback: local-only uid if no Telegram info
       next.uid = String(Date.now());
