@@ -34,7 +34,6 @@ export function initTelegramUI() {
 
     const existing = getProfile();
 
-    const uid = String(user.id); // Telegram numeric id
     const name =
       [user.first_name, user.last_name].filter(Boolean).join(" ") ||
       user.username ||
@@ -53,19 +52,17 @@ export function initTelegramUI() {
     else if (lang.startsWith("pt")) country = "BR";
     else if (lang.startsWith("hi")) country = "IN";
 
+    // IMPORTANT: do NOT change uid here, only cosmetic info
     setProfile({
-      uid,
-      userId: uid,
-      username: user.username || existing.username,
       name,
       country,
       avatarUrl,
+      username: user.username || existing.username,
     });
 
-    // Save raw user for debugging (you can remove later)
+    // Save raw user for debugging (optional)
     localStorage.setItem("mm_tg_debug", JSON.stringify({ hasUser: true, user }));
   } catch (err) {
-    // simple log so it doesn't crash the app
     console.log("Telegram init failed", err);
   }
 }
