@@ -1,80 +1,108 @@
 // src/lib/profile.ts
 import type { PlayerProfile } from "../types";
 
-export type { PlayerProfile }; // re-export
+export type { PlayerProfile };
 
 const KEY = "mm_profile";
 
-// Generate a short numeric UID (6 digits) if we don't have Telegram user
-function generateNumericUid(): string {
-  const n = Math.floor(100000 + Math.random() * 900000); // 100000–999999
-  return String(n);
+/** Try to read Telegram WebApp user, if we are really inside a Telegram Mini App */
+function readTelegramUser(): {
+  uid: string;
+  name: string;
+  country: string;
+  avatarUrl?: string;
+} | undefined {
+  if (typeof window === "undefined") return undefined;
+
+  const tg = (window as any).Telegram?.WebApp;
+  const unsafe = tg?.initDataUnsafe;
+  const u = unsafe?.user;
+  if (!u) return undefined;
+
+  const fullName =
+    (u.first_name || "") +
+    (u.last_name ? " " + u.last_name : "");
+
+  const name =
+    fullName.trim() ||
+    u.username ||
+    "Player";
+
+  // Telegram has language_code, not real country, but we’ll use it as a fallback
+  const country = (u.language_code || "US").toUpperCase();
+
+  const avatarUrl = (u as any).photo_url as string | undefined;
+
+  return {
+    uid: String(u.id),
+    name,
+    country,
+    avatarUrl,
+  };
 }
 
-// Try to read Telegram WebApp user (if we are inside Telegram)
-function getTelegramUserSafe(): any | null {
-  try {
-    const tg = (window as any).Telegram?.WebApp;
-    return tg?.initDataUnsafe?.user || null;
-  } catch {
-    return null;
-  }
-}
-
+/** Main profile getter */
 export function getProfile(): PlayerProfile {
-  try {
-    const raw = localStorage.getItem(KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as PlayerProfile;
-
-      // If we already have a non-"local" uid, just use it
-      if (parsed && typeof parsed === "object" && parsed.uid && parsed.uid !== "local") {
-        return parsed;
+  // 1️⃣ Try localStorage first
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem(KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as PlayerProfile;
+        if (parsed && typeof parsed === "object" && parsed.uid) {
+          return parsed;
+        }
       }
+    } catch {
+      // ignore parse errors, will fall back below
     }
-  } catch {
-    // ignore and build fresh below
   }
 
-  // Either no profile yet, or uid was "local" → build a better one
-  const tgUser = getTelegramUserSafe();
+  // 2️⃣ Try Telegram user
+  const tgUser = readTelegramUser();
 
-  const uidFromTelegram = tgUser?.id ? String(tgUser.id) : null;
-  const uid = uidFromTelegram || generateNumericUid();
-
-  const nameFromTelegram =
-    tgUser
-      ? [tgUser.first_name, tgUser.last_name].filter(Boolean).join(" ")
-      : "Player";
-
-  const avatarFromTelegram: string | undefined = tgUser?.photo_url || undefined;
-
-  const profile: PlayerProfile = {
-    uid,
-    name: nameFromTelegram,
-    country: "US", // default, player can change in Profile screen
-    avatarUrl: avatarFromTelegram,
-
-    // legacy aliases some parts of the app might still read
-    userId: uid,
-    username: tgUser?.username || nameFromTelegram,
-    region: "US",
+  // 3️⃣ Build base profile (NO RANDOM ID)
+  const base: PlayerProfile = {
+    uid: tgUser?.uid ?? "local",
+    name: tgUser?.name ?? "Player",
+    country: tgUser?.country ?? "US",
+    avatarUrl: tgUser?.avatarUrl,
+    // legacy aliases
+    userId: tgUser?.uid ?? "local",
+    username: tgUser?.name ?? "Player",
+    region: tgUser?.country ?? "US",
     updatedAt: Date.now(),
   };
 
-  localStorage.setItem(KEY, JSON.stringify(profile));
-  return profile;
+  // 4️⃣ Save once if we can
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(KEY, JSON.stringify(base));
+    } catch {
+      // if storage fails (very rare), we still return base
+    }
+  }
+
+  return base;
 }
 
+/** Update profile fields (name, country, etc.) but NEVER change uid */
 export function setProfile(update: Partial<PlayerProfile>) {
   const current = getProfile();
+
   const merged: PlayerProfile = {
     ...current,
     ...update,
+    // force UID + aliases to stay the same
+    uid: current.uid,
+    userId: current.userId ?? current.uid,
+    region: update.country ?? current.region ?? current.country,
     updatedAt: Date.now(),
   };
-  localStorage.setItem(KEY, JSON.stringify(merged));
-}
 
-// legacy name used in some pages
-export const saveProfile = setProfile;
+  try {
+    localStorage.setItem(KEY, JSON.stringify(merged));
+  } catch {
+    // ignore
+  }
+}
