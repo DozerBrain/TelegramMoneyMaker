@@ -36,9 +36,12 @@ function applyUserProfile(user: SimpleUser) {
   // 🔥 Save into our profile store
   setProfile({
     uid,
+    userId: uid,
     name,
     country,
+    username: user.username,
     avatarUrl: user.photo_url,
+    source: "TG",
   });
 
   return { uid, name, country };
