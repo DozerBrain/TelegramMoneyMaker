@@ -33,7 +33,7 @@ function applyUserProfile(user: SimpleUser) {
 
   const uid = String(user.id);
 
-  // 🔥 Save into our profile store
+  // 🔥 Save into our profile store (uid == Telegram id)
   setProfile({
     uid,
     userId: uid,
