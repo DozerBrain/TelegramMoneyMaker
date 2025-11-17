@@ -93,7 +93,7 @@ export default function LeaderboardPage() {
     if (!myId) return; // wait for profile
     setLoading(true);
     try {
-      const data = await topGlobal(500); // big enough so you & gf are included
+      const data = await topGlobal(5000); // big enough so you & gf are included
       setAllRows(data);
     } finally {
       setLoading(false);
