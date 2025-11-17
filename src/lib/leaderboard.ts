@@ -9,8 +9,6 @@ import {
   limitToLast,
 } from "firebase/database";
 import { getProfile } from "./profile";
-
-// ✅ getRegionForCountry from regions, RegionId type from countries
 import { getRegionForCountry } from "../data/regions";
 import type { RegionId } from "../data/countries";
 
