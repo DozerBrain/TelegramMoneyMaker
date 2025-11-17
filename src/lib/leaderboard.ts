@@ -9,7 +9,10 @@ import {
   limitToLast,
 } from "firebase/database";
 import { getProfile } from "./profile";
-import { getRegionForCountry, type RegionId } from "../data/regions";
+
+// ✅ getRegionForCountry from regions, RegionId type from countries
+import { getRegionForCountry } from "../data/regions";
+import type { RegionId } from "../data/countries";
 
 export type LeaderRow = {
   uid: string;
