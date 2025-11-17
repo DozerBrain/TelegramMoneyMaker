@@ -11,10 +11,16 @@ export type LeaderRow = {
   updatedAt: number;
 };
 
+/**
+ * Always push TOTAL EARNINGS, not balance, not tapValue.
+ * This must run ANY TIME the player earns money.
+ */
 export async function submitScore(totalEarnings: number) {
   const p = getProfile();
 
-  const uid = String(p.uid || "local");
+  // ensure correct UID
+  const uid = String(p.uid || p.userId || "local");
+
   const name = p.name || p.username || "Player";
   const country = (p.country || "US").toUpperCase();
 
@@ -22,16 +28,19 @@ export async function submitScore(totalEarnings: number) {
     uid,
     name,
     country,
-    score: Math.floor(totalEarnings),
+    score: Math.max(0, Math.floor(totalEarnings)),
     updatedAt: Date.now(),
   };
 
-  // Write in two places
+  // Write to global
   await set(ref(db, `leaderboard/global/${uid}`), row);
+
+  // Write to country
   await set(ref(db, `leaderboard/byCountry/${country}/${uid}`), row);
 }
 
-// --- Readers used by the page / top bar
+// -------- READERS ---------
+
 export async function topGlobal(limit = 50): Promise<LeaderRow[]> {
   const q = query(
     ref(db, "leaderboard/global"),
