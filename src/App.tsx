@@ -45,7 +45,7 @@ export type CardInstance = {
   obtainedAt: number;
 };
 
-/** Build legacy collection counts from NFT-style cards */
+/** Build rarity counts from NFT-style cards (for legacy views) */
 function buildCollectionFromCards(cards: CardInstance[]) {
   const counts = {
     common: 0,
@@ -64,7 +64,7 @@ function buildCollectionFromCards(cards: CardInstance[]) {
 }
 
 export default function App() {
-  // Load save once
+  // Load save once (also supports old "score"/"tap" fields)
   const initial = useMemo(() => (loadSave() as any) || {}, []);
 
   // Core state
@@ -81,11 +81,13 @@ export default function App() {
   );
   const [multi, setMulti] = useState<number>(initial.multi ?? 1);
 
-  // 🔥 New long-term stats
+  // Long-term stats
   const [critChance, setCritChance] = useState<number>(
     initial.critChance ?? 0
   );
-  const [critMult, setCritMult] = useState<number>(initial.critMult ?? 5); // x5 base
+  const [critMult, setCritMult] = useState<number>(
+    initial.critMult ?? 5 // x5 base
+  );
   const [autoBonusMult, setAutoBonusMult] = useState<number>(
     initial.autoBonusMult ?? 1
   );
@@ -129,12 +131,12 @@ export default function App() {
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
 
-  // 🔼 Track last score we submitted to Firebase (to avoid spam)
+  // Track last score we submitted to leaderboard (persisted)
   const [lastSubmittedScore, setLastSubmittedScore] = useState<number>(
-    initial.totalEarnings ?? 0
+    initial.lastSubmittedScore ?? 0
   );
 
-  // Telegram init
+  // Telegram init (reads tg webapp data + fills profile)
   useEffect(() => {
     initTelegramUI();
   }, []);
@@ -190,41 +192,45 @@ export default function App() {
   );
   const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
 
-  // Auto income (includes autoBonusMult now)
-  useInterval(() => {
-    if (autoPerSec <= 0) return;
+  // Auto income (includes autoBonusMult)
+  useInterval(
+    () => {
+      if (autoPerSec <= 0) return;
 
-    const gain = Math.max(
-      0,
-      Math.floor(
-        autoPerSec *
-          multi *
-          autoBonusMult *
-          suitMult *
-          petAutoMult *
-          cardMultAll *
-          globalMult
-      )
-    );
+      const gain = Math.max(
+        0,
+        Math.floor(
+          autoPerSec *
+            multi *
+            autoBonusMult *
+            suitMult *
+            petAutoMult *
+            cardMultAll *
+            globalMult
+        )
+      );
 
-    if (gain > 0) {
-      setBalance((b) => b + gain);
-      setTotalEarnings((t) => t + gain);
-    }
-  }, 1000);
+      if (gain > 0) {
+        setBalance((b) => b + gain);
+        setTotalEarnings((t) => t + gain);
+      }
+    },
+    1000 // every second
+  );
 
-  // 🔥 Auto-submit score to leaderboard
+  // Auto-submit score to leaderboard (clean, with persistence)
   useEffect(() => {
     if (totalEarnings <= 0) return;
 
-    // Only submit if we increased by at least 1000 (tune this later)
+    // Only submit if we increased by at least 1000 since last submit
     if (totalEarnings < lastSubmittedScore + 1000) return;
 
-    setLastSubmittedScore(totalEarnings);
+    const currentScore = totalEarnings;
+    setLastSubmittedScore(currentScore);
 
     try {
       const profile = getProfile();
-      submitScore(totalEarnings, profile).catch(() => {
+      submitScore(currentScore, profile).catch(() => {
         // ignore network errors for now
       });
     } catch {
@@ -255,10 +261,6 @@ export default function App() {
     saveSave({
       ...prev,
 
-      // Legacy fields
-      score: balance,
-      tap: taps,
-
       // Core
       balance,
       totalEarnings,
@@ -267,7 +269,7 @@ export default function App() {
       autoPerSec,
       multi,
 
-      // New stats
+      // Long-term stats
       critChance,
       critMult,
       autoBonusMult,
@@ -288,9 +290,9 @@ export default function App() {
       collection,
       couponsSpent,
 
-      // Spin & profile
+      // Spin & leaderboard meta
       spinCooldownEndsAt,
-      profile: prev.profile ?? defaultSave.profile,
+      lastSubmittedScore,
     });
   }, [
     balance,
@@ -311,9 +313,10 @@ export default function App() {
     cards,
     couponsSpent,
     spinCooldownEndsAt,
+    lastSubmittedScore,
   ]);
 
-  // Hash navigation
+  // Hash navigation (#/leaderboard, #/profile)
   useEffect(() => {
     const applyHash = () => {
       const h = (location.hash || "").toLowerCase();
