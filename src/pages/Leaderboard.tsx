@@ -9,14 +9,20 @@ export default function LeaderboardPage() {
   const [scope, setScope] = useState<Scope>("global");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(false);
+
+  // Me
   const [myId, setMyId] = useState<string>("");
   const [myCountry, setMyCountry] = useState<string>("US");
+  const [myName, setMyName] = useState<string>("Player");
+  const [myAvatar, setMyAvatar] = useState<string | null>(null);
 
-  // Load my profile (id + country) once
+  // Load my profile (id + country + name + avatar) once
   useEffect(() => {
     const p = getProfile();
     setMyId(String(p.uid || p.userId || "local"));
     setMyCountry((p.country || "US").toUpperCase());
+    setMyName(p.name || "Player");
+    setMyAvatar(p.avatarUrl || null);
   }, []);
 
   async function loadLeaderboard(scopeToLoad: Scope, country?: string) {
@@ -35,7 +41,7 @@ export default function LeaderboardPage() {
     }
   }
 
-  // Load whenever scope / myCountry changes
+  // Load whenever scope / myCountry changes (after myId is known)
   useEffect(() => {
     if (!myId) return; // wait until profile loaded
     loadLeaderboard(scope, myCountry);
@@ -48,9 +54,41 @@ export default function LeaderboardPage() {
   const myRank = myRankIndex >= 0 ? myRankIndex + 1 : undefined;
 
   return (
-    <div className="p-4 text-white">
+    <div className="p-4 text-white space-y-4">
+      {/* YOU CARD (always at top) */}
+      <div className="rounded-2xl bg-zinc-900/80 border border-emerald-500/40 px-4 py-3 flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          {myAvatar ? (
+            <img
+              src={myAvatar}
+              alt={myName}
+              className="h-10 w-10 rounded-full object-cover border border-emerald-500/70 flex-shrink-0"
+            />
+          ) : (
+            <div className="h-10 w-10 rounded-full bg-emerald-900 text-emerald-200 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+              {(myName || "P").slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <div className="min-w-0">
+            <div className="text-sm font-semibold truncate">{myName}</div>
+            <div className="text-[11px] text-white/50 truncate">
+              ID: <span className="font-mono">{myId || "…"}</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="text-right">
+          <div className="text-[10px] uppercase tracking-wide text-white/45">
+            {scope === "global" ? "Global Rank" : `${myCountry} Rank`}
+          </div>
+          <div className="text-sm font-semibold text-emerald-400">
+            {myRank ? `#${myRank}` : "-"}
+          </div>
+        </div>
+      </div>
+
       {/* Scope buttons + refresh */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between">
         <div className="flex gap-2">
           <button
             onClick={() => setScope("global")}
@@ -118,10 +156,11 @@ export default function LeaderboardPage() {
         )}
       </div>
 
-      <div className="mt-4 text-xs text-white/50">
-        Your ID: {myId}
+      {/* Extra info */}
+      <div className="text-[11px] text-white/45">
+        <div>Scope: {scope === "global" ? "Global leaderboard" : `Top in ${myCountry}`}</div>
         {myRank && rows.length > 0 && (
-          <span className="ml-2">• Your rank: #{myRank}</span>
+          <div className="mt-1">You are currently ranked #{myRank} in this view.</div>
         )}
       </div>
     </div>
