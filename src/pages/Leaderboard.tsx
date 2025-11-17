@@ -10,6 +10,7 @@ import { getProfile } from "../lib/profile";
 import {
   getRegionForCountry,
   REGION_LABELS,
+  REGION_LIST,
   type RegionId,
 } from "../data/regions";
 import {
@@ -19,7 +20,7 @@ import {
 } from "../data/countries";
 import { formatMoneyShort } from "../lib/format";
 
-type Scope = "global" | "country" | "region";
+type Scope = "global" | "region" | "country" | "friends";
 
 export default function LeaderboardPage() {
   const [scope, setScope] = useState<Scope>("global");
@@ -30,10 +31,12 @@ export default function LeaderboardPage() {
   const [myCountry, setMyCountry] = useState<string>("US");
   const [myRegion, setMyRegion] = useState<RegionId>("Unknown");
 
-  // The country currently being viewed in "country" scope
+  // What we are currently viewing
   const [selectedCountry, setSelectedCountry] = useState<string>("US");
+  const [selectedRegion, setSelectedRegion] =
+    useState<RegionId>("NorthAmerica");
 
-  // Load my profile (id + country + region) once
+  // Load my profile once
   useEffect(() => {
     const p = getProfile();
     const cc = (p.country || "US").toUpperCase();
@@ -41,8 +44,9 @@ export default function LeaderboardPage() {
 
     setMyId(String(p.uid || p.userId || "local"));
     setMyCountry(cc);
-    setSelectedCountry(cc);
     setMyRegion(region);
+    setSelectedCountry(cc);
+    setSelectedRegion(region);
   }, []);
 
   async function loadLeaderboard(scopeToLoad: Scope) {
@@ -53,11 +57,35 @@ export default function LeaderboardPage() {
       let data: LeaderRow[] = [];
 
       if (scopeToLoad === "global") {
+        // All players
         data = await topGlobal(50);
+      } else if (scopeToLoad === "region") {
+        // Selected region -> direct node; if empty, fallback to global filtered
+        const region = selectedRegion;
+        data = await topByRegion(region, 50);
+        if (data.length === 0) {
+          const g = await topGlobal(200);
+          data = g.filter(
+            (r) => getRegionForCountry(r.country) === region
+          );
+        }
       } else if (scopeToLoad === "country") {
-        data = await topByCountry(selectedCountry, 50);
+        // Selected country -> direct node; if empty, fallback to global filtered
+        const cc = selectedCountry.toUpperCase();
+        data = await topByCountry(cc, 50);
+        if (data.length === 0) {
+          const g = await topGlobal(200);
+          data = g.filter(
+            (r) => (r.country || "").toUpperCase() === cc
+          );
+        }
       } else {
-        data = await topByRegion(myRegion, 50);
+        // FRIENDS: for now -> players from your country (later can be "invited friends")
+        const g = await topGlobal(200);
+        const cc = myCountry.toUpperCase();
+        data = g.filter(
+          (r) => (r.country || "").toUpperCase() === cc
+        );
       }
 
       setRows(data);
@@ -66,12 +94,12 @@ export default function LeaderboardPage() {
     }
   }
 
-  // Load whenever scope / selectedCountry / myRegion changes
+  // Reload when scope / selection changes
   useEffect(() => {
     if (!myId) return;
     loadLeaderboard(scope);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, myId, selectedCountry, myRegion]);
+  }, [scope, myId, selectedCountry, selectedRegion, myCountry]);
 
   const myRankIndex = rows.findIndex(
     (r) => String(r.uid) === String(myId)
@@ -81,9 +109,11 @@ export default function LeaderboardPage() {
   const scopeLabel =
     scope === "global"
       ? "Global leaderboard"
+      : scope === "region"
+      ? `${REGION_LABELS[selectedRegion]} leaderboard`
       : scope === "country"
       ? `${countryNameFromCode(selectedCountry)} leaderboard`
-      : `${REGION_LABELS[myRegion]} leaderboard`;
+      : "Friends leaderboard";
 
   return (
     <div className="p-4 text-white">
@@ -93,7 +123,7 @@ export default function LeaderboardPage() {
           {/* Global */}
           <button
             onClick={() => setScope("global")}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1 ${
+            className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 ${
               scope === "global"
                 ? "bg-emerald-600"
                 : "bg-zinc-900/80 border border-white/10"
@@ -102,10 +132,25 @@ export default function LeaderboardPage() {
             🌍 <span>Global</span>
           </button>
 
-          {/* Country (view any country) */}
+          {/* Region */}
+          <button
+            onClick={() => setScope("region")}
+            className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 ${
+              scope === "region"
+                ? "bg-emerald-600"
+                : "bg-zinc-900/80 border border-white/10"
+            }`}
+          >
+            🌎
+            <span className="truncate max-w-[90px] sm:max-w-[120px]">
+              {REGION_LABELS[selectedRegion]}
+            </span>
+          </button>
+
+          {/* Country */}
           <button
             onClick={() => setScope("country")}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1 ${
+            className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 ${
               scope === "country"
                 ? "bg-emerald-600"
                 : "bg-zinc-900/80 border border-white/10"
@@ -115,19 +160,16 @@ export default function LeaderboardPage() {
             <span>{selectedCountry}</span>
           </button>
 
-          {/* Region (your region) */}
+          {/* Friends */}
           <button
-            onClick={() => setScope("region")}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1 ${
-              scope === "region"
+            onClick={() => setScope("friends")}
+            className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 ${
+              scope === "friends"
                 ? "bg-emerald-600"
                 : "bg-zinc-900/80 border border-white/10"
             }`}
           >
-            🌎
-            <span className="truncate max-w-[120px]">
-              {REGION_LABELS[myRegion]}
-            </span>
+            👥 <span>Friends</span>
           </button>
         </div>
 
@@ -139,7 +181,29 @@ export default function LeaderboardPage() {
         </button>
       </div>
 
-      {/* Country picker chips – only visible in "country" scope */}
+      {/* Region picker – visible in Region scope */}
+      {scope === "region" && (
+        <div className="mt-2 mb-3 -mx-4 px-4 flex gap-2 overflow-x-auto pb-1">
+          {REGION_LIST.map((r) => {
+            const isActive = r === selectedRegion;
+            return (
+              <button
+                key={r}
+                onClick={() => setSelectedRegion(r)}
+                className={`px-3 py-1 rounded-2xl text-xs font-semibold flex items-center gap-1 whitespace-nowrap ${
+                  isActive
+                    ? "bg-emerald-600"
+                    : "bg-zinc-900/80 border border-white/10"
+                }`}
+              >
+                <span>{REGION_LABELS[r]}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Country picker – visible in Country scope */}
       {scope === "country" && (
         <div className="mt-2 mb-3 -mx-4 px-4 flex gap-2 overflow-x-auto pb-1">
           {POPULAR_COUNTRIES.map((c) => {
