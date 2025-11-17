@@ -8,36 +8,30 @@ import { PETS } from "../data/pets";
 import { formatMoneyShort } from "../lib/format";
 
 type Props = {
-  // balances & totals
   balance: number;
   setBalance: (v: number | ((p: number) => number)) => void;
 
   totalEarnings: number;
   setTotalEarnings: (v: number | ((p: number) => number)) => void;
 
-  // tapping
   taps: number;
   setTaps: (v: number | ((p: number) => number)) => void;
 
   tapValue: number;
   multi: number;
 
-  // suit display
   currentSuitName: string;
   setCurrentSuitName: (v: string) => void;
 
-  // multipliers
   suitMult: number;
   petTapMult: number;
   cardMultAll: number;
   globalMult: number;
 
-  // equipped pet
   equippedPetId: string | null;
 
-  // crit system
-  critChance: number; // 0.05 = 5%
-  critMult: number;   // e.g. 5 = x5
+  critChance: number;
+  critMult: number;
 };
 
 export default function Home({
@@ -50,7 +44,7 @@ export default function Home({
   tapValue,
   multi,
   currentSuitName,
-  setCurrentSuitName, // reserved
+  setCurrentSuitName,
   suitMult,
   petTapMult,
   cardMultAll,
@@ -59,7 +53,6 @@ export default function Home({
   critChance,
   critMult,
 }: Props) {
-  // ---------- Combo UI ----------
   const [combo, setCombo] = useState(0);
   const [best, setBest] = useState(0);
   const [lastCrit, setLastCrit] = useState(false);
@@ -73,17 +66,15 @@ export default function Home({
     return () => window.removeEventListener("combo:update", onCombo as any);
   }, []);
 
-  // ---------- Leaderboard submit (throttled) ----------
   const lastPushRef = useRef(0);
 
-  async function pushLeaderboard(newScore: number) {
+  async function pushLeaderboard(score: number) {
     const now = Date.now();
-    if (now - lastPushRef.current < 1500) return; // max ~1.5s
+    if (now - lastPushRef.current < 1500) return;
     lastPushRef.current = now;
-    await submitScore(newScore); // ✅ submitScore takes only ONE argument
+    await submitScore(score);
   }
 
-  // ---------- Tap handler with crit ----------
   function onMainTap() {
     const totalTapMult =
       multi * suitMult * petTapMult * cardMultAll * globalMult;
@@ -99,23 +90,23 @@ export default function Home({
     }
 
     setLastCrit(didCrit);
-    if (didCrit) {
-      setTimeout(() => setLastCrit(false), 250);
-    }
+    if (didCrit) setTimeout(() => setLastCrit(false), 250);
 
     setTaps((t) => t + 1);
     setTotalEarnings((t) => t + gain);
 
     setBalance((b) => {
-      const newBalance = b + gain;
-      pushLeaderboard(newBalance);
-      return newBalance;
+      const updated = b + gain;
+
+      // 🔥 FIXED — use totalEarnings + gain
+      pushLeaderboard(totalEarnings + gain);
+
+      return updated;
     });
 
     comboTap();
   }
 
-  // ---------- View helpers ----------
   const suitImg = useMemo(() => {
     const name = (currentSuitName || "starter").toLowerCase();
     return `/suits/${name}.png`;
@@ -128,10 +119,8 @@ export default function Home({
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
-      {/* Left quick buttons (Cards / Suits / Pets) */}
       <LeftQuickNav />
 
-      {/* Mascot centered; pet anchored bottom-right of mascot */}
       <div className="mt-2 flex items-center justify-center">
         <div className="relative">
           <img
@@ -152,12 +141,10 @@ export default function Home({
         </div>
       </div>
 
-      {/* Tap button */}
       <div className="mt-5">
         <BanknoteButton onTap={onMainTap} size={140} />
       </div>
 
-      {/* Combo + crit badge */}
       <div className="mt-2 text-sm font-semibold flex flex-col items-center gap-1">
         {combo > 0 && (
           <div className="text-emerald-300">
@@ -171,7 +158,6 @@ export default function Home({
         )}
       </div>
 
-      {/* Balance readout */}
       <div className="mt-3 text-white/90 text-sm">
         Balance:{" "}
         <span className="text-emerald-400 font-semibold">
