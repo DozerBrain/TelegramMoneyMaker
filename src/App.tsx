@@ -211,9 +211,14 @@ export default function App() {
   useEffect(() => {
     if (totalEarnings <= 0) return;
 
-    submitScore(totalEarnings).catch(() => {
-      // ignore network errors for now
-    });
+    try {
+      // submitScore reads profile (uid, name, country) from moneymaker_profile_v1
+      submitScore(totalEarnings).catch(() => {
+        // ignore network errors for now
+      });
+    } catch {
+      // ignore
+    }
   }, [totalEarnings]);
 
   // Achievements checking
