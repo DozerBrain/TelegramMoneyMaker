@@ -11,7 +11,6 @@ import {
 import { formatMoneyShort } from "../lib/format";
 
 type Mode = "global" | "friends";
-
 type CountryCode = string;
 
 // ---- Helpers based on countries.ts -----------------------------------------
@@ -44,6 +43,50 @@ function regionOfCountry(code: string): RegionId {
   const c = findCountry(code);
   // fallback: if unknown, put them in "NA" just so it works
   return (c?.region ?? "NA") as RegionId;
+}
+
+// Old region strings that may still exist in Firebase
+type AnyRegion =
+  | RegionId
+  | "NorthAmerica"
+  | "SouthAmerica"
+  | "Europe"
+  | "MiddleEast"
+  | "Africa"
+  | "Asia"
+  | "Oceania";
+
+// Normalize whatever is stored in row.region into our RegionId ("NA", "EU", etc.)
+function normalizeRegion(region: AnyRegion | undefined, countryCode: string): RegionId {
+  if (!region) return regionOfCountry(countryCode);
+
+  switch (region) {
+    case "NA":
+    case "NorthAmerica":
+      return "NA";
+    case "SA":
+    case "SouthAmerica":
+      return "SA";
+    case "EU":
+    case "Europe":
+      return "EU";
+    case "CIS":
+      return "CIS";
+    case "MENA":
+    case "MiddleEast":
+      return "MENA";
+    case "AF":
+    case "Africa":
+      return "AF";
+    case "AS":
+    case "Asia":
+      return "AS";
+    case "OC":
+    case "Oceania":
+      return "OC";
+    default:
+      return regionOfCountry(countryCode);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -116,8 +159,10 @@ export default function LeaderboardPage() {
     // Region filter (always active)
     if (selectedRegion) {
       list = list.filter((r) => {
-        const rowRegion =
-          (r.region as RegionId | undefined) ?? regionOfCountry(r.country);
+        const rowRegion = normalizeRegion(
+          (r.region as AnyRegion | undefined),
+          r.country
+        );
         return rowRegion === selectedRegion;
       });
     }
@@ -263,14 +308,14 @@ export default function LeaderboardPage() {
         onClick={() => setShowCountryPicker(false)}
       >
         <div
-          className="mb-20 w-full max-w-md max-h-[60vh] rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1 overflow-hidden"
+          className="mb-20 w-full max-w-md max-h-[65vh] rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1 overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="text-xs text-white/50 px-1 pb-1">
             Countries in {regionLabel}
           </div>
 
-          <div className="max-h-[50vh] overflow-y-auto space-y-1 pr-1">
+          <div className="max-h-[55vh] overflow-y-auto space-y-1 pr-1">
             <button
               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
                 selectedCountry === "ALL"
