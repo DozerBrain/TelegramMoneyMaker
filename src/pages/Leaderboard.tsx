@@ -5,24 +5,39 @@ import { getProfile } from "../lib/profile";
 
 type Scope = "global" | "country";
 
+// 🔹 Shorten big scores: 1.2K, 3.4M, 5.6B, 7.8T, etc.
+function shortScore(n: number): string {
+  const abs = Math.abs(n);
+  if (abs >= 1_000_000_000_000_000) {
+    return (n / 1_000_000_000_000_000).toFixed(1).replace(/\.0$/, "") + "Q"; // quadrillion+
+  }
+  if (abs >= 1_000_000_000_000) {
+    return (n / 1_000_000_000_000).toFixed(1).replace(/\.0$/, "") + "T";
+  }
+  if (abs >= 1_000_000_000) {
+    return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "B";
+  }
+  if (abs >= 1_000_000) {
+    return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  }
+  if (abs >= 1_000) {
+    return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+  }
+  return Math.floor(n).toLocaleString();
+}
+
 export default function LeaderboardPage() {
   const [scope, setScope] = useState<Scope>("global");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(false);
-
-  // Me
   const [myId, setMyId] = useState<string>("");
   const [myCountry, setMyCountry] = useState<string>("US");
-  const [myName, setMyName] = useState<string>("Player");
-  const [myAvatar, setMyAvatar] = useState<string | null>(null);
 
-  // Load my profile (id + country + name + avatar) once
+  // Load my profile (id + country) once
   useEffect(() => {
     const p = getProfile();
     setMyId(String(p.uid || p.userId || "local"));
     setMyCountry((p.country || "US").toUpperCase());
-    setMyName(p.name || "Player");
-    setMyAvatar(p.avatarUrl || null);
   }, []);
 
   async function loadLeaderboard(scopeToLoad: Scope, country?: string) {
@@ -41,54 +56,20 @@ export default function LeaderboardPage() {
     }
   }
 
-  // Load whenever scope / myCountry changes (after myId is known)
+  // Load whenever scope / myCountry changes
   useEffect(() => {
     if (!myId) return; // wait until profile loaded
     loadLeaderboard(scope, myCountry);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope, myCountry, myId]);
 
-  const myRankIndex = rows.findIndex(
-    (r) => String(r.uid) === String(myId)
-  );
+  const myRankIndex = rows.findIndex((r) => String(r.uid) === String(myId));
   const myRank = myRankIndex >= 0 ? myRankIndex + 1 : undefined;
 
   return (
-    <div className="p-4 text-white space-y-4">
-      {/* YOU CARD (always at top) */}
-      <div className="rounded-2xl bg-zinc-900/80 border border-emerald-500/40 px-4 py-3 flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0">
-          {myAvatar ? (
-            <img
-              src={myAvatar}
-              alt={myName}
-              className="h-10 w-10 rounded-full object-cover border border-emerald-500/70 flex-shrink-0"
-            />
-          ) : (
-            <div className="h-10 w-10 rounded-full bg-emerald-900 text-emerald-200 flex items-center justify-center text-xs font-semibold flex-shrink-0">
-              {(myName || "P").slice(0, 2).toUpperCase()}
-            </div>
-          )}
-          <div className="min-w-0">
-            <div className="text-sm font-semibold truncate">{myName}</div>
-            <div className="text-[11px] text-white/50 truncate">
-              ID: <span className="font-mono">{myId || "…"}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="text-right">
-          <div className="text-[10px] uppercase tracking-wide text-white/45">
-            {scope === "global" ? "Global Rank" : `${myCountry} Rank`}
-          </div>
-          <div className="text-sm font-semibold text-emerald-400">
-            {myRank ? `#${myRank}` : "-"}
-          </div>
-        </div>
-      </div>
-
+    <div className="p-4 text-white">
       {/* Scope buttons + refresh */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between mb-4">
         <div className="flex gap-2">
           <button
             onClick={() => setScope("global")}
@@ -149,18 +130,19 @@ export default function LeaderboardPage() {
               <div className="truncate">{row.name}</div>
               <div className="text-white/70">{row.country}</div>
               <div className="text-right font-semibold">
-                {row.score.toLocaleString()}
+                {shortScore(row.score)}
               </div>
             </div>
           ))
         )}
       </div>
 
-      {/* Extra info */}
-      <div className="text-[11px] text-white/45">
-        <div>Scope: {scope === "global" ? "Global leaderboard" : `Top in ${myCountry}`}</div>
+      <div className="mt-4 text-xs text-white/50">
+        Scope: {scope === "global" ? "Global leaderboard" : `${myCountry} leaderboard`}
         {myRank && rows.length > 0 && (
-          <div className="mt-1">You are currently ranked #{myRank} in this view.</div>
+          <span className="block mt-1">
+            You are currently ranked #{myRank} in this view.
+          </span>
         )}
       </div>
     </div>
