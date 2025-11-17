@@ -1,65 +1,97 @@
 // src/pages/Leaderboard.tsx
 import React, { useEffect, useState } from "react";
-import { topGlobal, topByCountry, type LeaderRow } from "../lib/leaderboard";
+import {
+  topGlobal,
+  topByCountry,
+  topByRegion,
+  type LeaderRow,
+  regionFromCountry,
+  regionLabel,
+  type RegionCode,
+} from "../lib/leaderboard";
 import { getProfile } from "../lib/profile";
 import { formatMoneyShort } from "../lib/format";
 
-type Scope = "global" | "country";
+type Scope = "global" | "country" | "region";
 
-// 🔹 Use the same AA / AB / AC formatter as the rest of the game
-function shortScore(raw: number | string): string {
-  const n = typeof raw === "string" ? Number(raw) : raw;
-  if (!Number.isFinite(n)) return "0";
-  return formatMoneyShort(n);
+// Small helper: convert "US" -> 🇺🇸
+function flagEmoji(cc: string): string {
+  const code = (cc || "").toUpperCase();
+  if (code.length !== 2) return "🏳️";
+  const A = 0x1f1e6;
+  const a = "A".charCodeAt(0);
+  return String.fromCodePoint(
+    A + (code.charCodeAt(0) - a),
+    A + (code.charCodeAt(1) - a)
+  );
 }
 
 export default function LeaderboardPage() {
   const [scope, setScope] = useState<Scope>("global");
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(false);
+
   const [myId, setMyId] = useState<string>("");
   const [myCountry, setMyCountry] = useState<string>("US");
+  const [myRegion, setMyRegion] = useState<RegionCode>("NA");
 
-  // Load my profile (id + country) once
+  // Load my profile (id + country + region) once
   useEffect(() => {
     const p = getProfile();
-    setMyId(String(p.uid || p.userId || "local"));
-    setMyCountry((p.country || "US").toUpperCase());
+    const uid = String(p.uid || p.userId || "local");
+    const cc = (p.country || "US").toUpperCase();
+    const region = regionFromCountry(cc);
+
+    setMyId(uid);
+    setMyCountry(cc);
+    setMyRegion(region);
   }, []);
 
-  async function loadLeaderboard(scopeToLoad: Scope, country?: string) {
+  async function loadLeaderboard(scopeToLoad: Scope) {
     setLoading(true);
     try {
       let data: LeaderRow[] = [];
+
       if (scopeToLoad === "global") {
         data = await topGlobal(50);
-      } else {
-        const c = (country || myCountry || "US").toUpperCase();
+      } else if (scopeToLoad === "country") {
+        const c = (myCountry || "US").toUpperCase();
         data = await topByCountry(c, 50);
+      } else {
+        const r: RegionCode = myRegion || regionFromCountry(myCountry);
+        data = await topByRegion(r, 50);
       }
+
       setRows(data);
     } finally {
       setLoading(false);
     }
   }
 
-  // Load whenever scope / myCountry changes
+  // Load whenever scope / myCountry / myRegion / myId changes
   useEffect(() => {
     if (!myId) return; // wait until profile loaded
-    loadLeaderboard(scope, myCountry);
+    loadLeaderboard(scope);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, myCountry, myId]);
+  }, [scope, myCountry, myRegion, myId]);
 
-  const myRankIndex = rows.findIndex(
-    (r) => String(r.uid) === String(myId)
-  );
+  const myRankIndex = rows.findIndex((r) => String(r.uid) === String(myId));
   const myRank = myRankIndex >= 0 ? myRankIndex + 1 : undefined;
+
+  // Scope label at the bottom
+  const scopeLabel =
+    scope === "global"
+      ? "Global leaderboard"
+      : scope === "country"
+      ? `Country leaderboard (${myCountry})`
+      : `Region leaderboard (${regionLabel(myRegion)})`;
 
   return (
     <div className="p-4 text-white">
       {/* Scope buttons + refresh */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-2">
+          {/* GLOBAL */}
           <button
             onClick={() => setScope("global")}
             className={`px-4 py-2 rounded-xl text-sm font-semibold ${
@@ -70,6 +102,8 @@ export default function LeaderboardPage() {
           >
             🌍 Global
           </button>
+
+          {/* COUNTRY */}
           <button
             onClick={() => setScope("country")}
             className={`px-4 py-2 rounded-xl text-sm font-semibold ${
@@ -78,12 +112,24 @@ export default function LeaderboardPage() {
                 : "bg-zinc-900/80 border border-white/10"
             }`}
           >
-            🇺🇸 {myCountry}
+            {flagEmoji(myCountry)} {myCountry}
+          </button>
+
+          {/* REGION */}
+          <button
+            onClick={() => setScope("region")}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+              scope === "region"
+                ? "bg-emerald-600"
+                : "bg-zinc-900/80 border border-white/10"
+            }`}
+          >
+            🌎 {regionLabel(myRegion)}
           </button>
         </div>
 
         <button
-          onClick={() => loadLeaderboard(scope, myCountry)}
+          onClick={() => loadLeaderboard(scope)}
           className="px-3 py-2 rounded-xl bg-zinc-900/80 border border-white/10 text-xs"
         >
           {loading ? "Loading..." : "Refresh"}
@@ -119,7 +165,7 @@ export default function LeaderboardPage() {
               <div className="truncate">{row.name}</div>
               <div className="text-white/70">{row.country}</div>
               <div className="text-right font-semibold">
-                {shortScore(row.score)}
+                {formatMoneyShort(row.score)}
               </div>
             </div>
           ))
@@ -127,11 +173,9 @@ export default function LeaderboardPage() {
       </div>
 
       <div className="mt-4 text-xs text-white/50">
-        Scope: {scope === "global" ? "Global leaderboard" : `${myCountry} leaderboard`}
+        Scope: {scopeLabel}
         {myRank && rows.length > 0 && (
-          <span className="block mt-1">
-            You are currently ranked #{myRank} in this view.
-          </span>
+          <span className="ml-2">• You are currently ranked #{myRank} in this view.</span>
         )}
       </div>
     </div>
