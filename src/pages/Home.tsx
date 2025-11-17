@@ -2,7 +2,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import BanknoteButton from "../components/BanknoteButton";
 import { comboTap } from "../lib/combo";
-import { getProfile } from "../lib/profile";
 import { submitScore } from "../lib/leaderboard";
 import LeftQuickNav from "../components/LeftQuickNav";
 import { PETS } from "../data/pets";
@@ -75,14 +74,13 @@ export default function Home({
   }, []);
 
   // ---------- Leaderboard submit (throttled) ----------
-  const profile = useMemo(() => getProfile(), []);
   const lastPushRef = useRef(0);
 
   async function pushLeaderboard(newScore: number) {
     const now = Date.now();
-    if (now - lastPushRef.current < 1500) return;
+    if (now - lastPushRef.current < 1500) return; // max ~1.5s
     lastPushRef.current = now;
-    await submitScore(newScore, profile);
+    await submitScore(newScore); // ✅ submitScore takes only ONE argument
   }
 
   // ---------- Tap handler with crit ----------
@@ -90,10 +88,7 @@ export default function Home({
     const totalTapMult =
       multi * suitMult * petTapMult * cardMultAll * globalMult;
 
-    const baseGain = Math.max(
-      1,
-      Math.floor(tapValue * totalTapMult)
-    );
+    const baseGain = Math.max(1, Math.floor(tapValue * totalTapMult));
 
     let gain = baseGain;
     let didCrit = false;
