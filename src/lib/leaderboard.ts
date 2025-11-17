@@ -1,14 +1,6 @@
 // src/lib/leaderboard.ts
 import { db } from "./firebase";
-import {
-  get,
-  set,
-  ref,
-  query,
-  orderByChild,
-  limitToLast,
-} from "firebase/database";
-import type { Profile } from "./profile";
+import { get, set, ref, query, orderByChild, limitToLast } from "firebase/database";
 
 export type LeaderRow = {
   uid: string;
@@ -18,71 +10,57 @@ export type LeaderRow = {
   updatedAt: number;
 };
 
-/**
- * Save player score into Firebase leaderboard.
- * - Uses Telegram UID when available.
- * - Writes to:
- *   - leaderboard/global/<uid>
- *   - leaderboard/byCountry/<COUNTRY>/<uid>
- */
-export async function submitScore(
-  totalEarnings: number,
-  profile?: Profile
-): Promise<void> {
-  const p =
-    profile ??
-    (JSON.parse(
-      localStorage.getItem("moneymaker_profile_v1") || "{}"
-    ) as Partial<Profile>);
+export async function submitScore(totalEarnings: number) {
+  // Load profile from our profile store
+  const raw = localStorage.getItem("moneymaker_profile_v1") || "{}";
+  const p = JSON.parse(raw || "{}") as {
+    uid?: string;
+    userId?: string;
+    name?: string;
+    username?: string;
+    country?: string;
+    region?: string;
+  };
+
+  const uid = String(p.uid || p.userId || "local");
+  const name = p.name || p.username || "Player";
+  const country = (p.country || p.region || "US").toUpperCase();
 
   const row: LeaderRow = {
-    uid: String(p.uid || p.userId || "local"),
-    name: p.name || p.username || "Player",
-    country: (p.country || "US").toUpperCase(),
+    uid,
+    name,
+    country,
     score: Math.floor(totalEarnings),
     updatedAt: Date.now(),
   };
 
-  const globalRef = ref(db, `leaderboard/global/${row.uid}`);
-  const countryRef = ref(db, `leaderboard/byCountry/${row.country}/${row.uid}`);
-
-  await set(globalRef, row);
-  await set(countryRef, row);
+  // Write in two places
+  await set(ref(db, `leaderboard/global/${row.uid}`), row);
+  await set(ref(db, `leaderboard/byCountry/${row.country}/${row.uid}`), row);
 }
 
-/** Top global players */
+// --- Readers used by the page / top bar
 export async function topGlobal(limit = 50): Promise<LeaderRow[]> {
-  try {
-    const snap = await get(
-      query(ref(db, "leaderboard/global"), orderByChild("score"), limitToLast(limit))
-    );
-    if (!snap.exists()) return [];
-    const rows = Object.values(snap.val() as Record<string, LeaderRow>);
-    // orderByChild+limitToLast gives ascending; we want descending
-    return rows.sort((a, b) => b.score - a.score);
-  } catch {
-    return [];
-  }
+  const q = query(
+    ref(db, "leaderboard/global"),
+    orderByChild("score"),
+    limitToLast(limit)
+  );
+  const snap = await get(q);
+  if (!snap.exists()) return [];
+  const data = snap.val() as Record<string, LeaderRow>;
+  return Object.values(data).sort((a, b) => b.score - a.score);
 }
 
-/** Top players in specific country (by 2-letter code like "US", "RU") */
-export async function topByCountry(
-  country: string,
-  limit = 50
-): Promise<LeaderRow[]> {
-  const key = (country || "US").toUpperCase();
-  try {
-    const snap = await get(
-      query(
-        ref(db, `leaderboard/byCountry/${key}`),
-        orderByChild("score"),
-        limitToLast(limit)
-      )
-    );
-    if (!snap.exists()) return [];
-    const rows = Object.values(snap.val() as Record<string, LeaderRow>);
-    return rows.sort((a, b) => b.score - a.score);
-  } catch {
-    return [];
-  }
+export async function topByCountry(country: string, limit = 50): Promise<LeaderRow[]> {
+  const cc = country.toUpperCase();
+  const q = query(
+    ref(db, `leaderboard/byCountry/${cc}`),
+    orderByChild("score"),
+    limitToLast(limit)
+  );
+  const snap = await get(q);
+  if (!snap.exists()) return [];
+  const data = snap.val() as Record<string, LeaderRow>;
+  return Object.values(data).sort((a, b) => b.score - a.score);
 }
