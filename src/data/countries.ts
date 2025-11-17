@@ -31,6 +31,21 @@ export const REGIONS: { id: RegionId; label: string }[] = [
   { id: "OC", label: "Oceania" },
 ];
 
+// For quick mapping id -> human label
+export const REGION_LABELS: Record<RegionId, string> = {
+  NA: "North America",
+  SA: "South America",
+  EU: "Europe",
+  CIS: "CIS",
+  MENA: "MENA",
+  AF: "Africa",
+  AS: "Asia",
+  OC: "Oceania",
+};
+
+// Simple list used for region picker
+export const REGION_LIST: RegionId[] = ["NA", "SA", "EU", "CIS", "MENA", "AF", "AS", "OC"];
+
 // 🔥 Full list of countries (UN members + a few extra like Taiwan / Palestine)
 export const COUNTRIES: Country[] = [
   // --- North America (NA) ---
@@ -189,7 +204,6 @@ export const COUNTRIES: Country[] = [
   { code: "NG", name: "Nigeria", flag: "🇳🇬", region: "AF" },
   { code: "RW", name: "Rwanda", flag: "🇷🇼", region: "AF" },
   { code: "SC", name: "Seychelles", flag: "🇸🇨", region: "AF" },
-  { code: "SD", name: "Sudan", flag: "🇸🇩", region: "MENA" }, // shared, but keep as MENA above
   { code: "SL", name: "Sierra Leone", flag: "🇸🇱", region: "AF" },
   { code: "SN", name: "Senegal", flag: "🇸🇳", region: "AF" },
   { code: "SO", name: "Somalia", flag: "🇸🇴", region: "AF" },
@@ -248,3 +262,29 @@ export const COUNTRIES: Country[] = [
   { code: "VU", name: "Vanuatu", flag: "🇻🇺", region: "OC" },
   { code: "WS", name: "Samoa", flag: "🇼🇸", region: "OC" },
 ];
+
+// 👉 For now, POPULAR_COUNTRIES = all countries
+export const POPULAR_COUNTRIES = COUNTRIES;
+
+// Helper: get region for a country code
+export function getRegionForCountry(code: string): RegionId {
+  const cc = (code || "US").toUpperCase();
+  const found = COUNTRIES.find((c) => c.code === cc);
+  if (found) return found.region;
+  // default fallback
+  return "NA";
+}
+
+// Helper: flag from country code
+export function codeToFlag(code: string): string {
+  const cc = (code || "US").toUpperCase();
+  const found = COUNTRIES.find((c) => c.code === cc);
+  return found?.flag ?? "🏳️";
+}
+
+// Helper: full name from country code
+export function countryNameFromCode(code: string): string {
+  const cc = (code || "US").toUpperCase();
+  const found = COUNTRIES.find((c) => c.code === cc);
+  return found?.name ?? cc;
+}
