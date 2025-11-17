@@ -12,8 +12,6 @@ import {
   REGION_LABELS,
   REGION_LIST,
   type RegionId,
-} from "../data/regions";
-import {
   POPULAR_COUNTRIES,
   codeToFlag,
   countryNameFromCode,
@@ -29,12 +27,11 @@ export default function LeaderboardPage() {
 
   const [myId, setMyId] = useState<string>("");
   const [myCountry, setMyCountry] = useState<string>("US");
-  const [myRegion, setMyRegion] = useState<RegionId>("Unknown");
+  const [myRegion, setMyRegion] = useState<RegionId>("NA");
 
   // What we are currently viewing
   const [selectedCountry, setSelectedCountry] = useState<string>("US");
-  const [selectedRegion, setSelectedRegion] =
-    useState<RegionId>("NorthAmerica");
+  const [selectedRegion, setSelectedRegion] = useState<RegionId>("NA");
 
   // Load my profile once
   useEffect(() => {
@@ -80,7 +77,7 @@ export default function LeaderboardPage() {
           );
         }
       } else {
-        // FRIENDS: for now -> players from your country (later can be "invited friends")
+        // FRIENDS: for now -> players from your country
         const g = await topGlobal(200);
         const cc = myCountry.toUpperCase();
         data = g.filter(
