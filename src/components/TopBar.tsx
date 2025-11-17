@@ -21,7 +21,6 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
   const [avatar, setAvatar] = useState<string | undefined>();
   const [rank, setRank] = useState<number | null>(null);
 
-  // load profile + rank
   useEffect(() => {
     let dead = false;
 
@@ -52,20 +51,26 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
   }, []);
 
   function openProfile() {
-    window.dispatchEvent(new CustomEvent("MM_GOTO", { detail: { goto: "profile" } }));
+    window.dispatchEvent(
+      new CustomEvent("MM_GOTO", { detail: { goto: "profile" } })
+    );
   }
 
   function openLeaderboard() {
-    window.dispatchEvent(new CustomEvent("MM_GOTO", { detail: { goto: "leaderboard" } }));
+    window.dispatchEvent(
+      new CustomEvent("MM_GOTO", { detail: { goto: "leaderboard" } })
+    );
   }
 
   return (
-    <header className="w-full bg-black/40 border-b border-white/5 px-3 py-2 flex items-center justify-between">
-      {/* LEFT : APS / Tap / Taps */}
-      <div className="flex flex-col text-[11px] leading-tight text-white/70 min-w-[80px]">
+    <header className="w-full bg-black/40 border-b border-white/5 px-3 py-2 flex items-center justify-between gap-2">
+      {/* LEFT : APS / Tap / Taps (fixed small block, no shrink) */}
+      <div className="flex-none w-[92px] flex flex-col text-[11px] leading-tight text-white/70">
         <div className="flex gap-1">
           <span className="text-white/40">APS</span>
-          <span className="text-emerald-400 font-semibold">{short(autoPerSec)}</span>
+          <span className="text-emerald-400 font-semibold">
+            {short(autoPerSec)}
+          </span>
         </div>
         <div className="flex gap-1">
           <span className="text-white/40">Tap</span>
@@ -77,36 +82,36 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
         </div>
       </div>
 
-      {/* CENTER : title */}
-      <div className="flex flex-col items-center flex-1">
-        <div className="text-[15px] font-semibold text-emerald-400">
+      {/* CENTER : title (flex-1, can shrink & truncate) */}
+      <div className="flex-1 min-w-0 flex flex-col items-center">
+        <div className="text-[15px] font-semibold text-emerald-400 max-w-[160px] truncate">
           MoneyMaker 💸
         </div>
-        <div className="text-[10px] tracking-[0.18em] text-white/40 mt-0.5">
+        <div className="text-[10px] tracking-[0.18em] text-white/40 mt-0.5 whitespace-nowrap">
           TAP • EARN • FLEX
         </div>
       </div>
 
-      {/* RIGHT : big pill with Profile + Rank */}
-      <div className="flex items-center">
-        <div className="flex items-stretch rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
+      {/* RIGHT : big pill with Profile + Rank (no shrink, max width) */}
+      <div className="flex-none">
+        <div className="flex items-stretch rounded-2xl bg-white/5 border border-white/10 overflow-hidden max-w-[190px]">
           {/* PROFILE PART */}
           <button
             onClick={openProfile}
-            className="flex items-center gap-2 px-2 py-1 pr-3"
+            className="flex items-center gap-2 px-2 py-1 pr-3 min-w-0"
           >
             {avatar ? (
               <img
                 src={avatar}
-                className="h-7 w-7 rounded-full border border-emerald-500/70 object-cover"
+                className="h-7 w-7 rounded-full border border-emerald-500/70 object-cover flex-shrink-0"
               />
             ) : (
-              <div className="h-7 w-7 rounded-full bg-emerald-900 text-emerald-200 flex items-center justify-center text-[10px] font-semibold">
+              <div className="h-7 w-7 rounded-full bg-emerald-900 text-emerald-200 flex items-center justify-center text-[10px] font-semibold flex-shrink-0">
                 {displayName.slice(0, 1).toUpperCase()}
               </div>
             )}
 
-            <div className="flex flex-col items-start leading-tight">
+            <div className="flex flex-col items-start leading-tight min-w-0">
               <span className="text-[11px] text-white font-semibold max-w-[80px] truncate">
                 {displayName}
               </span>
@@ -114,7 +119,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
             </div>
           </button>
 
-          {/* small divider */}
+          {/* divider */}
           <div className="w-px bg-white/10 my-1" />
 
           {/* RANK PART */}
