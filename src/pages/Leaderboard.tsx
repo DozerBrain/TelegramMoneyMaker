@@ -1,227 +1,376 @@
 // src/pages/Leaderboard.tsx
-import React, { useEffect, useState } from "react";
-import {
-  topGlobal,
-  topByCountry,
-  topByRegion,
-  type LeaderRow,
-} from "../lib/leaderboard";
+import React, { useEffect, useMemo, useState } from "react";
+import { topGlobal, type LeaderRow } from "../lib/leaderboard";
 import { getProfile } from "../lib/profile";
 import {
-  getRegionForCountry,
-  REGION_LABELS,
-  REGION_LIST,
+  COUNTRIES,
+  REGIONS,
+  type Country,
   type RegionId,
-  POPULAR_COUNTRIES,
-  codeToFlag,
-  countryNameFromCode,
 } from "../data/countries";
 import { formatMoneyShort } from "../lib/format";
 
-type Scope = "global" | "region" | "country" | "friends";
+type Mode = "global" | "friends";
+
+type CountryCode = string;
+
+// ---- Helpers based on countries.ts -----------------------------------------
+
+function buildRegionLabelMap() {
+  const map: Record<RegionId, string> = {} as Record<RegionId, string>;
+  for (const r of REGIONS) {
+    map[r.id] = r.label;
+  }
+  return map;
+}
+
+const REGION_LABELS: Record<RegionId, string> = buildRegionLabelMap();
+
+function findCountry(code: string): Country | undefined {
+  const cc = code.toUpperCase();
+  return COUNTRIES.find((c) => c.code === cc);
+}
+
+function codeToFlag(code: string): string {
+  return findCountry(code)?.flag ?? "🏳️";
+}
+
+function countryNameFromCode(code: string): string {
+  const c = findCountry(code);
+  return c ? c.name : code.toUpperCase();
+}
+
+function regionOfCountry(code: string): RegionId {
+  const c = findCountry(code);
+  // fallback: if unknown, put them in "NA" just so it works
+  return (c?.region ?? "NA") as RegionId;
+}
+
+// ---------------------------------------------------------------------------
 
 export default function LeaderboardPage() {
-  const [scope, setScope] = useState<Scope>("global");
+  const [mode, setMode] = useState<Mode>("global");
+
+  const [allRows, setAllRows] = useState<LeaderRow[]>([]);
   const [rows, setRows] = useState<LeaderRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   const [myId, setMyId] = useState<string>("");
-  const [myCountry, setMyCountry] = useState<string>("US");
+  const [myCountry, setMyCountry] = useState<CountryCode>("US");
   const [myRegion, setMyRegion] = useState<RegionId>("NA");
 
-  // What we are currently viewing
-  const [selectedCountry, setSelectedCountry] = useState<string>("US");
   const [selectedRegion, setSelectedRegion] = useState<RegionId>("NA");
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode | "ALL">(
+    "ALL"
+  );
 
-  // Load my profile once
+  // popup states
+  const [showModePicker, setShowModePicker] = useState(false);
+  const [showRegionPicker, setShowRegionPicker] = useState(false);
+  const [showCountryPicker, setShowCountryPicker] = useState(false);
+
+  // --- Load profile once ----------------------------------------------------
   useEffect(() => {
     const p = getProfile();
     const cc = (p.country || "US").toUpperCase();
-    const region = getRegionForCountry(cc);
+    const region = regionOfCountry(cc);
 
     setMyId(String(p.uid || p.userId || "local"));
     setMyCountry(cc);
     setMyRegion(region);
-    setSelectedCountry(cc);
+
     setSelectedRegion(region);
+    setSelectedCountry("ALL");
   }, []);
 
-  async function loadLeaderboard(scopeToLoad: Scope) {
-    if (!myId) return; // wait until profile loaded
-
+  // --- Load global leaderboard (big list), then filter in memory ------------
+  async function refreshGlobal() {
+    if (!myId) return; // wait for profile
     setLoading(true);
     try {
-      let data: LeaderRow[] = [];
-
-      if (scopeToLoad === "global") {
-        // All players
-        data = await topGlobal(50);
-      } else if (scopeToLoad === "region") {
-        // Selected region -> direct node; if empty, fallback to global filtered
-        const region = selectedRegion;
-        data = await topByRegion(region, 50);
-        if (data.length === 0) {
-          const g = await topGlobal(200);
-          data = g.filter(
-            (r) => getRegionForCountry(r.country) === region
-          );
-        }
-      } else if (scopeToLoad === "country") {
-        // Selected country -> direct node; if empty, fallback to global filtered
-        const cc = selectedCountry.toUpperCase();
-        data = await topByCountry(cc, 50);
-        if (data.length === 0) {
-          const g = await topGlobal(200);
-          data = g.filter(
-            (r) => (r.country || "").toUpperCase() === cc
-          );
-        }
-      } else {
-        // FRIENDS: for now -> players from your country
-        const g = await topGlobal(200);
-        const cc = myCountry.toUpperCase();
-        data = g.filter(
-          (r) => (r.country || "").toUpperCase() === cc
-        );
-      }
-
-      setRows(data);
+      const data = await topGlobal(500); // big enough so you + gf always inside
+      setAllRows(data);
     } finally {
       setLoading(false);
     }
   }
 
-  // Reload when scope / selection changes
   useEffect(() => {
     if (!myId) return;
-    loadLeaderboard(scope);
+    refreshGlobal();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, myId, selectedCountry, selectedRegion, myCountry]);
+  }, [myId]);
+
+  // --- Compute filtered rows whenever filters or data change ----------------
+  useEffect(() => {
+    let list = [...allRows];
+
+    // Friends = same country as you (for now)
+    if (mode === "friends") {
+      const cc = myCountry.toUpperCase();
+      list = list.filter(
+        (r) => (r.country || "").toUpperCase() === cc
+      );
+    }
+
+    // Region filter (always active)
+    if (selectedRegion) {
+      list = list.filter((r) => {
+        const rowRegion =
+          (r.region as RegionId | undefined) ?? regionOfCountry(r.country);
+        return rowRegion === selectedRegion;
+      });
+    }
+
+    // Country filter (optional)
+    if (selectedCountry !== "ALL") {
+      const cc = selectedCountry.toUpperCase();
+      list = list.filter(
+        (r) => (r.country || "").toUpperCase() === cc
+      );
+    }
+
+    list.sort((a, b) => b.score - a.score);
+    setRows(list);
+  }, [allRows, mode, selectedRegion, selectedCountry, myCountry]);
 
   const myRankIndex = rows.findIndex(
     (r) => String(r.uid) === String(myId)
   );
   const myRank = myRankIndex >= 0 ? myRankIndex + 1 : undefined;
 
-  const scopeLabel =
-    scope === "global"
-      ? "Global leaderboard"
-      : scope === "region"
-      ? `${REGION_LABELS[selectedRegion]} leaderboard`
-      : scope === "country"
-      ? `${countryNameFromCode(selectedCountry)} leaderboard`
-      : "Friends leaderboard";
+  const modeLabel = mode === "global" ? "Global" : "Friends";
+  const regionLabel = REGION_LABELS[selectedRegion] || "Region";
+
+  const countryLabel =
+    selectedCountry === "ALL"
+      ? "All countries"
+      : countryNameFromCode(selectedCountry);
+
+  const scopeLabel = `${modeLabel} · ${regionLabel}${
+    selectedCountry === "ALL" ? "" : ` · ${countryLabel}`
+  } leaderboard`;
+
+  const countriesInSelectedRegion = useMemo(
+    () => COUNTRIES.filter((c) => c.region === selectedRegion),
+    [selectedRegion]
+  );
+
+  // --- UI helpers for popup sheets -----------------------------------------
+  function ModePicker() {
+    if (!showModePicker) return null;
+    return (
+      <div
+        className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
+        onClick={() => setShowModePicker(false)}
+      >
+        <div
+          className="mb-20 w-full max-w-md rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-xs text-white/50 px-1 pb-1">
+            Choose what you want to see
+          </div>
+          <button
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+              mode === "global"
+                ? "bg-emerald-600 text-white"
+                : "bg-zinc-800 text-white/80"
+            }`}
+            onClick={() => {
+              setMode("global");
+              setShowModePicker(false);
+            }}
+          >
+            <span className="flex items-center gap-2">
+              <span>🌍</span>
+              <span>Global</span>
+            </span>
+            <span className="text-[10px] text-white/60">
+              Everyone worldwide
+            </span>
+          </button>
+
+          <button
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+              mode === "friends"
+                ? "bg-emerald-600 text-white"
+                : "bg-zinc-800 text-white/80"
+            }`}
+            onClick={() => {
+              setMode("friends");
+              setShowModePicker(false);
+            }}
+          >
+            <span className="flex items-center gap-2">
+              <span>👥</span>
+              <span>Friends</span>
+            </span>
+            <span className="text-[10px] text-white/60">
+              Players from your country
+            </span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function RegionPicker() {
+    if (!showRegionPicker) return null;
+    return (
+      <div
+        className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
+        onClick={() => setShowRegionPicker(false)}
+      >
+        <div
+          className="mb-20 w-full max-w-md rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-xs text-white/50 px-1 pb-1">
+            Choose a region
+          </div>
+          {REGIONS.map((r) => {
+            const active = r.id === selectedRegion;
+            return (
+              <button
+                key={r.id}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+                  active
+                    ? "bg-emerald-600 text-white"
+                    : "bg-zinc-800 text-white/80"
+                }`}
+                onClick={() => {
+                  setSelectedRegion(r.id);
+                  // when region changes, reset country filter
+                  setSelectedCountry("ALL");
+                  setShowRegionPicker(false);
+                }}
+              >
+                <span>{r.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  function CountryPicker() {
+    if (!showCountryPicker) return null;
+    return (
+      <div
+        className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
+        onClick={() => setShowCountryPicker(false)}
+      >
+        <div
+          className="mb-20 w-full max-w-md max-h-[60vh] rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1 overflow-hidden"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-xs text-white/50 px-1 pb-1">
+            Countries in {regionLabel}
+          </div>
+
+          <div className="max-h-[50vh] overflow-y-auto space-y-1 pr-1">
+            <button
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+                selectedCountry === "ALL"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-zinc-800 text-white/80"
+              }`}
+              onClick={() => {
+                setSelectedCountry("ALL");
+                setShowCountryPicker(false);
+              }}
+            >
+              <span className="flex items-center gap-2">
+                <span>🌐</span>
+                <span>All countries</span>
+              </span>
+            </button>
+
+            {countriesInSelectedRegion.map((c) => {
+              const active = selectedCountry === c.code;
+              return (
+                <button
+                  key={c.code}
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+                    active
+                      ? "bg-emerald-600 text-white"
+                      : "bg-zinc-800 text-white/80"
+                  }`}
+                  onClick={() => {
+                    setSelectedCountry(c.code);
+                    setShowCountryPicker(false);
+                  }}
+                >
+                  <span className="flex items-center gap-2">
+                    <span>{c.flag}</span>
+                    <span>{c.name}</span>
+                  </span>
+                  <span className="text-[10px] text-white/60">
+                    {c.code}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // -------------------------------------------------------------------------
 
   return (
-    <div className="p-4 text-white">
-      {/* Scope buttons + refresh */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex gap-2">
-          {/* Global */}
+    <div className="p-4 pb-6 text-white">
+      {/* top selectors */}
+      <div className="flex items-center justify-between mb-4 gap-2">
+        <div className="flex gap-2 overflow-x-auto">
+          {/* Mode: Global / Friends */}
           <button
-            onClick={() => setScope("global")}
-            className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 ${
-              scope === "global"
-                ? "bg-emerald-600"
-                : "bg-zinc-900/80 border border-white/10"
-            }`}
+            onClick={() => setShowModePicker(true)}
+            className="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 bg-zinc-900/80 border border-white/10"
           >
-            🌍 <span>Global</span>
+            <span>{mode === "global" ? "🌍" : "👥"}</span>
+            <span>{modeLabel}</span>
           </button>
 
           {/* Region */}
           <button
-            onClick={() => setScope("region")}
-            className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 ${
-              scope === "region"
-                ? "bg-emerald-600"
-                : "bg-zinc-900/80 border border-white/10"
-            }`}
+            onClick={() => setShowRegionPicker(true)}
+            className="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 bg-zinc-900/80 border border-white/10"
           >
-            🌎
-            <span className="truncate max-w-[90px] sm:max-w-[120px]">
-              {REGION_LABELS[selectedRegion]}
+            <span>🌎</span>
+            <span className="truncate max-w-[110px] sm:max-w-[140px]">
+              {regionLabel}
             </span>
           </button>
 
           {/* Country */}
           <button
-            onClick={() => setScope("country")}
-            className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 ${
-              scope === "country"
-                ? "bg-emerald-600"
-                : "bg-zinc-900/80 border border-white/10"
-            }`}
+            onClick={() => setShowCountryPicker(true)}
+            className="px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 bg-zinc-900/80 border border-white/10"
           >
-            <span>{codeToFlag(selectedCountry)}</span>
-            <span>{selectedCountry}</span>
-          </button>
-
-          {/* Friends */}
-          <button
-            onClick={() => setScope("friends")}
-            className={`px-3 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1 ${
-              scope === "friends"
-                ? "bg-emerald-600"
-                : "bg-zinc-900/80 border border-white/10"
-            }`}
-          >
-            👥 <span>Friends</span>
+            <span>
+              {selectedCountry === "ALL"
+                ? "🌐"
+                : codeToFlag(selectedCountry)}
+            </span>
+            <span className="truncate max-w-[90px] sm:max-w-[120px]">
+              {selectedCountry === "ALL"
+                ? "All"
+                : selectedCountry.toUpperCase()}
+            </span>
           </button>
         </div>
 
         <button
-          onClick={() => loadLeaderboard(scope)}
+          onClick={refreshGlobal}
           className="px-3 py-2 rounded-xl bg-zinc-900/80 border border-white/10 text-xs"
         >
           {loading ? "Loading..." : "Refresh"}
         </button>
       </div>
-
-      {/* Region picker – visible in Region scope */}
-      {scope === "region" && (
-        <div className="mt-2 mb-3 -mx-4 px-4 flex gap-2 overflow-x-auto pb-1">
-          {REGION_LIST.map((r) => {
-            const isActive = r === selectedRegion;
-            return (
-              <button
-                key={r}
-                onClick={() => setSelectedRegion(r)}
-                className={`px-3 py-1 rounded-2xl text-xs font-semibold flex items-center gap-1 whitespace-nowrap ${
-                  isActive
-                    ? "bg-emerald-600"
-                    : "bg-zinc-900/80 border border-white/10"
-                }`}
-              >
-                <span>{REGION_LABELS[r]}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Country picker – visible in Country scope */}
-      {scope === "country" && (
-        <div className="mt-2 mb-3 -mx-4 px-4 flex gap-2 overflow-x-auto pb-1">
-          {POPULAR_COUNTRIES.map((c) => {
-            const isActive = c.code === selectedCountry;
-            return (
-              <button
-                key={c.code}
-                onClick={() => setSelectedCountry(c.code)}
-                className={`px-3 py-1 rounded-2xl text-xs font-semibold flex items-center gap-1 whitespace-nowrap ${
-                  isActive
-                    ? "bg-emerald-600"
-                    : "bg-zinc-900/80 border border-white/10"
-                }`}
-              >
-                <span>{codeToFlag(c.code)}</span>
-                <span>{c.code}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
 
       {/* Table */}
       <div className="rounded-2xl bg-zinc-900/80 border border-white/10 overflow-hidden">
@@ -254,7 +403,7 @@ export default function LeaderboardPage() {
 
               <div className="text-white/70 flex items-center gap-1">
                 <span>{codeToFlag(row.country)}</span>
-                <span>{row.country}</span>
+                <span>{row.country.toUpperCase()}</span>
               </div>
 
               <div className="text-right font-semibold">
@@ -273,6 +422,11 @@ export default function LeaderboardPage() {
           </span>
         )}
       </div>
+
+      {/* Popups */}
+      <ModePicker />
+      <RegionPicker />
+      <CountryPicker />
     </div>
   );
 }
