@@ -9,10 +9,7 @@ import {
   limitToLast,
 } from "firebase/database";
 import { getProfile } from "./profile";
-import {
-  getRegionForCountry,
-  type RegionId,
-} from "../data/regions";
+import { getRegionForCountry, type RegionId } from "../data/regions";
 
 export type LeaderRow = {
   uid: string;
@@ -20,7 +17,8 @@ export type LeaderRow = {
   country: string;
   score: number;
   updatedAt: number;
-  region?: RegionId; // optional so old rows still type-safe
+  // optional region label like "NorthAmerica"
+  region?: RegionId;
 };
 
 export async function submitScore(totalEarnings: number) {
@@ -29,7 +27,7 @@ export async function submitScore(totalEarnings: number) {
   const uid = String(p.uid || "local");
   const name = p.name || p.username || "Player";
   const country = (p.country || "US").toUpperCase();
-  const region: RegionId = getRegionForCountry(country);
+  const region = getRegionForCountry(country);
 
   const row: LeaderRow = {
     uid,
@@ -40,22 +38,14 @@ export async function submitScore(totalEarnings: number) {
     region,
   };
 
-  // Write in 2–3 places in parallel
-  const writes: Promise<any>[] = [
-    set(ref(db, `leaderboard/global/${uid}`), row),
-    set(ref(db, `leaderboard/byCountry/${country}/${uid}`), row),
-  ];
-
-  if (region !== "Unknown") {
-    writes.push(
-      set(ref(db, `leaderboard/byRegion/${region}/${uid}`), row)
-    );
-  }
-
-  await Promise.all(writes);
+  // Write in three places
+  await set(ref(db, `leaderboard/global/${uid}`), row);
+  await set(ref(db, `leaderboard/byCountry/${country}/${uid}`), row);
+  await set(ref(db, `leaderboard/byRegion/${region}/${uid}`), row);
 }
 
 // --- Readers used by the page / top bar
+
 export async function topGlobal(limit = 50): Promise<LeaderRow[]> {
   const q = query(
     ref(db, "leaderboard/global"),
@@ -73,7 +63,7 @@ export async function topByCountry(
   country: string,
   limit = 50
 ): Promise<LeaderRow[]> {
-  const cc = country.toUpperCase();
+  const cc = (country || "US").toUpperCase();
   const q = query(
     ref(db, `leaderboard/byCountry/${cc}`),
     orderByChild("score"),
