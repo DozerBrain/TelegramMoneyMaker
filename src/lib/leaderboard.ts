@@ -58,7 +58,8 @@ export async function submitScore(totalEarnings: number) {
     uid,
     name,
     country,
-    score: Math.floor(totalEarnings),
+    // 🔥 force number so Firebase stores it as numeric, not string
+    score: Number(Math.floor(totalEarnings)) || 0,
     updatedAt: Date.now(),
     region,
   };
@@ -76,6 +77,14 @@ export async function submitScore(totalEarnings: number) {
   await set(ref(db, `leaderboard/byRegion/${legacyRegionKey}/${uid}`), row);
 }
 
+// Small helper to be safe with old data that might have string scores
+function normalizeRows(obj: Record<string, LeaderRow>): LeaderRow[] {
+  return Object.values(obj).map((r) => ({
+    ...r,
+    score: Number(r.score) || 0,
+  }));
+}
+
 // --- Readers used by the page / top bar ---
 
 export async function topGlobal(limit = 50): Promise<LeaderRow[]> {
@@ -86,8 +95,9 @@ export async function topGlobal(limit = 50): Promise<LeaderRow[]> {
   );
   const snap = await get(q);
   if (!snap.exists()) return [];
+
   const data = snap.val() as Record<string, LeaderRow>;
-  return Object.values(data).sort((a, b) => b.score - a.score);
+  return normalizeRows(data).sort((a, b) => b.score - a.score);
 }
 
 export async function topByCountry(
@@ -105,7 +115,7 @@ export async function topByCountry(
   if (!snap.exists()) return [];
 
   const data = snap.val() as Record<string, LeaderRow>;
-  return Object.values(data).sort((a, b) => b.score - a.score);
+  return normalizeRows(data).sort((a, b) => b.score - a.score);
 }
 
 export async function topByRegion(
@@ -125,7 +135,7 @@ export async function topByRegion(
   let rows: LeaderRow[] = [];
   if (snapNew.exists()) {
     rows = rows.concat(
-      Object.values(snapNew.val() as Record<string, LeaderRow>)
+      normalizeRows(snapNew.val() as Record<string, LeaderRow>)
     );
   }
 
@@ -139,7 +149,7 @@ export async function topByRegion(
     const snapOld = await get(qOld);
     if (snapOld.exists()) {
       rows = rows.concat(
-        Object.values(snapOld.val() as Record<string, LeaderRow>)
+        normalizeRows(snapOld.val() as Record<string, LeaderRow>)
       );
     }
   }
