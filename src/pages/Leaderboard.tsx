@@ -5,26 +5,21 @@ import {
   topByCountry,
   topByRegion,
   type LeaderRow,
-  regionFromCountry,
-  regionLabel,
-  type RegionCode,
 } from "../lib/leaderboard";
 import { getProfile } from "../lib/profile";
+import {
+  getRegionForCountry,
+  REGION_LABELS,
+  type RegionId,
+} from "../data/regions";
+import {
+  POPULAR_COUNTRIES,
+  codeToFlag,
+  countryNameFromCode,
+} from "../data/countries";
 import { formatMoneyShort } from "../lib/format";
 
 type Scope = "global" | "country" | "region";
-
-// Small helper: convert "US" -> 🇺🇸
-function flagEmoji(cc: string): string {
-  const code = (cc || "").toUpperCase();
-  if (code.length !== 2) return "🏳️";
-  const A = 0x1f1e6;
-  const a = "A".charCodeAt(0);
-  return String.fromCodePoint(
-    A + (code.charCodeAt(0) - a),
-    A + (code.charCodeAt(1) - a)
-  );
-}
 
 export default function LeaderboardPage() {
   const [scope, setScope] = useState<Scope>("global");
@@ -33,21 +28,26 @@ export default function LeaderboardPage() {
 
   const [myId, setMyId] = useState<string>("");
   const [myCountry, setMyCountry] = useState<string>("US");
-  const [myRegion, setMyRegion] = useState<RegionCode>("NA");
+  const [myRegion, setMyRegion] = useState<RegionId>("Unknown");
+
+  // The country currently being viewed in "country" scope
+  const [selectedCountry, setSelectedCountry] = useState<string>("US");
 
   // Load my profile (id + country + region) once
   useEffect(() => {
     const p = getProfile();
-    const uid = String(p.uid || p.userId || "local");
     const cc = (p.country || "US").toUpperCase();
-    const region = regionFromCountry(cc);
+    const region = getRegionForCountry(cc);
 
-    setMyId(uid);
+    setMyId(String(p.uid || p.userId || "local"));
     setMyCountry(cc);
+    setSelectedCountry(cc);
     setMyRegion(region);
   }, []);
 
   async function loadLeaderboard(scopeToLoad: Scope) {
+    if (!myId) return; // wait until profile loaded
+
     setLoading(true);
     try {
       let data: LeaderRow[] = [];
@@ -55,11 +55,9 @@ export default function LeaderboardPage() {
       if (scopeToLoad === "global") {
         data = await topGlobal(50);
       } else if (scopeToLoad === "country") {
-        const c = (myCountry || "US").toUpperCase();
-        data = await topByCountry(c, 50);
+        data = await topByCountry(selectedCountry, 50);
       } else {
-        const r: RegionCode = myRegion || regionFromCountry(myCountry);
-        data = await topByRegion(r, 50);
+        data = await topByRegion(myRegion, 50);
       }
 
       setRows(data);
@@ -68,63 +66,68 @@ export default function LeaderboardPage() {
     }
   }
 
-  // Load whenever scope / myCountry / myRegion / myId changes
+  // Load whenever scope / selectedCountry / myRegion changes
   useEffect(() => {
-    if (!myId) return; // wait until profile loaded
+    if (!myId) return;
     loadLeaderboard(scope);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scope, myCountry, myRegion, myId]);
+  }, [scope, myId, selectedCountry, myRegion]);
 
-  const myRankIndex = rows.findIndex((r) => String(r.uid) === String(myId));
+  const myRankIndex = rows.findIndex(
+    (r) => String(r.uid) === String(myId)
+  );
   const myRank = myRankIndex >= 0 ? myRankIndex + 1 : undefined;
 
-  // Scope label at the bottom
   const scopeLabel =
     scope === "global"
       ? "Global leaderboard"
       : scope === "country"
-      ? `Country leaderboard (${myCountry})`
-      : `Region leaderboard (${regionLabel(myRegion)})`;
+      ? `${countryNameFromCode(selectedCountry)} leaderboard`
+      : `${REGION_LABELS[myRegion]} leaderboard`;
 
   return (
     <div className="p-4 text-white">
       {/* Scope buttons + refresh */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex gap-2">
-          {/* GLOBAL */}
+          {/* Global */}
           <button
             onClick={() => setScope("global")}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+            className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1 ${
               scope === "global"
                 ? "bg-emerald-600"
                 : "bg-zinc-900/80 border border-white/10"
             }`}
           >
-            🌍 Global
+            🌍 <span>Global</span>
           </button>
 
-          {/* COUNTRY */}
+          {/* Country (view any country) */}
           <button
             onClick={() => setScope("country")}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+            className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1 ${
               scope === "country"
                 ? "bg-emerald-600"
                 : "bg-zinc-900/80 border border-white/10"
             }`}
           >
-            {flagEmoji(myCountry)} {myCountry}
+            <span>{codeToFlag(selectedCountry)}</span>
+            <span>{selectedCountry}</span>
           </button>
 
-          {/* REGION */}
+          {/* Region (your region) */}
           <button
             onClick={() => setScope("region")}
-            className={`px-4 py-2 rounded-xl text-sm font-semibold ${
+            className={`px-4 py-2 rounded-xl text-sm font-semibold flex items-center gap-1 ${
               scope === "region"
                 ? "bg-emerald-600"
                 : "bg-zinc-900/80 border border-white/10"
             }`}
           >
-            🌎 {regionLabel(myRegion)}
+            🌎
+            <span className="truncate max-w-[120px]">
+              {REGION_LABELS[myRegion]}
+            </span>
           </button>
         </div>
 
@@ -136,9 +139,32 @@ export default function LeaderboardPage() {
         </button>
       </div>
 
+      {/* Country picker chips – only visible in "country" scope */}
+      {scope === "country" && (
+        <div className="mt-2 mb-3 -mx-4 px-4 flex gap-2 overflow-x-auto pb-1">
+          {POPULAR_COUNTRIES.map((c) => {
+            const isActive = c.code === selectedCountry;
+            return (
+              <button
+                key={c.code}
+                onClick={() => setSelectedCountry(c.code)}
+                className={`px-3 py-1 rounded-2xl text-xs font-semibold flex items-center gap-1 whitespace-nowrap ${
+                  isActive
+                    ? "bg-emerald-600"
+                    : "bg-zinc-900/80 border border-white/10"
+                }`}
+              >
+                <span>{codeToFlag(c.code)}</span>
+                <span>{c.code}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {/* Table */}
       <div className="rounded-2xl bg-zinc-900/80 border border-white/10 overflow-hidden">
-        <div className="grid grid-cols-[40px_1.5fr_1fr_1fr] px-4 py-2 text-xs text-white/50 border-b border-white/5">
+        <div className="grid grid-cols-[40px_1.5fr_1.1fr_1fr] px-4 py-2 text-xs text-white/50 border-b border-white/5">
           <div>#</div>
           <div>Player</div>
           <div>Country</div>
@@ -155,15 +181,21 @@ export default function LeaderboardPage() {
           rows.map((row, idx) => (
             <div
               key={row.uid}
-              className={`grid grid-cols-[40px_1.5fr_1fr_1fr] px-4 py-2 text-sm ${
+              className={`grid grid-cols-[40px_1.5fr_1.1fr_1fr] px-4 py-2 text-sm ${
                 String(row.uid) === String(myId)
                   ? "bg-emerald-500/10"
                   : "bg-transparent"
               }`}
             >
               <div className="text-white/60">{idx + 1}</div>
+
               <div className="truncate">{row.name}</div>
-              <div className="text-white/70">{row.country}</div>
+
+              <div className="text-white/70 flex items-center gap-1">
+                <span>{codeToFlag(row.country)}</span>
+                <span>{row.country}</span>
+              </div>
+
               <div className="text-right font-semibold">
                 {formatMoneyShort(row.score)}
               </div>
@@ -175,7 +207,9 @@ export default function LeaderboardPage() {
       <div className="mt-4 text-xs text-white/50">
         Scope: {scopeLabel}
         {myRank && rows.length > 0 && (
-          <span className="ml-2">• You are currently ranked #{myRank} in this view.</span>
+          <span className="ml-2">
+            • You are currently ranked #{myRank} in this view.
+          </span>
         )}
       </div>
     </div>
