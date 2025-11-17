@@ -7,8 +7,8 @@ export type RegionId =
   | "Asia"
   | "Africa"
   | "Oceania"
-  | "MiddleEast"
   | "CIS"
+  | "MENA"
   | "Unknown";
 
 export const REGION_LABELS: Record<RegionId, string> = {
@@ -18,222 +18,136 @@ export const REGION_LABELS: Record<RegionId, string> = {
   Asia: "Asia",
   Africa: "Africa",
   Oceania: "Oceania",
-  MiddleEast: "Middle East",
   CIS: "CIS",
-  Unknown: "World",
+  MENA: "Middle East & North Africa",
+  Unknown: "Other",
 };
 
-/**
- * Very simple country → region mapping.
- * We can always expand this later.
- */
-export function getRegionForCountry(country: string): RegionId {
-  const cc = country.toUpperCase();
+// order for chips
+export const REGION_LIST: RegionId[] = [
+  "NorthAmerica",
+  "SouthAmerica",
+  "Europe",
+  "CIS",
+  "MENA",
+  "Asia",
+  "Africa",
+  "Oceania",
+  "Unknown",
+];
 
+// Very rough mapping: country code -> region
+const COUNTRY_REGION: Record<string, RegionId> = {
   // North America
-  if (["US", "CA", "MX"].includes(cc)) return "NorthAmerica";
+  US: "NorthAmerica",
+  CA: "NorthAmerica",
+  MX: "NorthAmerica",
 
   // South America
-  if (
-    [
-      "BR",
-      "AR",
-      "CL",
-      "CO",
-      "PE",
-      "UY",
-      "PY",
-      "BO",
-      "VE",
-      "EC",
-      "GY",
-      "SR",
-      "GF",
-    ].includes(cc)
-  )
-    return "SouthAmerica";
-
-  // CIS / post-Soviet (you + neighbors)
-  if (
-    [
-      "RU",
-      "UA",
-      "BY",
-      "KZ",
-      "KG",
-      "TJ",
-      "TM",
-      "UZ",
-      "AM",
-      "AZ",
-      "GE",
-      "MD",
-    ].includes(cc)
-  )
-    return "CIS";
-
-  // Middle East
-  if (
-    [
-      "TR",
-      "AE",
-      "SA",
-      "QA",
-      "KW",
-      "OM",
-      "BH",
-      "JO",
-      "LB",
-      "SY",
-      "IQ",
-      "IR",
-      "YE",
-      "IL",
-      "PS",
-    ].includes(cc)
-  )
-    return "MiddleEast";
-
-  // Asia (big bucket)
-  if (
-    [
-      // East Asia
-      "CN",
-      "JP",
-      "KR",
-      "KP",
-      "TW",
-      "HK",
-      "MO",
-      "MN",
-      // South Asia
-      "IN",
-      "PK",
-      "BD",
-      "LK",
-      "NP",
-      "BT",
-      "MV",
-      // SE Asia
-      "TH",
-      "VN",
-      "KH",
-      "LA",
-      "MM",
-      "MY",
-      "SG",
-      "ID",
-      "PH",
-      "BN",
-      "TL",
-    ].includes(cc)
-  )
-    return "Asia";
+  BR: "SouthAmerica",
+  AR: "SouthAmerica",
+  CL: "SouthAmerica",
+  CO: "SouthAmerica",
+  PE: "SouthAmerica",
+  VE: "SouthAmerica",
+  UY: "SouthAmerica",
+  PY: "SouthAmerica",
+  BO: "SouthAmerica",
+  EC: "SouthAmerica",
 
   // Europe
-  if (
-    [
-      "DE",
-      "FR",
-      "IT",
-      "ES",
-      "PT",
-      "NL",
-      "BE",
-      "LU",
-      "IE",
-      "GB",
-      "SE",
-      "NO",
-      "FI",
-      "DK",
-      "PL",
-      "CZ",
-      "SK",
-      "HU",
-      "RO",
-      "BG",
-      "HR",
-      "SI",
-      "AT",
-      "CH",
-      "GR",
-      "CY",
-      "EE",
-      "LV",
-      "LT",
-      "IS",
-      "AL",
-      "BA",
-      "ME",
-      "MK",
-      "RS",
-      "XK",
-    ].includes(cc)
-  )
-    return "Europe";
+  GB: "Europe",
+  FR: "Europe",
+  DE: "Europe",
+  IT: "Europe",
+  ES: "Europe",
+  PT: "Europe",
+  NL: "Europe",
+  BE: "Europe",
+  PL: "Europe",
+  CZ: "Europe",
+  SK: "Europe",
+  AT: "Europe",
+  CH: "Europe",
+  SE: "Europe",
+  NO: "Europe",
+  FI: "Europe",
+  DK: "Europe",
+  IE: "Europe",
+  HU: "Europe",
+  RO: "Europe",
+  BG: "Europe",
+  GR: "Europe",
+  RS: "Europe",
+  HR: "Europe",
+
+  // CIS (post-Soviet)
+  RU: "CIS",
+  UA: "CIS",
+  KZ: "CIS",
+  BY: "CIS",
+  UZ: "CIS",
+  KG: "CIS",
+  TJ: "CIS",
+  TM: "CIS",
+  AZ: "CIS",
+  AM: "CIS",
+  GE: "CIS",
+  MD: "CIS",
+
+  // MENA
+  TR: "MENA",
+  SA: "MENA",
+  AE: "MENA",
+  QA: "MENA",
+  BH: "MENA",
+  KW: "MENA",
+  OM: "MENA",
+  IR: "MENA",
+  IQ: "MENA",
+  JO: "MENA",
+  LB: "MENA",
+  SY: "MENA",
+  EG: "MENA",
+  MA: "MENA",
+  DZ: "MENA",
+  TN: "MENA",
+  LY: "MENA",
+  YE: "MENA",
+
+  // Asia (rest)
+  IN: "Asia",
+  PK: "Asia",
+  BD: "Asia",
+  LK: "Asia",
+  NP: "Asia",
+  CN: "Asia",
+  JP: "Asia",
+  KR: "Asia",
+  TH: "Asia",
+  VN: "Asia",
+  ID: "Asia",
+  MY: "Asia",
+  SG: "Asia",
+  PH: "Asia",
+  HK: "Asia",
+  TW: "Asia",
+
+  // Africa (rest)
+  NG: "Africa",
+  ZA: "Africa",
+  KE: "Africa",
+  GH: "Africa",
+  ET: "Africa",
+  TZ: "Africa",
+  UG: "Africa",
 
   // Oceania
-  if (["AU", "NZ", "PG", "FJ", "WS", "TO", "SB", "VU", "NC", "PF"].includes(cc))
-    return "Oceania";
+  AU: "Oceania",
+  NZ: "Oceania",
+};
 
-  // Africa
-  if (
-    [
-      "ZA",
-      "NG",
-      "EG",
-      "DZ",
-      "MA",
-      "TN",
-      "KE",
-      "UG",
-      "TZ",
-      "GH",
-      "CI",
-      "SN",
-      "CM",
-      "ET",
-      "SD",
-      "AO",
-      "MZ",
-      "ZW",
-      "NA",
-      "BW",
-      "ZM",
-      "MW",
-      "LR",
-      "SL",
-      "ML",
-      "BF",
-      "NE",
-      "TD",
-      "CF",
-      "CG",
-      "CD",
-      "BI",
-      "RW",
-      "SO",
-      "DJ",
-      "ER",
-      "GM",
-      "GN",
-      "GW",
-      "CV",
-      "ST",
-      "SC",
-      "MU",
-      "MG",
-      "LS",
-      "SZ",
-      "BJ",
-      "GA",
-      "GQ",
-      "KM",
-    ].includes(cc)
-  )
-    return "Africa";
-
-  // Fallback
-  return "Unknown";
+export function getRegionForCountry(code: string): RegionId {
+  const cc = (code || "").toUpperCase();
+  return COUNTRY_REGION[cc] || "Unknown";
 }
