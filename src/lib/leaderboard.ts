@@ -9,7 +9,7 @@ import {
   limitToLast,
 } from "firebase/database";
 import { getProfile } from "./profile";
-import { getRegionForCountry, type RegionId } from "../data/regions";
+import { getRegionForCountry, type RegionId } from "../data/countries";
 
 export type LeaderRow = {
   uid: string;
@@ -17,7 +17,6 @@ export type LeaderRow = {
   country: string;
   score: number;
   updatedAt: number;
-  // optional region label like "NorthAmerica"
   region?: RegionId;
 };
 
