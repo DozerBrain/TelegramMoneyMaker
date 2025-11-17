@@ -3,158 +3,133 @@ import React, { useEffect, useState } from "react";
 import { getProfile } from "../lib/profile";
 import { topGlobal, type LeaderRow } from "../lib/leaderboard";
 
-type TopBarProps = {
+type Props = {
   taps: number;
   tapValue: number;
   autoPerSec: number;
 };
 
-function formatNumberShort(n: number): string {
+function short(n: number): string {
   if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "B";
   if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
   return String(Math.floor(n));
 }
 
-export default function TopBar({ taps, tapValue, autoPerSec }: TopBarProps) {
-  const [displayName, setDisplayName] = useState<string>("Player");
-  const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
+  const [displayName, setDisplayName] = useState("Player");
+  const [avatar, setAvatar] = useState<string | undefined>();
   const [rank, setRank] = useState<number | null>(null);
 
-  // Load profile + rank
+  // load profile + rank
   useEffect(() => {
-    let cancelled = false;
+    let dead = false;
 
     async function load() {
+      const p = getProfile();
+      if (dead) return;
+
+      setDisplayName(p.name || "Player");
+      setAvatar(p.avatarUrl);
+
+      if (!p.uid) return;
+
       try {
-        const profile = getProfile();
-        if (!profile) return;
+        const rows: LeaderRow[] = await topGlobal(100);
+        if (dead) return;
 
-        if (!cancelled) {
-          setDisplayName(profile.name || "Player");
-          setAvatarUrl(profile.avatarUrl);
-        }
-
-        if (!profile.uid) return;
-
-        // Look at top 100 global and find this user
-        try {
-          const rows: LeaderRow[] = await topGlobal(100);
-          if (cancelled) return;
-
-          const idx = rows.findIndex((r) => String(r.uid) === String(profile.uid));
-          if (idx >= 0) {
-            // rank is 1-based, highest score first
-            setRank(idx + 1);
-          } else {
-            setRank(null);
-          }
-        } catch {
-          // ignore leaderboard errors
-        }
+        const pos = rows.findIndex((r) => String(r.uid) === String(p.uid));
+        setRank(pos >= 0 ? pos + 1 : null);
       } catch {
-        // ignore profile errors
+        // ignore
       }
     }
 
     load();
     return () => {
-      cancelled = true;
+      dead = true;
     };
   }, []);
 
-  const apsLabel = formatNumberShort(autoPerSec);
-  const tapLabel = formatNumberShort(tapValue);
-  const tapsLabel = formatNumberShort(taps);
-
-  function gotoProfile() {
-    window.dispatchEvent(
-      new CustomEvent("MM_GOTO", { detail: { goto: "profile" } })
-    );
+  function openProfile() {
+    window.dispatchEvent(new CustomEvent("MM_GOTO", { detail: { goto: "profile" } }));
   }
 
-  function gotoLeaderboard() {
-    window.dispatchEvent(
-      new CustomEvent("MM_GOTO", { detail: { goto: "leaderboard" } })
-    );
+  function openLeaderboard() {
+    window.dispatchEvent(new CustomEvent("MM_GOTO", { detail: { goto: "leaderboard" } }));
   }
 
   return (
-    <header className="w-full bg-black/40 border-b border-white/5 px-3 py-2 flex items-center justify-between gap-2">
-      {/* LEFT: APS / Tap / Taps */}
+    <header className="w-full bg-black/40 border-b border-white/5 px-3 py-2 flex items-center justify-between">
+      {/* LEFT : APS / Tap / Taps */}
       <div className="flex flex-col text-[11px] leading-tight text-white/70 min-w-[80px]">
-        <div className="flex items-baseline gap-1">
+        <div className="flex gap-1">
           <span className="text-white/40">APS</span>
-          <span className="font-semibold text-emerald-400 text-[12px]">
-            {apsLabel}
-          </span>
+          <span className="text-emerald-400 font-semibold">{short(autoPerSec)}</span>
         </div>
-        <div className="flex items-baseline gap-1">
+        <div className="flex gap-1">
           <span className="text-white/40">Tap</span>
-          <span className="font-semibold text-[12px]">{tapLabel}</span>
+          <span className="font-semibold">{short(tapValue)}</span>
         </div>
-        <div className="flex items-baseline gap-1">
+        <div className="flex gap-1">
           <span className="text-white/40">Taps</span>
-          <span className="font-semibold text-[12px]">{tapsLabel}</span>
+          <span className="font-semibold">{short(taps)}</span>
         </div>
       </div>
 
-      {/* CENTER: Title + tagline */}
-      <div className="flex-1 flex flex-col items-center justify-center text-center">
-        <div className="text-[15px] font-semibold text-emerald-400 leading-none">
+      {/* CENTER : title */}
+      <div className="flex flex-col items-center flex-1">
+        <div className="text-[15px] font-semibold text-emerald-400">
           MoneyMaker 💸
         </div>
-        <div className="mt-0.5 text-[10px] tracking-[0.18em] uppercase text-white/35">
+        <div className="text-[10px] tracking-[0.18em] text-white/40 mt-0.5">
           TAP • EARN • FLEX
         </div>
       </div>
 
-      {/* RIGHT: Profile + Rank */}
-      <div className="flex items-center gap-2 min-w-[110px] justify-end">
-        {/* Rank pill (click → leaderboard) */}
-        <button
-          onClick={gotoLeaderboard}
-          className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] text-white/75 flex flex-col items-end leading-tight"
-        >
-          <span className="uppercase text-[9px] tracking-wide text-white/45">
-            Rank
-          </span>
-          <span className="font-semibold text-[11px] text-emerald-400">
-            {rank ? `#${rank}` : "-"}
-          </span>
-        </button>
+      {/* RIGHT : big pill with Profile + Rank */}
+      <div className="flex items-center">
+        <div className="flex items-stretch rounded-2xl bg-white/5 border border-white/10 overflow-hidden">
+          {/* PROFILE PART */}
+          <button
+            onClick={openProfile}
+            className="flex items-center gap-2 px-2 py-1 pr-3"
+          >
+            {avatar ? (
+              <img
+                src={avatar}
+                className="h-7 w-7 rounded-full border border-emerald-500/70 object-cover"
+              />
+            ) : (
+              <div className="h-7 w-7 rounded-full bg-emerald-900 text-emerald-200 flex items-center justify-center text-[10px] font-semibold">
+                {displayName.slice(0, 1).toUpperCase()}
+              </div>
+            )}
 
-        {/* Profile (click → profile page) */}
-        <button
-          onClick={gotoProfile}
-          className="flex items-center gap-2"
-        >
-          {avatarUrl ? (
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="h-8 w-8 rounded-full object-cover border border-emerald-500/70 shadow-sm"
-            />
-          ) : (
-            <div className="h-8 w-8 rounded-full bg-emerald-900 text-emerald-200 flex items-center justify-center text-[11px] font-semibold">
-              {displayName
-                .split(" ")
-                .map((p) => p[0])
-                .join("")
-                .slice(0, 2)
-                .toUpperCase() || "P"}
+            <div className="flex flex-col items-start leading-tight">
+              <span className="text-[11px] text-white font-semibold max-w-[80px] truncate">
+                {displayName}
+              </span>
+              <span className="text-[9px] text-emerald-400">PROFILE</span>
             </div>
-          )}
+          </button>
 
-          <div className="flex flex-col items-start leading-tight text-left">
-            <span className="text-[11px] font-semibold text-white truncate max-w-[80px]">
-              {displayName}
+          {/* small divider */}
+          <div className="w-px bg-white/10 my-1" />
+
+          {/* RANK PART */}
+          <button
+            onClick={openLeaderboard}
+            className="flex flex-col items-center justify-center px-3 py-1 min-w-[54px]"
+          >
+            <span className="text-[9px] uppercase tracking-wide text-white/45">
+              RANK
             </span>
-            <span className="text-[9px] text-emerald-400/80 uppercase tracking-wide">
-              Profile
+            <span className="text-[11px] text-emerald-400 font-semibold">
+              {rank ? `#${rank}` : "-"}
             </span>
-          </div>
-        </button>
+          </button>
+        </div>
       </div>
     </header>
   );
