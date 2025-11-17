@@ -45,7 +45,7 @@ export type CardInstance = {
   obtainedAt: number;
 };
 
-/** Build rarity counts from NFT-style cards (for legacy views) */
+/** Build legacy collection counts from NFT-style cards */
 function buildCollectionFromCards(cards: CardInstance[]) {
   const counts = {
     common: 0,
@@ -64,7 +64,7 @@ function buildCollectionFromCards(cards: CardInstance[]) {
 }
 
 export default function App() {
-  // Load save once (also supports old "score"/"tap" fields)
+  // Load save once
   const initial = useMemo(() => (loadSave() as any) || {}, []);
 
   // Core state
@@ -81,22 +81,20 @@ export default function App() {
   );
   const [multi, setMulti] = useState<number>(initial.multi ?? 1);
 
-  // Long-term stats
+  // 🔥 New long-term stats
   const [critChance, setCritChance] = useState<number>(
     initial.critChance ?? 0
-  );
-  const [critMult, setCritMult] = useState<number>(
-    initial.critMult ?? 5 // x5 base
-  );
+  ); // stored as fraction (0.05 = 5%)
+  const [critMult, setCritMult] = useState<number>(initial.critMult ?? 5); // x5 base
   const [autoBonusMult, setAutoBonusMult] = useState<number>(
     initial.autoBonusMult ?? 1
-  );
+  ); // 1.0 = no bonus
   const [couponBoostLevel, setCouponBoostLevel] = useState<number>(
     initial.couponBoostLevel ?? 0
-  );
+  ); // each level = +10% coupon gain
   const [bulkDiscountLevel, setBulkDiscountLevel] = useState<number>(
     initial.bulkDiscountLevel ?? 0
-  );
+  ); // each level reduces 10-card chest cost by 1 (min 5)
 
   // Suits / pets
   const [equippedSuitId, setEquippedSuitId] = useState<string | null>(
@@ -131,12 +129,7 @@ export default function App() {
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
 
-  // Track last score we submitted to leaderboard (persisted)
-  const [lastSubmittedScore, setLastSubmittedScore] = useState<number>(
-    initial.lastSubmittedScore ?? 0
-  );
-
-  // Telegram init (reads tg webapp data + fills profile)
+  // Telegram init
   useEffect(() => {
     initTelegramUI();
   }, []);
@@ -192,51 +185,42 @@ export default function App() {
   );
   const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
 
-  // Auto income (includes autoBonusMult)
-  useInterval(
-    () => {
-      if (autoPerSec <= 0) return;
+  // Auto income (includes autoBonusMult now)
+  useInterval(() => {
+    if (autoPerSec <= 0) return;
 
-      const gain = Math.max(
-        0,
-        Math.floor(
-          autoPerSec *
-            multi *
-            autoBonusMult *
-            suitMult *
-            petAutoMult *
-            cardMultAll *
-            globalMult
-        )
-      );
+    const gain = Math.max(
+      0,
+      Math.floor(
+        autoPerSec *
+          multi *
+          autoBonusMult *
+          suitMult *
+          petAutoMult *
+          cardMultAll *
+          globalMult
+      )
+    );
 
-      if (gain > 0) {
-        setBalance((b) => b + gain);
-        setTotalEarnings((t) => t + gain);
-      }
-    },
-    1000 // every second
-  );
+    if (gain > 0) {
+      setBalance((b) => b + gain);
+      setTotalEarnings((t) => t + gain);
+    }
+  }, 1000);
 
-  // Auto-submit score to leaderboard (clean, with persistence)
+  // 🔥 Auto-submit score to leaderboard EVERY time totalEarnings changes
   useEffect(() => {
     if (totalEarnings <= 0) return;
 
-    // Only submit if we increased by at least 1000 since last submit
-    if (totalEarnings < lastSubmittedScore + 1000) return;
-
-    const currentScore = totalEarnings;
-    setLastSubmittedScore(currentScore);
-
     try {
       const profile = getProfile();
-      submitScore(currentScore, profile).catch(() => {
+      submitScore(totalEarnings, profile).catch(() => {
         // ignore network errors for now
       });
     } catch {
       // ignore
     }
-  }, [totalEarnings, lastSubmittedScore]);
+  }, [totalEarnings]);
 
   // Achievements checking
   useEffect(() => {
@@ -261,6 +245,10 @@ export default function App() {
     saveSave({
       ...prev,
 
+      // Legacy fields
+      score: balance,
+      tap: taps,
+
       // Core
       balance,
       totalEarnings,
@@ -269,7 +257,7 @@ export default function App() {
       autoPerSec,
       multi,
 
-      // Long-term stats
+      // New stats
       critChance,
       critMult,
       autoBonusMult,
@@ -290,9 +278,9 @@ export default function App() {
       collection,
       couponsSpent,
 
-      // Spin & leaderboard meta
+      // Spin & profile
       spinCooldownEndsAt,
-      lastSubmittedScore,
+      profile: prev.profile ?? defaultSave.profile,
     });
   }, [
     balance,
@@ -313,10 +301,9 @@ export default function App() {
     cards,
     couponsSpent,
     spinCooldownEndsAt,
-    lastSubmittedScore,
   ]);
 
-  // Hash navigation (#/leaderboard, #/profile)
+  // Hash navigation
   useEffect(() => {
     const applyHash = () => {
       const h = (location.hash || "").toLowerCase();
