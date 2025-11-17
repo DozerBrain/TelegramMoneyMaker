@@ -13,9 +13,7 @@ import { formatMoneyShort } from "../lib/format";
 type Mode = "global" | "friends";
 type CountryCode = string;
 
-// ---------------------------------------------------------------------------
-// Helpers based on countries.ts
-// ---------------------------------------------------------------------------
+// ---------- Helpers from countries.ts ----------
 
 function buildRegionLabelMap() {
   const map: Record<RegionId, string> = {} as Record<RegionId, string>;
@@ -43,11 +41,10 @@ function countryNameFromCode(code: string): string {
 
 function regionOfCountry(code: string): RegionId {
   const c = findCountry(code);
-  // fallback: if unknown, put them in NA so logic always works
   return (c?.region ?? "NA") as RegionId;
 }
 
-// ---------------------------------------------------------------------------
+// -----------------------------------------------
 
 export default function LeaderboardPage() {
   const [mode, setMode] = useState<Mode>("global");
@@ -70,9 +67,7 @@ export default function LeaderboardPage() {
   const [showRegionPicker, setShowRegionPicker] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
 
-  // -------------------------------------------------------------------------
-  // Load my profile once
-  // -------------------------------------------------------------------------
+  // --- Load my profile once -----------------------------------------------
   useEffect(() => {
     const p = getProfile();
     const cc = (p.country || "US").toUpperCase();
@@ -86,14 +81,14 @@ export default function LeaderboardPage() {
     setSelectedCountry("ALL");
   }, []);
 
-  // -------------------------------------------------------------------------
-  // Load big global list once, then filter in memory
-  // -------------------------------------------------------------------------
+  // --- Load big global list (like TopBar, but once) ------------------------
   async function refreshGlobal() {
-    if (!myId) return; // wait for profile
+    if (!myId) return; // wait until profile loaded
     setLoading(true);
     try {
-      const data = await topGlobal(1000); // big enough so you & gf are included
+      // big enough to always contain you + gf
+      const data = await topGlobal(5000);
+      data.sort((a, b) => b.score - a.score);
       setAllRows(data);
     } finally {
       setLoading(false);
@@ -106,13 +101,13 @@ export default function LeaderboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myId]);
 
-  // -------------------------------------------------------------------------
-  // Recompute filtered rows
-  // -------------------------------------------------------------------------
+  // --- Compute filtered rows ----------------------------------------------
   useEffect(() => {
+    if (!myId) return;
+
     let list = [...allRows];
 
-    // Friends = same country as you (for now)
+    // Mode: friends = same country
     if (mode === "friends") {
       const cc = myCountry.toUpperCase();
       list = list.filter(
@@ -120,7 +115,7 @@ export default function LeaderboardPage() {
       );
     }
 
-    // Region filter (always active)
+    // Region filter (optional – applied if you change it)
     if (selectedRegion) {
       list = list.filter((r) => {
         const rowRegion =
@@ -137,9 +132,19 @@ export default function LeaderboardPage() {
       );
     }
 
+    // sort by score
     list.sort((a, b) => b.score - a.score);
+
+    // 🔥 Make sure YOU are always in the list (even if filters would hide you)
+    const meGlobal = allRows.find(
+      (r) => String(r.uid) === String(myId)
+    );
+    if (meGlobal && !list.some((r) => String(r.uid) === String(myId))) {
+      list.unshift(meGlobal);
+    }
+
     setRows(list);
-  }, [allRows, mode, selectedRegion, selectedCountry, myCountry]);
+  }, [allRows, mode, selectedRegion, selectedCountry, myCountry, myId]);
 
   const myRankIndex = rows.findIndex(
     (r) => String(r.uid) === String(myId)
@@ -163,9 +168,8 @@ export default function LeaderboardPage() {
     [selectedRegion]
   );
 
-  // -------------------------------------------------------------------------
-  // Popup sheets
-  // -------------------------------------------------------------------------
+  // --- Popups --------------------------------------------------------------
+
   function ModePicker() {
     if (!showModePicker) return null;
     return (
@@ -180,7 +184,6 @@ export default function LeaderboardPage() {
           <div className="text-xs text-white/50 px-1 pb-1">
             Choose what you want to see
           </div>
-
           <button
             className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
               mode === "global"
@@ -251,7 +254,6 @@ export default function LeaderboardPage() {
                 }`}
                 onClick={() => {
                   setSelectedRegion(r.id);
-                  // when region changes, reset country filter
                   setSelectedCountry("ALL");
                   setShowRegionPicker(false);
                 }}
@@ -281,7 +283,6 @@ export default function LeaderboardPage() {
           </div>
 
           <div className="max-h-[50vh] overflow-y-auto space-y-1 pr-1">
-            {/* ALL option */}
             <button
               className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
                 selectedCountry === "ALL"
@@ -299,7 +300,6 @@ export default function LeaderboardPage() {
               </span>
             </button>
 
-            {/* countries from this region */}
             {countriesInSelectedRegion.map((c) => {
               const active = selectedCountry === c.code;
               return (
@@ -332,8 +332,7 @@ export default function LeaderboardPage() {
   }
 
   // -------------------------------------------------------------------------
-  // Render
-  // -------------------------------------------------------------------------
+
   return (
     <div className="p-4 pb-6 text-white">
       {/* top selectors */}
