@@ -2,28 +2,15 @@
 import React, { useEffect, useState } from "react";
 import { topGlobal, topByCountry, type LeaderRow } from "../lib/leaderboard";
 import { getProfile } from "../lib/profile";
+import { formatMoneyShort } from "../lib/format";
 
 type Scope = "global" | "country";
 
-// 🔹 Shorten big scores: 1.2K, 3.4M, 5.6B, 7.8T, etc.
-function shortScore(n: number): string {
-  const abs = Math.abs(n);
-  if (abs >= 1_000_000_000_000_000) {
-    return (n / 1_000_000_000_000_000).toFixed(1).replace(/\.0$/, "") + "Q"; // quadrillion+
-  }
-  if (abs >= 1_000_000_000_000) {
-    return (n / 1_000_000_000_000).toFixed(1).replace(/\.0$/, "") + "T";
-  }
-  if (abs >= 1_000_000_000) {
-    return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "B";
-  }
-  if (abs >= 1_000_000) {
-    return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-  }
-  if (abs >= 1_000) {
-    return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
-  }
-  return Math.floor(n).toLocaleString();
+// 🔹 Use the same AA / AB / AC formatter as the rest of the game
+function shortScore(raw: number | string): string {
+  const n = typeof raw === "string" ? Number(raw) : raw;
+  if (!Number.isFinite(n)) return "0";
+  return formatMoneyShort(n);
 }
 
 export default function LeaderboardPage() {
@@ -63,7 +50,9 @@ export default function LeaderboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scope, myCountry, myId]);
 
-  const myRankIndex = rows.findIndex((r) => String(r.uid) === String(myId));
+  const myRankIndex = rows.findIndex(
+    (r) => String(r.uid) === String(myId)
+  );
   const myRank = myRankIndex >= 0 ? myRankIndex + 1 : undefined;
 
   return (
