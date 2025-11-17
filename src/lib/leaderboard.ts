@@ -1,6 +1,7 @@
 // src/lib/leaderboard.ts
 import { db } from "./firebase";
 import { get, set, ref, query, orderByChild, limitToLast } from "firebase/database";
+import { getProfile } from "./profile";
 
 export type LeaderRow = {
   uid: string;
@@ -11,20 +12,11 @@ export type LeaderRow = {
 };
 
 export async function submitScore(totalEarnings: number) {
-  // Load profile from our profile store
-  const raw = localStorage.getItem("moneymaker_profile_v1") || "{}";
-  const p = JSON.parse(raw || "{}") as {
-    uid?: string;
-    userId?: string;
-    name?: string;
-    username?: string;
-    country?: string;
-    region?: string;
-  };
+  const p = getProfile();
 
-  const uid = String(p.uid || p.userId || "local");
+  const uid = String(p.uid || "local");
   const name = p.name || p.username || "Player";
-  const country = (p.country || p.region || "US").toUpperCase();
+  const country = (p.country || "US").toUpperCase();
 
   const row: LeaderRow = {
     uid,
@@ -35,8 +27,8 @@ export async function submitScore(totalEarnings: number) {
   };
 
   // Write in two places
-  await set(ref(db, `leaderboard/global/${row.uid}`), row);
-  await set(ref(db, `leaderboard/byCountry/${row.country}/${row.uid}`), row);
+  await set(ref(db, `leaderboard/global/${uid}`), row);
+  await set(ref(db, `leaderboard/byCountry/${country}/${uid}`), row);
 }
 
 // --- Readers used by the page / top bar
@@ -48,8 +40,8 @@ export async function topGlobal(limit = 50): Promise<LeaderRow[]> {
   );
   const snap = await get(q);
   if (!snap.exists()) return [];
-  const data = snap.val() as Record<string, LeaderRow>;
-  return Object.values(data).sort((a, b) => b.score - a.score);
+  return Object.values(snap.val() as Record<string, LeaderRow>)
+    .sort((a, b) => b.score - a.score);
 }
 
 export async function topByCountry(country: string, limit = 50): Promise<LeaderRow[]> {
@@ -61,6 +53,6 @@ export async function topByCountry(country: string, limit = 50): Promise<LeaderR
   );
   const snap = await get(q);
   if (!snap.exists()) return [];
-  const data = snap.val() as Record<string, LeaderRow>;
-  return Object.values(data).sort((a, b) => b.score - a.score);
+  return Object.values(snap.val() as Record<string, LeaderRow>)
+    .sort((a, b) => b.score - a.score);
 }
