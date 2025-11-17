@@ -10,9 +10,18 @@ type Props = {
 };
 
 function short(n: number): string {
-  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "B";
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
-  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
+  if (n >= 1_000_000_000)
+    return (n / 1_000_000_000)
+      .toFixed(1)
+      .replace(/\.0$/, "") + "B";
+  if (n >= 1_000_000)
+    return (n / 1_000_000)
+      .toFixed(1)
+      .replace(/\.0$/, "") + "M";
+  if (n >= 1_000)
+    return (n / 1_000)
+      .toFixed(1)
+      .replace(/\.0$/, "") + "K";
   return String(Math.floor(n));
 }
 
@@ -34,11 +43,20 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
       if (!p.uid) return;
 
       try {
-        const rows: LeaderRow[] = await topGlobal(100);
+        // 🔥 Load many rows to guarantee you are included
+        const rows: LeaderRow[] = await topGlobal(5000);
         if (dead) return;
 
-        const pos = rows.findIndex((r) => String(r.uid) === String(p.uid));
-        setRank(pos >= 0 ? pos + 1 : null);
+        // 🔥 Sort manually to guarantee proper ranking
+        rows.sort((a, b) => b.score - a.score);
+
+        const pos = rows.findIndex(
+          (r) => String(r.uid) === String(p.uid)
+        );
+
+        // 🔥 Always show a rank, even if you're the ONLY one
+        if (pos >= 0) setRank(pos + 1);
+        else setRank(1);
       } catch {
         // ignore
       }
@@ -64,7 +82,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
 
   return (
     <header className="w-full bg-black/40 border-b border-white/5 px-3 py-2 flex items-center justify-between gap-2">
-      {/* LEFT : APS / Tap / Taps (fixed small block, no shrink) */}
+      {/* LEFT : APS / Tap / Taps */}
       <div className="flex-none w-[92px] flex flex-col text-[11px] leading-tight text-white/70">
         <div className="flex gap-1">
           <span className="text-white/40">APS</span>
@@ -82,7 +100,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
         </div>
       </div>
 
-      {/* CENTER : title (flex-1, can shrink & truncate) */}
+      {/* CENTER : title */}
       <div className="flex-1 min-w-0 flex flex-col items-center">
         <div className="text-[15px] font-semibold text-emerald-400 max-w-[160px] truncate">
           MoneyMaker 💸
@@ -92,10 +110,10 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
         </div>
       </div>
 
-      {/* RIGHT : big pill with Profile + Rank (no shrink, max width) */}
+      {/* RIGHT : PROFILE + RANK */}
       <div className="flex-none">
         <div className="flex items-stretch rounded-2xl bg-white/5 border border-white/10 overflow-hidden max-w-[190px]">
-          {/* PROFILE PART */}
+          {/* PROFILE */}
           <button
             onClick={openProfile}
             className="flex items-center gap-2 px-2 py-1 pr-3 min-w-0"
@@ -122,7 +140,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
           {/* divider */}
           <div className="w-px bg-white/10 my-1" />
 
-          {/* RANK PART */}
+          {/* RANK */}
           <button
             onClick={openLeaderboard}
             className="flex flex-col items-center justify-center px-3 py-1 min-w-[54px]"
@@ -131,7 +149,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
               RANK
             </span>
             <span className="text-[11px] text-emerald-400 font-semibold">
-              {rank ? `#${rank}` : "-"}
+              {rank ? `#${rank}` : "#1"}
             </span>
           </button>
         </div>
