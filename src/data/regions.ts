@@ -1,8 +1,10 @@
 // src/data/regions.ts
-import type { RegionId } from "./countries";
-import { COUNTRIES } from "./countries";
+import { COUNTRIES, type RegionId } from "./countries";
 
-// Region labels for the UI
+// Re-export RegionId so other files can import from here if they want
+export type { RegionId } from "./countries";
+
+// Human-readable labels
 export const REGION_LABELS: Record<RegionId, string> = {
   NA: "North America",
   SA: "South America",
@@ -14,7 +16,7 @@ export const REGION_LABELS: Record<RegionId, string> = {
   OC: "Oceania",
 };
 
-// List for UI pills
+// Ordered list for UI
 export const REGION_LIST: RegionId[] = [
   "NA",
   "SA",
@@ -26,13 +28,10 @@ export const REGION_LIST: RegionId[] = [
   "OC",
 ];
 
-// Returns region for a given country code
+// Look up region by country code (US -> NA, RU -> CIS, etc.)
 export function getRegionForCountry(code: string): RegionId {
   const cc = (code || "").toUpperCase();
-
   const found = COUNTRIES.find((c) => c.code === cc);
-  if (found) return found.region;
-
-  // fallback to Asia instead of undefined
-  return "AS";
+  // default to NA if unknown so we always have **some** region
+  return found?.region ?? "NA";
 }
