@@ -9,18 +9,30 @@ import {
   limitToLast,
 } from "firebase/database";
 import { getProfile } from "./profile";
-import { getRegionForCountry } from "../data/regions";
-import type { RegionId } from "../data/countries";
+import { COUNTRIES, type RegionId } from "../data/countries";
+
+// ----------------- Types -----------------
 
 export type LeaderRow = {
   uid: string;
   name: string;
-  country: string;
+  country: string; // ISO code like "US"
   score: number;
   updatedAt: number;
-  // optional region label like "NA"
-  region?: RegionId;
+  region?: RegionId; // "NA", "EU", ...
 };
+
+// ----------------- Region helpers -----------------
+
+function findCountry(code: string) {
+  const cc = (code || "").toUpperCase();
+  return COUNTRIES.find((c) => c.code === cc);
+}
+
+function getRegionForCountry(country: string): RegionId {
+  const c = findCountry(country);
+  return (c?.region ?? "NA") as RegionId;
+}
 
 // Map new short region codes -> old long keys we used before
 function regionToLegacyKey(region: RegionId): string {
@@ -46,6 +58,38 @@ function regionToLegacyKey(region: RegionId): string {
   }
 }
 
+// Small helper to read from a path (or empty if not exist)
+async function readNode(
+  path: string,
+  limit: number
+): Promise<LeaderRow[]> {
+  const q = query(ref(db, path), orderByChild("score"), limitToLast(limit));
+  const snap = await get(q);
+  if (!snap.exists()) return [];
+  return Object.values(snap.val() as Record<string, LeaderRow>);
+}
+
+// Merge rows from multiple paths, dedupe by uid, keep best score
+function mergeRows(
+  lists: LeaderRow[][],
+  limit: number
+): LeaderRow[] {
+  const byId: Record<string, LeaderRow> = {};
+  for (const list of lists) {
+    for (const r of list) {
+      const key = String(r.uid);
+      if (!byId[key] || r.score > byId[key].score) {
+        byId[key] = r;
+      }
+    }
+  }
+  return Object.values(byId)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
+// ----------------- Writer -----------------
+
 export async function submitScore(totalEarnings: number) {
   const p = getProfile();
 
@@ -53,51 +97,45 @@ export async function submitScore(totalEarnings: number) {
   const name = p.name || p.username || "Player";
   const country = (p.country || "US").toUpperCase();
   const region = getRegionForCountry(country); // e.g. "NA"
+  const legacyRegionKey = regionToLegacyKey(region);
 
   const row: LeaderRow = {
     uid,
     name,
     country,
-    // 🔥 force number so Firebase stores it as numeric, not string
-    score: Number(Math.floor(totalEarnings)) || 0,
+    score: Math.floor(totalEarnings),
     updatedAt: Date.now(),
     region,
   };
 
-  const legacyRegionKey = regionToLegacyKey(region);
-
-  // ✅ Write everywhere (new + legacy paths)
+  // ✅ Write to lowercase paths (new)
   await set(ref(db, `leaderboard/global/${uid}`), row);
   await set(ref(db, `leaderboard/byCountry/${country}/${uid}`), row);
-
-  // new region node
   await set(ref(db, `leaderboard/byRegion/${region}/${uid}`), row);
+  await set(
+    ref(db, `leaderboard/byRegion/${legacyRegionKey}/${uid}`),
+    row
+  );
 
-  // legacy region node (so old data still works)
-  await set(ref(db, `leaderboard/byRegion/${legacyRegionKey}/${uid}`), row);
+  // ✅ Also mirror to old capital "Leaderboard" paths (for old data / safety)
+  await set(ref(db, `Leaderboard/global/${uid}`), row);
+  await set(ref(db, `Leaderboard/byCountry/${country}/${uid}`), row);
+  await set(
+    ref(db, `Leaderboard/byRegion/${region}/${uid}`),
+    row
+  );
+  await set(
+    ref(db, `Leaderboard/byRegion/${legacyRegionKey}/${uid}`),
+    row
+  );
 }
 
-// Small helper to be safe with old data that might have string scores
-function normalizeRows(obj: Record<string, LeaderRow>): LeaderRow[] {
-  return Object.values(obj).map((r) => ({
-    ...r,
-    score: Number(r.score) || 0,
-  }));
-}
-
-// --- Readers used by the page / top bar ---
+// ----------------- Readers -----------------
 
 export async function topGlobal(limit = 50): Promise<LeaderRow[]> {
-  const q = query(
-    ref(db, "leaderboard/global"),
-    orderByChild("score"),
-    limitToLast(limit)
-  );
-  const snap = await get(q);
-  if (!snap.exists()) return [];
-
-  const data = snap.val() as Record<string, LeaderRow>;
-  return normalizeRows(data).sort((a, b) => b.score - a.score);
+  const lower = await readNode("leaderboard/global", limit);
+  const upper = await readNode("Leaderboard/global", limit);
+  return mergeRows([lower, upper], limit);
 }
 
 export async function topByCountry(
@@ -106,16 +144,16 @@ export async function topByCountry(
 ): Promise<LeaderRow[]> {
   const cc = (country || "US").toUpperCase();
 
-  const q = query(
-    ref(db, `leaderboard/byCountry/${cc}`),
-    orderByChild("score"),
-    limitToLast(limit)
+  const lower = await readNode(
+    `leaderboard/byCountry/${cc}`,
+    limit
   );
-  const snap = await get(q);
-  if (!snap.exists()) return [];
+  const upper = await readNode(
+    `Leaderboard/byCountry/${cc}`,
+    limit
+  );
 
-  const data = snap.val() as Record<string, LeaderRow>;
-  return normalizeRows(data).sort((a, b) => b.score - a.score);
+  return mergeRows([lower, upper], limit);
 }
 
 export async function topByRegion(
@@ -124,46 +162,26 @@ export async function topByRegion(
 ): Promise<LeaderRow[]> {
   const legacyKey = regionToLegacyKey(region);
 
-  // Read new node
-  const qNew = query(
-    ref(db, `leaderboard/byRegion/${region}`),
-    orderByChild("score"),
-    limitToLast(limit)
+  const lowerNew = await readNode(
+    `leaderboard/byRegion/${region}`,
+    limit
   );
-  const snapNew = await get(qNew);
+  const lowerOld = await readNode(
+    `leaderboard/byRegion/${legacyKey}`,
+    limit
+  );
 
-  let rows: LeaderRow[] = [];
-  if (snapNew.exists()) {
-    rows = rows.concat(
-      normalizeRows(snapNew.val() as Record<string, LeaderRow>)
-    );
-  }
+  const upperNew = await readNode(
+    `Leaderboard/byRegion/${region}`,
+    limit
+  );
+  const upperOld = await readNode(
+    `Leaderboard/byRegion/${legacyKey}`,
+    limit
+  );
 
-  // Also read legacy node (old data)
-  if (legacyKey !== region) {
-    const qOld = query(
-      ref(db, `leaderboard/byRegion/${legacyKey}`),
-      orderByChild("score"),
-      limitToLast(limit)
-    );
-    const snapOld = await get(qOld);
-    if (snapOld.exists()) {
-      rows = rows.concat(
-        normalizeRows(snapOld.val() as Record<string, LeaderRow>)
-      );
-    }
-  }
-
-  // De-dupe by uid and keep best score
-  const byId: Record<string, LeaderRow> = {};
-  for (const r of rows) {
-    const key = String(r.uid);
-    if (!byId[key] || r.score > byId[key].score) {
-      byId[key] = r;
-    }
-  }
-
-  return Object.values(byId)
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit);
+  return mergeRows(
+    [lowerNew, lowerOld, upperNew, upperOld],
+    limit
+  );
 }
