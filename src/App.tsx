@@ -23,7 +23,6 @@ import { achievements } from "./data/achievements";
 import { initTelegramUI } from "./lib/telegram";
 import { suits } from "./data/suits";
 import { getEquippedPet, getEquippedSuit } from "./lib/storage";
-import { getProfile } from "./lib/profile";
 import { submitScore } from "./lib/leaderboard";
 
 // Central income math
@@ -212,14 +211,9 @@ export default function App() {
   useEffect(() => {
     if (totalEarnings <= 0) return;
 
-    try {
-      const profile = getProfile();
-      submitScore(totalEarnings, profile).catch(() => {
-        // ignore network errors for now
-      });
-    } catch {
-      // ignore
-    }
+    submitScore(totalEarnings).catch(() => {
+      // ignore network errors for now
+    });
   }, [totalEarnings]);
 
   // Achievements checking
