@@ -1,50 +1,48 @@
 // src/data/countries.ts
 
+// 🌍 High-level server regions
 export type RegionId =
   | "NA"   // North America
   | "SA"   // South America
   | "EU"   // Europe
-  | "CIS"  // CIS / Post-Soviet
-  | "MENA" // Middle East & North Africa
-  | "AF"   // Sub-Saharan Africa
-  | "AS"   // Asia & Pacific
-  | "OC";  // Oceania
+  | "AS"   // Asia
+  | "OC"   // Oceania
+  | "MENA" // Middle East
+  | "AF";  // Africa (entire continent)
 
 export type CountryCode = string;
 
 export type Country = {
-  code: CountryCode;   // "US"
-  name: string;        // "United States"
-  flag: string;        // "🇺🇸"
-  region: RegionId;    // "NA"
+  code: CountryCode; // "US"
+  name: string;      // "United States"
+  flag: string;      // "🇺🇸"
+  region: RegionId;  // "NA"
 };
 
-// High-level regions for UI pills
+// High-level regions for UI
 export const REGIONS: { id: RegionId; label: string }[] = [
   { id: "NA", label: "North America" },
   { id: "SA", label: "South America" },
   { id: "EU", label: "Europe" },
-  { id: "CIS", label: "CIS" },
-  { id: "MENA", label: "MENA" },
-  { id: "AF", label: "Africa" },
   { id: "AS", label: "Asia" },
   { id: "OC", label: "Oceania" },
+  { id: "MENA", label: "Middle East" },
+  { id: "AF", label: "Africa" },
 ];
 
-// For quick mapping id -> human label
+// Quick map id -> human label
 export const REGION_LABELS: Record<RegionId, string> = {
   NA: "North America",
   SA: "South America",
   EU: "Europe",
-  CIS: "CIS",
-  MENA: "MENA",
-  AF: "Africa",
   AS: "Asia",
   OC: "Oceania",
+  MENA: "Middle East",
+  AF: "Africa",
 };
 
-// Simple list used for region picker
-export const REGION_LIST: RegionId[] = ["NA", "SA", "EU", "CIS", "MENA", "AF", "AS", "OC"];
+// For pickers
+export const REGION_LIST: RegionId[] = ["NA", "SA", "EU", "AS", "OC", "MENA", "AF"];
 
 // 🔥 Full list of countries (UN members + a few extra like Taiwan / Palestine)
 export const COUNTRIES: Country[] = [
@@ -52,28 +50,30 @@ export const COUNTRIES: Country[] = [
   { code: "US", name: "United States", flag: "🇺🇸", region: "NA" },
   { code: "CA", name: "Canada", flag: "🇨🇦", region: "NA" },
   { code: "MX", name: "Mexico", flag: "🇲🇽", region: "NA" },
-  { code: "GL", name: "Greenland", flag: "🇬🇱", region: "NA" },
-  { code: "BZ", name: "Belize", flag: "🇧🇿", region: "NA" },
-  { code: "CR", name: "Costa Rica", flag: "🇨🇷", region: "NA" },
-  { code: "SV", name: "El Salvador", flag: "🇸🇻", region: "NA" },
-  { code: "GT", name: "Guatemala", flag: "🇬🇹", region: "NA" },
-  { code: "HN", name: "Honduras", flag: "🇭🇳", region: "NA" },
-  { code: "NI", name: "Nicaragua", flag: "🇳🇮", region: "NA" },
-  { code: "PA", name: "Panama", flag: "🇵🇦", region: "NA" },
-  { code: "BS", name: "Bahamas", flag: "🇧🇸", region: "NA" },
-  { code: "BB", name: "Barbados", flag: "🇧🇧", region: "NA" },
-  { code: "CU", name: "Cuba", flag: "🇨🇺", region: "NA" },
-  { code: "DM", name: "Dominica", flag: "🇩🇲", region: "NA" },
-  { code: "DO", name: "Dominican Republic", flag: "🇩🇴", region: "NA" },
-  { code: "GD", name: "Grenada", flag: "🇬🇩", region: "NA" },
-  { code: "HT", name: "Haiti", flag: "🇭🇹", region: "NA" },
-  { code: "JM", name: "Jamaica", flag: "🇯🇲", region: "NA" },
-  { code: "KN", name: "Saint Kitts and Nevis", flag: "🇰🇳", region: "NA" },
-  { code: "LC", name: "Saint Lucia", flag: "🇱🇨", region: "NA" },
-  { code: "VC", name: "Saint Vincent and the Grenadines", flag: "🇻🇨", region: "NA" },
-  { code: "TT", name: "Trinidad and Tobago", flag: "🇹🇹", region: "NA" },
 
-  // --- South America (SA) ---
+  // --- South America (SA) + Latin / Caribbean ---
+  { code: "BZ", name: "Belize", flag: "🇧🇿", region: "SA" },
+  { code: "CR", name: "Costa Rica", flag: "🇨🇷", region: "SA" },
+  { code: "SV", name: "El Salvador", flag: "🇸🇻", region: "SA" },
+  { code: "GT", name: "Guatemala", flag: "🇬🇹", region: "SA" },
+  { code: "HN", name: "Honduras", flag: "🇭🇳", region: "SA" },
+  { code: "NI", name: "Nicaragua", flag: "🇳🇮", region: "SA" },
+  { code: "PA", name: "Panama", flag: "🇵🇦", region: "SA" },
+
+  { code: "BS", name: "Bahamas", flag: "🇧🇸", region: "SA" },
+  { code: "BB", name: "Barbados", flag: "🇧🇧", region: "SA" },
+  { code: "CU", name: "Cuba", flag: "🇨🇺", region: "SA" },
+  { code: "DM", name: "Dominica", flag: "🇩🇲", region: "SA" },
+  { code: "DO", name: "Dominican Republic", flag: "🇩🇴", region: "SA" },
+  { code: "GD", name: "Grenada", flag: "🇬🇩", region: "SA" },
+  { code: "HT", name: "Haiti", flag: "🇭🇹", region: "SA" },
+  { code: "JM", name: "Jamaica", flag: "🇯🇲", region: "SA" },
+  { code: "KN", name: "Saint Kitts and Nevis", flag: "🇰🇳", region: "SA" },
+  { code: "LC", name: "Saint Lucia", flag: "🇱🇨", region: "SA" },
+  { code: "VC", name: "Saint Vincent and the Grenadines", flag: "🇻🇨", region: "SA" },
+  { code: "TT", name: "Trinidad and Tobago", flag: "🇹🇹", region: "SA" },
+
+  // Core South America
   { code: "AR", name: "Argentina", flag: "🇦🇷", region: "SA" },
   { code: "BO", name: "Bolivia", flag: "🇧🇴", region: "SA" },
   { code: "BR", name: "Brazil", flag: "🇧🇷", region: "SA" },
@@ -86,6 +86,9 @@ export const COUNTRIES: Country[] = [
   { code: "SR", name: "Suriname", flag: "🇸🇷", region: "SA" },
   { code: "UY", name: "Uruguay", flag: "🇺🇾", region: "SA" },
   { code: "VE", name: "Venezuela", flag: "🇻🇪", region: "SA" },
+
+  // Greenland (more NA/Europe-ish, but we keep in NA or SA?)
+  { code: "GL", name: "Greenland", flag: "🇬🇱", region: "NA" },
 
   // --- Europe (EU) ---
   { code: "AL", name: "Albania", flag: "🇦🇱", region: "EU" },
@@ -132,45 +135,47 @@ export const COUNTRIES: Country[] = [
   { code: "GB", name: "United Kingdom", flag: "🇬🇧", region: "EU" },
   { code: "VA", name: "Vatican City", flag: "🇻🇦", region: "EU" },
 
-  // --- CIS (CIS) ---
-  { code: "RU", name: "Russia", flag: "🇷🇺", region: "CIS" },
-  { code: "BY", name: "Belarus", flag: "🇧🇾", region: "CIS" },
-  { code: "KZ", name: "Kazakhstan", flag: "🇰🇿", region: "CIS" },
-  { code: "KG", name: "Kyrgyzstan", flag: "🇰🇬", region: "CIS" },
-  { code: "TJ", name: "Tajikistan", flag: "🇹🇯", region: "CIS" },
-  { code: "TM", name: "Turkmenistan", flag: "🇹🇲", region: "CIS" },
-  { code: "UZ", name: "Uzbekistan", flag: "🇺🇿", region: "CIS" },
-  { code: "AM", name: "Armenia", flag: "🇦🇲", region: "CIS" },
-  { code: "AZ", name: "Azerbaijan", flag: "🇦🇿", region: "CIS" },
-  { code: "GE", name: "Georgia", flag: "🇬🇪", region: "CIS" },
+  // Former “CIS” that we map to EU (for server logic)
+  { code: "RU", name: "Russia", flag: "🇷🇺", region: "EU" },
+  { code: "BY", name: "Belarus", flag: "🇧🇾", region: "EU" },
+  { code: "AM", name: "Armenia", flag: "🇦🇲", region: "EU" },
+  { code: "AZ", name: "Azerbaijan", flag: "🇦🇿", region: "EU" },
+  { code: "GE", name: "Georgia", flag: "🇬🇪", region: "EU" },
 
-  // --- MENA (MENA) ---
+  // Former “CIS” that are more Central Asia -> Asia server
+  { code: "KZ", name: "Kazakhstan", flag: "🇰🇿", region: "AS" },
+  { code: "KG", name: "Kyrgyzstan", flag: "🇰🇬", region: "AS" },
+  { code: "TJ", name: "Tajikistan", flag: "🇹🇯", region: "AS" },
+  { code: "TM", name: "Turkmenistan", flag: "🇹🇲", region: "AS" },
+  { code: "UZ", name: "Uzbekistan", flag: "🇺🇿", region: "AS" },
+
+  // --- Middle East (MENA) ---
   { code: "AE", name: "United Arab Emirates", flag: "🇦🇪", region: "MENA" },
   { code: "BH", name: "Bahrain", flag: "🇧🇭", region: "MENA" },
-  { code: "DJ", name: "Djibouti", flag: "🇩🇯", region: "MENA" },
-  { code: "DZ", name: "Algeria", flag: "🇩🇿", region: "MENA" },
-  { code: "EG", name: "Egypt", flag: "🇪🇬", region: "MENA" },
-  { code: "EH", name: "Western Sahara", flag: "🇪🇭", region: "MENA" },
-  { code: "ER", name: "Eritrea", flag: "🇪🇷", region: "MENA" },
   { code: "IL", name: "Israel", flag: "🇮🇱", region: "MENA" },
   { code: "IQ", name: "Iraq", flag: "🇮🇶", region: "MENA" },
   { code: "IR", name: "Iran", flag: "🇮🇷", region: "MENA" },
   { code: "JO", name: "Jordan", flag: "🇯🇴", region: "MENA" },
   { code: "KW", name: "Kuwait", flag: "🇰🇼", region: "MENA" },
   { code: "LB", name: "Lebanon", flag: "🇱🇧", region: "MENA" },
-  { code: "LY", name: "Libya", flag: "🇱🇾", region: "MENA" },
-  { code: "MA", name: "Morocco", flag: "🇲🇦", region: "MENA" },
   { code: "OM", name: "Oman", flag: "🇴🇲", region: "MENA" },
   { code: "PS", name: "Palestine", flag: "🇵🇸", region: "MENA" },
   { code: "QA", name: "Qatar", flag: "🇶🇦", region: "MENA" },
   { code: "SA", name: "Saudi Arabia", flag: "🇸🇦", region: "MENA" },
-  { code: "SD", name: "Sudan", flag: "🇸🇩", region: "MENA" },
   { code: "SY", name: "Syria", flag: "🇸🇾", region: "MENA" },
-  { code: "TN", name: "Tunisia", flag: "🇹🇳", region: "MENA" },
   { code: "TR", name: "Turkey", flag: "🇹🇷", region: "MENA" },
   { code: "YE", name: "Yemen", flag: "🇾🇪", region: "MENA" },
 
-  // --- Sub-Saharan Africa (AF) ---
+  // --- Africa (AF) – whole continent now ---
+  { code: "DZ", name: "Algeria", flag: "🇩🇿", region: "AF" },
+  { code: "EG", name: "Egypt", flag: "🇪🇬", region: "AF" },
+  { code: "EH", name: "Western Sahara", flag: "🇪🇭", region: "AF" },
+  { code: "ER", name: "Eritrea", flag: "🇪🇷", region: "AF" },
+  { code: "LY", name: "Libya", flag: "🇱🇾", region: "AF" },
+  { code: "MA", name: "Morocco", flag: "🇲🇦", region: "AF" },
+  { code: "SD", name: "Sudan", flag: "🇸🇩", region: "AF" },
+  { code: "TN", name: "Tunisia", flag: "🇹🇳", region: "AF" },
+
   { code: "AO", name: "Angola", flag: "🇦🇴", region: "AF" },
   { code: "BF", name: "Burkina Faso", flag: "🇧🇫", region: "AF" },
   { code: "BI", name: "Burundi", flag: "🇧🇮", region: "AF" },
@@ -218,7 +223,7 @@ export const COUNTRIES: Country[] = [
   { code: "ZM", name: "Zambia", flag: "🇿🇲", region: "AF" },
   { code: "ZW", name: "Zimbabwe", flag: "🇿🇼", region: "AF" },
 
-  // --- Asia & Pacific (AS) ---
+  // --- Asia (AS) ---
   { code: "AF", name: "Afghanistan", flag: "🇦🇫", region: "AS" },
   { code: "BD", name: "Bangladesh", flag: "🇧🇩", region: "AS" },
   { code: "BN", name: "Brunei", flag: "🇧🇳", region: "AS" },
