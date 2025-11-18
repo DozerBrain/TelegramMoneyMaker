@@ -15,6 +15,7 @@ import ProfilePage from "./pages/Profile";
 import PetsPage from "./pages/Pets";
 import SuitsPage from "./pages/Suits";
 import CardsPage from "./pages/Cards";
+import WorldMapPage from "./pages/WorldMap"; // 👈 NEW: world mini-game
 
 // Storage / helpers
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
@@ -457,19 +458,24 @@ export default function App() {
         )}
 
         {tab === "more" && (
-          <More
-            balance={balance}
-            totalEarnings={totalEarnings}
-            taps={taps}
-            tapValue={tapValue}
-            autoPerSec={autoPerSec}
-            multi={multi}
-            achievementsState={achState}
-            onClaim={handleClaimAchievement}
-            onReset={handleReset}
-            onExport={handleExport}
-            onImport={handleImport}
-          />
+          <>
+            <More
+              balance={balance}
+              totalEarnings={totalEarnings}
+              taps={taps}
+              tapValue={tapValue}
+              autoPerSec={autoPerSec}
+              multi={multi}
+              achievementsState={achState}
+              onClaim={handleClaimAchievement}
+              onReset={handleReset}
+              onExport={handleExport}
+              onImport={handleImport}
+            />
+
+            {/* 👇 NEW: World map mini-game appears under the More page */}
+            <WorldMapPage balance={balance} />
+          </>
         )}
       </main>
 
