@@ -98,7 +98,7 @@ export default function Home({
     setBalance((b) => {
       const updated = b + gain;
 
-      // 🔥 FIXED — use totalEarnings + gain
+      // 🔥 use totalEarnings + gain so leaderboard is correct
       pushLeaderboard(totalEarnings + gain);
 
       return updated;
@@ -117,12 +117,30 @@ export default function Home({
     [equippedPetId]
   );
 
+  // 👇 Mini games / World Map opener
+  function openWorldMap() {
+    window.dispatchEvent(
+      new CustomEvent("MM_GOTO", { detail: { goto: "world" } })
+    );
+  }
+
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
       <LeftQuickNav />
 
       <div className="mt-2 flex items-center justify-center">
         <div className="relative">
+          {/* 👇 Mini games button – top right of mascot */}
+          <button
+            onClick={openWorldMap}
+            className="absolute -top-2 -right-2 px-3 py-1 rounded-full bg-emerald-600 text-[10px] sm:text-[11px] font-semibold shadow-lg shadow-emerald-500/30 border border-emerald-300/60 flex items-center gap-1"
+          >
+            🎮 Mini games
+            <span className="hidden sm:inline text-[10px] text-emerald-100">
+              Conquer the World 🌎
+            </span>
+          </button>
+
           <img
             src={suitImg}
             alt="Equipped suit"
