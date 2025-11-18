@@ -33,18 +33,18 @@ function SquareButton({ title, onClick, preview }: SquareButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden bg-zinc-900/90 border border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.35)] flex flex-col"
+      className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden bg-black/85 border border-emerald-500/40 shadow-[0_0_14px_rgba(16,185,129,0.3)] flex flex-col"
     >
       {/* image / animation area */}
-      <div className="flex-1 flex items-center justify-center bg-black/40">
-        <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl overflow-hidden border border-white/15 bg-black/60 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center bg-zinc-900/80">
+        <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl overflow-hidden border border-white/10 bg-black/70 flex items-center justify-center">
           {preview}
         </div>
       </div>
 
-      {/* title strip at the bottom */}
-      <div className="px-2 py-1.5 bg-black/60 border-t border-white/5 text-left">
-        <div className="text-[11px] sm:text-[12px] font-semibold text-white leading-tight">
+      {/* title strip at bottom */}
+      <div className="px-2 py-1 bg-black/80 border-t border-white/10 flex items-center justify-center">
+        <div className="text-[11px] sm:text-[12px] font-semibold text-white text-center leading-tight">
           {title}
         </div>
       </div>
@@ -59,7 +59,7 @@ export default function LeftQuickNav() {
   const [suitIndex, setSuitIndex] = useState(0);
   const [petIndex, setPetIndex] = useState(0);
 
-  // cycle card rarities (uses /public/cards/*.jpg)
+  // cycle card rarities
   useEffect(() => {
     const id = setInterval(
       () => setCardIndex((i) => (i + 1) % CARD_RARITIES.length),
@@ -90,14 +90,18 @@ export default function LeftQuickNav() {
 
   const currentCard: CardRarity = CARD_RARITIES[cardIndex];
 
-  // card image from /public/cards
+  // Card preview – supports .png and .jpg from /public/cards
   const cardPreview = (
-    <img
-      src={`/cards/${currentCard}.jpg`}
-      alt={currentCard}
-      className="h-full w-full object-cover"
-      draggable={false}
-    />
+    <picture>
+      {/* try png first, then jpg */}
+      <source srcSet={`/cards/${currentCard}.png`} />
+      <img
+        src={`/cards/${currentCard}.jpg`}
+        alt={currentCard}
+        className="h-full w-full object-cover"
+        draggable={false}
+      />
+    </picture>
   );
 
   const suitImg = suits[suitIndex]?.img ?? "/suits/starter.png";
@@ -122,8 +126,8 @@ export default function LeftQuickNav() {
 
   return (
     <>
-      {/* Cards – top left */}
-      <div className="pointer-events-auto absolute left-3 top-28 z-10">
+      {/* Cards – near the head */}
+      <div className="pointer-events-auto absolute left-6 top-28 sm:left-8 sm:top-28 z-10">
         <SquareButton
           title="Cards"
           onClick={() => goto("cards")}
@@ -131,8 +135,8 @@ export default function LeftQuickNav() {
         />
       </div>
 
-      {/* Suits – middle left */}
-      <div className="pointer-events-auto absolute left-3 top-[13.5rem] z-10">
+      {/* Suits – middle / torso */}
+      <div className="pointer-events-auto absolute left-6 top-[12.5rem] sm:left-8 sm:top-[12.5rem] z-10">
         <SquareButton
           title="Suits"
           onClick={() => goto("suits")}
@@ -140,8 +144,8 @@ export default function LeftQuickNav() {
         />
       </div>
 
-      {/* Pets – lower left */}
-      <div className="pointer-events-auto absolute left-3 top-[19.5rem] z-10">
+      {/* Pets – lower, above tap area */}
+      <div className="pointer-events-auto absolute left-6 top-[18rem] sm:left-8 sm:top-[18rem] z-10">
         <SquareButton
           title="Pets"
           onClick={() => goto("pets")}
