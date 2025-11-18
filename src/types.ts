@@ -8,7 +8,8 @@ export type Tab =
   | "more"
   | "cards"
   | "suits"
-  | "pets";
+  | "pets"
+  | "world";
 
 export type Suit = {
   id: string;
