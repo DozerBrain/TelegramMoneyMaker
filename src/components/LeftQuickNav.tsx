@@ -33,20 +33,28 @@ function SquareButton({ title, onClick, preview }: SquareButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="w-20 h-20 sm:w-24 sm:h-24 rounded-3xl overflow-hidden bg-black/85 border border-emerald-500/40 shadow-[0_0_14px_rgba(16,185,129,0.3)] flex flex-col"
+      className="
+        w-20 h-20 sm:w-24 sm:h-24
+        rounded-3xl overflow-hidden
+        bg-[#050709]/80
+        border border-emerald-400/40
+        shadow-[0_0_18px_rgba(16,185,129,0.35)]
+        flex flex-col items-center justify-center
+        active:scale-[0.96] transition-transform
+      "
     >
-      {/* image / animation area */}
-      <div className="flex-1 flex items-center justify-center bg-zinc-900/80">
-        <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl overflow-hidden border border-white/10 bg-black/70 flex items-center justify-center">
+      {/* preview area */}
+      <div className="flex-1 flex items-center justify-center pt-2">
+        <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl overflow-hidden">
           {preview}
         </div>
       </div>
 
-      {/* title strip at bottom */}
-      <div className="px-2 py-1 bg-black/80 border-t border-white/10 flex items-center justify-center">
-        <div className="text-[11px] sm:text-[12px] font-semibold text-white text-center leading-tight">
+      {/* title at absolute bottom, no extra dark bar */}
+      <div className="w-full pb-1 pt-0.5 flex items-center justify-center">
+        <span className="text-[11px] sm:text-[12px] font-semibold text-white/95 text-center">
           {title}
-        </div>
+        </span>
       </div>
     </button>
   );
@@ -90,10 +98,9 @@ export default function LeftQuickNav() {
 
   const currentCard: CardRarity = CARD_RARITIES[cardIndex];
 
-  // Card preview – supports .png and .jpg from /public/cards
+  // Card preview – from /public/cards
   const cardPreview = (
     <picture>
-      {/* try png first, then jpg */}
       <source srcSet={`/cards/${currentCard}.png`} />
       <img
         src={`/cards/${currentCard}.jpg`}
@@ -126,7 +133,7 @@ export default function LeftQuickNav() {
 
   return (
     <>
-      {/* Cards – near the head */}
+      {/* Cards – upper */}
       <div className="pointer-events-auto absolute left-6 top-28 sm:left-8 sm:top-28 z-10">
         <SquareButton
           title="Cards"
@@ -135,7 +142,7 @@ export default function LeftQuickNav() {
         />
       </div>
 
-      {/* Suits – middle / torso */}
+      {/* Suits – middle */}
       <div className="pointer-events-auto absolute left-6 top-[12.5rem] sm:left-8 sm:top-[12.5rem] z-10">
         <SquareButton
           title="Suits"
@@ -144,7 +151,7 @@ export default function LeftQuickNav() {
         />
       </div>
 
-      {/* Pets – lower, above tap area */}
+      {/* Pets – lower */}
       <div className="pointer-events-auto absolute left-6 top-[18rem] sm:left-8 sm:top-[18rem] z-10">
         <SquareButton
           title="Pets"
