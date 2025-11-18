@@ -21,69 +21,32 @@ function goto(tab: "cards" | "suits" | "pets") {
   );
 }
 
-// ---------- Small helpers ----------
+// ---------- generic square button ----------
 
-function rarityLabel(r: CardRarity) {
-  switch (r) {
-    case "common":
-      return "Common";
-    case "uncommon":
-      return "Uncommon";
-    case "rare":
-      return "Rare";
-    case "epic":
-      return "Epic";
-    case "legendary":
-      return "Legendary";
-    case "mythic":
-      return "Mythic";
-    case "ultimate":
-      return "Ultimate";
-  }
-}
-
-function rarityBg(r: CardRarity) {
-  switch (r) {
-    case "common":
-      return "from-zinc-700 to-zinc-500";
-    case "uncommon":
-      return "from-emerald-700 to-emerald-400";
-    case "rare":
-      return "from-sky-700 to-sky-400";
-    case "epic":
-      return "from-purple-700 to-purple-400";
-    case "legendary":
-      return "from-amber-700 to-amber-400";
-    case "mythic":
-      return "from-fuchsia-700 to-fuchsia-400";
-    case "ultimate":
-      return "from-emerald-500 to-yellow-300";
-  }
-}
-
-type QuickButtonProps = {
-  label: string;
-  sublabel: string;
+type SquareButtonProps = {
+  title: string;
   onClick: () => void;
   preview: React.ReactNode;
 };
 
-function QuickButton({ label, sublabel, onClick, preview }: QuickButtonProps) {
+function SquareButton({ title, onClick, preview }: SquareButtonProps) {
   return (
     <button
       onClick={onClick}
-      className="w-36 sm:w-40 rounded-3xl px-3 py-2 flex items-center justify-between bg-zinc-900/85 border border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.35)]"
+      className="w-24 h-24 sm:w-28 sm:h-28 rounded-3xl overflow-hidden bg-zinc-900/90 border border-emerald-500/40 shadow-[0_0_20px_rgba(16,185,129,0.35)] flex flex-col"
     >
-      <div className="flex flex-col items-start">
-        <span className="text-[13px] font-semibold text-white">
-          {label}
-        </span>
-        <span className="text-[10px] text-emerald-300/90">
-          {sublabel}
-        </span>
+      {/* image / animation area */}
+      <div className="flex-1 flex items-center justify-center bg-black/40">
+        <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl overflow-hidden border border-white/15 bg-black/60 flex items-center justify-center">
+          {preview}
+        </div>
       </div>
-      <div className="h-10 w-10 rounded-2xl overflow-hidden bg-black/60 border border-emerald-500/40 flex items-center justify-center">
-        {preview}
+
+      {/* title strip at the bottom */}
+      <div className="px-2 py-1.5 bg-black/60 border-t border-white/5 text-left">
+        <div className="text-[11px] sm:text-[12px] font-semibold text-white leading-tight">
+          {title}
+        </div>
       </div>
     </button>
   );
@@ -96,7 +59,7 @@ export default function LeftQuickNav() {
   const [suitIndex, setSuitIndex] = useState(0);
   const [petIndex, setPetIndex] = useState(0);
 
-  // cards animation (just gradient + text, no broken image)
+  // cycle card rarities (uses /public/cards/*.jpg)
   useEffect(() => {
     const id = setInterval(
       () => setCardIndex((i) => (i + 1) % CARD_RARITIES.length),
@@ -105,7 +68,7 @@ export default function LeftQuickNav() {
     return () => clearInterval(id);
   }, []);
 
-  // suits animation
+  // cycle suits
   useEffect(() => {
     if (!suits.length) return;
     const id = setInterval(
@@ -115,7 +78,7 @@ export default function LeftQuickNav() {
     return () => clearInterval(id);
   }, []);
 
-  // pets animation
+  // cycle pets
   useEffect(() => {
     if (!PETS.length) return;
     const id = setInterval(
@@ -126,23 +89,18 @@ export default function LeftQuickNav() {
   }, []);
 
   const currentCard: CardRarity = CARD_RARITIES[cardIndex];
-  const suitImg = suits[suitIndex]?.img ?? "/suits/starter.png";
-  const petImg = PETS[petIndex]?.img ?? "/pets/mouse.png";
 
-  // ---- PREVIEWS -----------------------------------------------------
-
+  // card image from /public/cards
   const cardPreview = (
-    <div
-      className={`h-full w-full flex items-center justify-center bg-gradient-to-br ${rarityBg(
-        currentCard
-      )}`}
-    >
-      <span className="text-[8px] font-semibold uppercase text-white drop-shadow">
-        {rarityLabel(currentCard)}
-      </span>
-    </div>
+    <img
+      src={`/cards/${currentCard}.jpg`}
+      alt={currentCard}
+      className="h-full w-full object-cover"
+      draggable={false}
+    />
   );
 
+  const suitImg = suits[suitIndex]?.img ?? "/suits/starter.png";
   const suitPreview = (
     <img
       src={suitImg}
@@ -152,6 +110,7 @@ export default function LeftQuickNav() {
     />
   );
 
+  const petImg = PETS[petIndex]?.img ?? "/pets/mouse.png";
   const petPreview = (
     <img
       src={petImg}
@@ -163,31 +122,28 @@ export default function LeftQuickNav() {
 
   return (
     <>
-      {/* Cards – higher, near top blue box */}
+      {/* Cards – top left */}
       <div className="pointer-events-auto absolute left-3 top-28 z-10">
-        <QuickButton
-          label="Cards"
-          sublabel="All rarities"
+        <SquareButton
+          title="Cards"
           onClick={() => goto("cards")}
           preview={cardPreview}
         />
       </div>
 
-      {/* Suits – middle */}
-      <div className="pointer-events-auto absolute left-3 top-52 z-10">
-        <QuickButton
-          label="Suits"
-          sublabel="Style & boosts"
+      {/* Suits – middle left */}
+      <div className="pointer-events-auto absolute left-3 top-[13.5rem] z-10">
+        <SquareButton
+          title="Suits"
           onClick={() => goto("suits")}
           preview={suitPreview}
         />
       </div>
 
-      {/* Pets – lower, closer to dragon */}
-      <div className="pointer-events-auto absolute left-3 top-[18.5rem] z-10">
-        <QuickButton
-          label="Pets"
-          sublabel="Cute helpers"
+      {/* Pets – lower left */}
+      <div className="pointer-events-auto absolute left-3 top-[19.5rem] z-10">
+        <SquareButton
+          title="Pets"
           onClick={() => goto("pets")}
           preview={petPreview}
         />
