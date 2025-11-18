@@ -51,7 +51,6 @@ function QuickButton({ label, sublabel, onClick, previewImg }: QuickButtonProps)
 }
 
 export default function LeftQuickNav() {
-  // cycle indices
   const [cardIndex, setCardIndex] = useState(0);
   const [suitIndex, setSuitIndex] = useState(0);
   const [petIndex, setPetIndex] = useState(0);
@@ -84,35 +83,40 @@ export default function LeftQuickNav() {
 
   const currentCard: CardRarity = CARD_RARITIES[cardIndex];
   const cardImg = `/cards/${currentCard}.jpg`;
-
   const suitImg = suits[suitIndex]?.img ?? "/suits/starter.png";
   const petImg = PETS[petIndex]?.img ?? "/pets/mouse.png";
 
   return (
-    <div className="pointer-events-auto absolute left-3 top-1/2 -translate-y-1/2 flex flex-col gap-3 z-10">
-      {/* Cards – upper */}
-      <QuickButton
-        label="Cards"
-        sublabel="All rarities"
-        onClick={() => goto("cards")}
-        previewImg={cardImg}
-      />
+    <>
+      {/* Cards – top (near top blue box) */}
+      <div className="pointer-events-auto absolute left-3 top-32 z-10">
+        <QuickButton
+          label="Cards"
+          sublabel="All rarities"
+          onClick={() => goto("cards")}
+          previewImg={cardImg}
+        />
+      </div>
 
       {/* Suits – middle */}
-      <QuickButton
-        label="Suits"
-        sublabel="Style & boosts"
-        onClick={() => goto("suits")}
-        previewImg={suitImg}
-      />
+      <div className="pointer-events-auto absolute left-3 top-60 z-10">
+        <QuickButton
+          label="Suits"
+          sublabel="Style & boosts"
+          onClick={() => goto("suits")}
+          previewImg={suitImg}
+        />
+      </div>
 
-      {/* Pets – lower */}
-      <QuickButton
-        label="Pets"
-        sublabel="Cute helpers"
-        onClick={() => goto("pets")}
-        previewImg={petImg}
-      />
-    </div>
+      {/* Pets – lower (near dragon / balance) */}
+      <div className="pointer-events-auto absolute left-3 top-[19rem] z-10">
+        <QuickButton
+          label="Pets"
+          sublabel="Cute helpers"
+          onClick={() => goto("pets")}
+          previewImg={petImg}
+        />
+      </div>
+    </>
   );
 }
