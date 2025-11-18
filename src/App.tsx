@@ -15,7 +15,7 @@ import ProfilePage from "./pages/Profile";
 import PetsPage from "./pages/Pets";
 import SuitsPage from "./pages/Suits";
 import CardsPage from "./pages/Cards";
-import WorldMapPage from "./pages/WorldMap"; // 👈 NEW: world mini-game
+import WorldMapPage from "./pages/WorldMap"; // ✅ World mini-game page
 
 // Storage / helpers
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
@@ -315,7 +315,7 @@ export default function App() {
     return () => window.removeEventListener("hashchange", applyHash);
   }, []);
 
-  // Quick nav events (Cards / Suits / Pets)
+  // Quick nav events (Cards / Suits / Pets / World)
   useEffect(() => {
     const onGoto = (e: Event) => {
       const ce = e as CustomEvent<{ goto: Tab }>;
@@ -458,25 +458,23 @@ export default function App() {
         )}
 
         {tab === "more" && (
-          <>
-            <More
-              balance={balance}
-              totalEarnings={totalEarnings}
-              taps={taps}
-              tapValue={tapValue}
-              autoPerSec={autoPerSec}
-              multi={multi}
-              achievementsState={achState}
-              onClaim={handleClaimAchievement}
-              onReset={handleReset}
-              onExport={handleExport}
-              onImport={handleImport}
-            />
-
-            {/* 👇 NEW: World map mini-game appears under the More page */}
-            <WorldMapPage balance={balance} />
-          </>
+          <More
+            balance={balance}
+            totalEarnings={totalEarnings}
+            taps={taps}
+            tapValue={tapValue}
+            autoPerSec={autoPerSec}
+            multi={multi}
+            achievementsState={achState}
+            onClaim={handleClaimAchievement}
+            onReset={handleReset}
+            onExport={handleExport}
+            onImport={handleImport}
+          />
         )}
+
+        {/* ⭐ NEW: dedicated World Map mini-game tab */}
+        {tab === "world" && <WorldMapPage balance={balance} />}
       </main>
 
       <Tabs active={tab} onChange={setTab} />
