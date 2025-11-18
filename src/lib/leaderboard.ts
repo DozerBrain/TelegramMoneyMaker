@@ -9,7 +9,10 @@ import {
   limitToLast,
 } from "firebase/database";
 import { getProfile } from "./profile";
-import { COUNTRIES, type RegionId } from "../data/countries";
+import {
+  getRegionForCountry,
+  type RegionId,
+} from "../data/countries";
 
 // ----------------- Types -----------------
 
@@ -22,47 +25,10 @@ export type LeaderRow = {
   region?: RegionId; // "NA", "EU", ...
 };
 
-// ----------------- Region helpers -----------------
+// ----------------- Small helpers -----------------
 
-function findCountry(code: string) {
-  const cc = (code || "").toUpperCase();
-  return COUNTRIES.find((c) => c.code === cc);
-}
-
-function getRegionForCountry(country: string): RegionId {
-  const c = findCountry(country);
-  return (c?.region ?? "NA") as RegionId;
-}
-
-// Map new short region codes -> old long keys we used before
-function regionToLegacyKey(region: RegionId): string {
-  switch (region) {
-    case "NA":
-      return "NorthAmerica";
-    case "SA":
-      return "SouthAmerica";
-    case "EU":
-      return "Europe";
-    case "CIS":
-      return "CIS";
-    case "MENA":
-      return "MiddleEast";
-    case "AF":
-      return "Africa";
-    case "AS":
-      return "Asia";
-    case "OC":
-      return "Oceania";
-    default:
-      return String(region);
-  }
-}
-
-// Small helper to read from a path (or empty if not exist)
-async function readNode(
-  path: string,
-  limit: number
-): Promise<LeaderRow[]> {
+// Read from a path (or empty if not exist)
+async function readNode(path: string, limit: number): Promise<LeaderRow[]> {
   const q = query(ref(db, path), orderByChild("score"), limitToLast(limit));
   const snap = await get(q);
   if (!snap.exists()) return [];
@@ -70,11 +36,9 @@ async function readNode(
 }
 
 // Merge rows from multiple paths, dedupe by uid, keep best score
-function mergeRows(
-  lists: LeaderRow[][],
-  limit: number
-): LeaderRow[] {
+function mergeRows(lists: LeaderRow[][], limit: number): LeaderRow[] {
   const byId: Record<string, LeaderRow> = {};
+
   for (const list of lists) {
     for (const r of list) {
       const key = String(r.uid);
@@ -83,6 +47,7 @@ function mergeRows(
       }
     }
   }
+
   return Object.values(byId)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
@@ -96,8 +61,7 @@ export async function submitScore(totalEarnings: number) {
   const uid = String(p.uid || "local");
   const name = p.name || p.username || "Player";
   const country = (p.country || "US").toUpperCase();
-  const region = getRegionForCountry(country); // e.g. "NA"
-  const legacyRegionKey = regionToLegacyKey(region);
+  const region = getRegionForCountry(country); // e.g. "NA", "EU", "AS"...
 
   const row: LeaderRow = {
     uid,
@@ -108,26 +72,15 @@ export async function submitScore(totalEarnings: number) {
     region,
   };
 
-  // ✅ Write to lowercase paths (new)
+  // ✅ New lowercase paths
   await set(ref(db, `leaderboard/global/${uid}`), row);
   await set(ref(db, `leaderboard/byCountry/${country}/${uid}`), row);
   await set(ref(db, `leaderboard/byRegion/${region}/${uid}`), row);
-  await set(
-    ref(db, `leaderboard/byRegion/${legacyRegionKey}/${uid}`),
-    row
-  );
 
-  // ✅ Also mirror to old capital "Leaderboard" paths (for old data / safety)
+  // ✅ Mirror into old "Leaderboard" capital paths (for safety / old clients)
   await set(ref(db, `Leaderboard/global/${uid}`), row);
   await set(ref(db, `Leaderboard/byCountry/${country}/${uid}`), row);
-  await set(
-    ref(db, `Leaderboard/byRegion/${region}/${uid}`),
-    row
-  );
-  await set(
-    ref(db, `Leaderboard/byRegion/${legacyRegionKey}/${uid}`),
-    row
-  );
+  await set(ref(db, `Leaderboard/byRegion/${region}/${uid}`), row);
 }
 
 // ----------------- Readers -----------------
@@ -144,14 +97,8 @@ export async function topByCountry(
 ): Promise<LeaderRow[]> {
   const cc = (country || "US").toUpperCase();
 
-  const lower = await readNode(
-    `leaderboard/byCountry/${cc}`,
-    limit
-  );
-  const upper = await readNode(
-    `Leaderboard/byCountry/${cc}`,
-    limit
-  );
+  const lower = await readNode(`leaderboard/byCountry/${cc}`, limit);
+  const upper = await readNode(`Leaderboard/byCountry/${cc}`, limit);
 
   return mergeRows([lower, upper], limit);
 }
@@ -160,28 +107,8 @@ export async function topByRegion(
   region: RegionId,
   limit = 50
 ): Promise<LeaderRow[]> {
-  const legacyKey = regionToLegacyKey(region);
+  const lower = await readNode(`leaderboard/byRegion/${region}`, limit);
+  const upper = await readNode(`Leaderboard/byRegion/${region}`, limit);
 
-  const lowerNew = await readNode(
-    `leaderboard/byRegion/${region}`,
-    limit
-  );
-  const lowerOld = await readNode(
-    `leaderboard/byRegion/${legacyKey}`,
-    limit
-  );
-
-  const upperNew = await readNode(
-    `Leaderboard/byRegion/${region}`,
-    limit
-  );
-  const upperOld = await readNode(
-    `Leaderboard/byRegion/${legacyKey}`,
-    limit
-  );
-
-  return mergeRows(
-    [lowerNew, lowerOld, upperNew, upperOld],
-    limit
-  );
+  return mergeRows([lower, upper], limit);
 }
