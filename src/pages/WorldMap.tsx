@@ -36,8 +36,8 @@ function codeToFlag(code: string): string {
 }
 
 /**
- * Very simple cost formula per country.
- * You can tweak this later.
+ * Simple cost formula per country.
+ * You can tweak these numbers later.
  */
 function costForCountry(code: string): number {
   const region = regionOfCountry(code);
@@ -46,8 +46,6 @@ function costForCountry(code: string): number {
       return 50_000;
     case "EU":
       return 75_000;
-    case "CIS":
-      return 60_000;
     case "SA":
       return 40_000;
     case "MENA":
@@ -65,19 +63,18 @@ function costForCountry(code: string): number {
 
 /**
  * APS bonus and coupon bonus for a single country.
- * Very simple for now: richer regions give a bit more.
  * - apsBonus = flat +APS
- * - couponBonus = +X (we'll interpret as +0.05 => +5% later)
+ * - couponBonus = +X (we interpret as +0.05 => +5% later)
  */
-function countryBonuses(code: string): { apsBonus: number; couponBonus: number } {
+function countryBonuses(
+  code: string
+): { apsBonus: number; couponBonus: number } {
   const region = regionOfCountry(code);
   switch (region) {
     case "NA":
-      return { apsBonus: 1, couponBonus: 0.05 };
+      return { apsBonus: 1.0, couponBonus: 0.05 };
     case "EU":
       return { apsBonus: 1.3, couponBonus: 0.06 };
-    case "CIS":
-      return { apsBonus: 1.1, couponBonus: 0.05 };
     case "SA":
       return { apsBonus: 0.9, couponBonus: 0.045 };
     case "MENA":
@@ -89,23 +86,22 @@ function countryBonuses(code: string): { apsBonus: number; couponBonus: number }
     case "OC":
       return { apsBonus: 1.0, couponBonus: 0.05 };
     default:
-      return { apsBonus: 1, couponBonus: 0.05 };
+      return { apsBonus: 1.0, couponBonus: 0.05 };
   }
 }
 
 /**
  * Region graph: which regions unlock next once you finish one.
- * This is the "close by region" logic.
+ * This is the "close by region" logic with your 7 servers only.
  */
 const REGION_NEIGHBORS: Record<RegionId, RegionId[]> = {
   NA: ["SA", "EU"],
   SA: ["NA", "AF"],
-  EU: ["NA", "CIS", "MENA", "AF"],
-  CIS: ["EU", "AS", "MENA"],
-  MENA: ["EU", "CIS", "AF"],
-  AF: ["SA", "EU", "MENA"],
-  AS: ["CIS", "OC"],
+  EU: ["NA", "MENA", "AF", "AS"],
+  AS: ["EU", "OC", "MENA"],
   OC: ["AS"],
+  MENA: ["EU", "AF", "AS"],
+  AF: ["SA", "EU", "MENA"],
 };
 
 // localStorage key for this mini-game
@@ -123,17 +119,32 @@ function loadWorldSave(homeCountry: string, homeRegion: RegionId): WorldSave {
     }
     const parsed = JSON.parse(raw) as Partial<WorldSave>;
     return {
-      owned: Array.isArray(parsed.owned) && parsed.owned.length > 0
-        ? parsed.owned.map(String)
-        : [homeCountry],
+      owned:
+        Array.isArray(parsed.owned) && parsed.owned.length > 0
+          ? parsed.owned.map(String)
+          : [homeCountry],
       unlockedRegions:
-        Array.isArray(parsed.unlockedRegions) && parsed.unlockedRegions.length > 0
+        Array.isArray(parsed.unlockedRegions) &&
+        parsed.unlockedRegions.length > 0
           ? (parsed.unlockedRegions as RegionId[])
           : [homeRegion],
     };
   } catch {
     return { owned: [homeCountry], unlockedRegions: [homeRegion] };
   }
+}
+
+function computeTotals(owned: string[]) {
+  let apsBonusTotal = 0;
+  let couponBonusTotal = 0;
+
+  for (const code of owned) {
+    const { apsBonus, couponBonus } = countryBonuses(code);
+    apsBonusTotal += apsBonus;
+    couponBonusTotal += couponBonus;
+  }
+
+  return { apsBonusTotal, couponBonusTotal };
 }
 
 function saveWorldSave(save: WorldSave) {
@@ -153,19 +164,6 @@ function saveWorldSave(save: WorldSave) {
       },
     })
   );
-}
-
-function computeTotals(owned: string[]) {
-  let apsBonusTotal = 0;
-  let couponBonusTotal = 0;
-
-  for (const code of owned) {
-    const { apsBonus, couponBonus } = countryBonuses(code);
-    apsBonusTotal += apsBonus;
-    couponBonusTotal += couponBonus;
-  }
-
-  return { apsBonusTotal, couponBonusTotal };
 }
 
 // ---------------------------------------------------------------------------
@@ -190,7 +188,8 @@ export default function WorldMapPage({ balance }: Props) {
     loadWorldSave(homeCountry, homeRegion)
   );
 
-  const [selectedRegion, setSelectedRegion] = useState<RegionId>(homeRegion);
+  const [selectedRegion, setSelectedRegion] =
+    useState<RegionId>(homeRegion);
 
   // recompute unlockedRegions when owned changes
   useEffect(() => {
@@ -205,11 +204,11 @@ export default function WorldMapPage({ balance }: Props) {
         (c) => c.region === r.id
       ).map((c) => c.code.toUpperCase());
 
+      const ownedUpper = world.owned.map((o) => o.toUpperCase());
+
       const allOwned =
         countriesInRegion.length > 0 &&
-        countriesInRegion.every((code) =>
-          world.owned.map((o) => o.toUpperCase()).includes(code)
-        );
+        countriesInRegion.every((code) => ownedUpper.includes(code));
 
       if (allOwned) {
         const neighbors = REGION_NEIGHBORS[r.id] ?? [];
@@ -222,7 +221,7 @@ export default function WorldMapPage({ balance }: Props) {
     const finalUnlocked = Array.from(nextUnlocked);
 
     if (
-      finalUnlocked.sort().join(",") !==
+      finalUnlocked.slice().sort().join(",") !==
       world.unlockedRegions.slice().sort().join(",")
     ) {
       const updated: WorldSave = {
@@ -306,7 +305,8 @@ export default function WorldMapPage({ balance }: Props) {
       {/* Fake world map block */}
       <div className="rounded-2xl bg-gradient-to-br from-zinc-900 to-black border border-white/10 p-3 mb-4">
         <div className="text-[11px] text-white/60 mb-2">
-          Tap a region to focus it. Locked regions are hidden in the fog with ?.
+          Tap a region to focus it. Locked regions are hidden in the fog with
+          ?.
         </div>
 
         <div className="grid grid-cols-2 gap-2 text-xs">
@@ -342,7 +342,12 @@ export default function WorldMapPage({ balance }: Props) {
                   {r.label}
                 </span>
                 <span className="text-[9px] text-white/60 mt-1">
-                  {COUNTRIES.filter((c) => c.region === r.id).length} countries
+                  {
+                    COUNTRIES.filter(
+                      (c) => c.region === r.id
+                    ).length
+                  }{" "}
+                  countries
                 </span>
               </button>
             );
@@ -380,9 +385,7 @@ export default function WorldMapPage({ balance }: Props) {
                 <div className="flex items-center gap-2 min-w-0">
                   <span className="text-lg">{c.flag}</span>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-sm truncate">
-                      {c.name}
-                    </span>
+                    <span className="text-sm truncate">{c.name}</span>
                     <span className="text-[10px] text-white/50">
                       {c.code} · +{apsBonus.toFixed(1)} APS · +
                       {(couponBonus * 100).toFixed(1)}% coupons
