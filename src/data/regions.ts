@@ -1,26 +1,19 @@
 // src/data/regions.ts
 
-// We only use these 7 servers now:
-import type { RegionId } from "./countries";
+import {
+  type RegionId,
+  REGION_LABELS,
+  REGION_LIST,
+  getRegionForCountry as getRegionForCountryFromCountries,
+} from "./countries";
 
-// Human-readable labels
-export const REGION_LABELS: Record<RegionId, string> = {
-  NA: "North America",
-  SA: "South America",
-  EU: "Europe",
-  AS: "Asia",
-  OC: "Oceania",
-  MENA: "Middle East",
-  AF: "Africa",
-};
+// Re-export RegionId so other files can import from here
+export type { RegionId } from "./countries";
 
-// Ordered list for UI selectors
-export const REGION_LIST: RegionId[] = [
-  "NA",
-  "SA",
-  "EU",
-  "AS",
-  "OC",
-  "MENA",
-  "AF",
-];
+// Re-export region labels and list from countries.ts
+export { REGION_LABELS, REGION_LIST };
+
+// Single canonical helper: country -> region/server
+export function getRegionForCountry(code: string): RegionId {
+  return getRegionForCountryFromCountries(code);
+}
