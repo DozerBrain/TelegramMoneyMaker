@@ -117,10 +117,10 @@ export default function Home({
     [equippedPetId]
   );
 
-  // 👇 Mini games / World Map opener
-  function openWorldMap() {
+  // 👇 Mini games / World Map opener → now goes to "games"
+  function openGames() {
     window.dispatchEvent(
-      new CustomEvent("MM_GOTO", { detail: { goto: "world" } })
+      new CustomEvent("MM_GOTO", { detail: { goto: "games" } })
     );
   }
 
@@ -130,14 +130,14 @@ export default function Home({
 
       <div className="mt-2 flex items-center justify-center">
         <div className="relative">
-          {/* 👇 GAMES button – top right of mascot */}
+          {/* 👇 Mini games button – top right of mascot */}
           <button
-            onClick={openWorldMap}
+            onClick={openGames}
             className="absolute -top-2 -right-2 px-3 py-1 rounded-full bg-emerald-600 text-[10px] sm:text-[11px] font-semibold shadow-lg shadow-emerald-500/30 border border-emerald-300/60 flex items-center gap-1"
           >
-            🎮 GAMES
+            🎮 Mini games
             <span className="hidden sm:inline text-[10px] text-emerald-100">
-              World Map & mini games
+              Conquer the World 🌎
             </span>
           </button>
 
