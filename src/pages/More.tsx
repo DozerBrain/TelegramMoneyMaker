@@ -1,8 +1,6 @@
-// src/pages/More.tsx
+// src/pages/More.tsx  (Inventory)
 import React, { useState } from "react";
-import { formatMoneyShort } from "../lib/format";
-
-type AchState = Record<string, { done: boolean; claimed: boolean }>;
+import LeftQuickNav from "../components/LeftQuickNav";
 
 type Props = {
   balance: number;
@@ -11,8 +9,11 @@ type Props = {
   tapValue: number;
   autoPerSec: number;
   multi: number;
-  achievementsState: AchState;
+
+  // still passed from App but not used here now
+  achievementsState: Record<string, { done: boolean; claimed: boolean }>;
   onClaim: (id: string, reward: number) => void;
+
   onReset: () => void;
   onExport: () => void;
   onImport: (raw: string) => void;
@@ -25,146 +26,81 @@ export default function More({
   tapValue,
   autoPerSec,
   multi,
-  achievementsState,
-  onClaim,
   onReset,
   onExport,
   onImport,
 }: Props) {
   const [importText, setImportText] = useState("");
-  const [importError, setImportError] = useState("");
-
-  function niceId(id: string) {
-    return id
-      .replace(/[_-]+/g, " ")
-      .replace(/\b\w/g, (c) => c.toUpperCase());
-  }
-
-  function claim(id: string) {
-    const reward = 100;
-    onClaim(id, reward);
-  }
-
-  function handleImport() {
-    setImportError("");
-    if (!importText.trim()) return;
-    try {
-      JSON.parse(importText);
-      onImport(importText.trim());
-      setImportText("");
-    } catch {
-      setImportError("Invalid JSON. Paste your exact save string.");
-    }
-  }
 
   return (
-    <div className="p-4 space-y-6 text-white">
-      {/* Stats */}
-      <section className="space-y-1">
-        <h2 className="text-lg font-bold">Your Stats</h2>
-        <div className="text-sm opacity-80">
-          Balance:{" "}
-          <b className="text-emerald-300">
-            ${formatMoneyShort(balance)}
-          </b>
-        </div>
-        <div className="text-sm opacity-80">
-          Total Earned:{" "}
-          <b className="text-emerald-300">
-            ${formatMoneyShort(totalEarnings)}
-          </b>
-        </div>
-        <div className="text-sm opacity-80">
-          Taps: <b>{formatMoneyShort(taps)}</b>
-        </div>
-        <div className="text-sm opacity-80">
-          Tap Value: <b>{formatMoneyShort(tapValue)}</b> • Multiplier:
-<b>{formatMoneyShort(multi)}x</b>
-        </div>
-        <div className="text-sm opacity-80">
-          Auto/sec: <b>{formatMoneyShort(autoPerSec)}</b>
-        </div>
-      </section>
+    <div className="w-full h-full flex flex-col items-center pt-3 pb-24 px-4 text-white">
+      {/* 🔹 Inventory header row: Cards / Suits / Pets */}
+      <LeftQuickNav />
 
-      {/* Achievements */}
-      <section className="space-y-2">
-        <h2 className="text-lg font-bold">Achievements</h2>
-        {Object.keys(achievementsState).length === 0 ? (
-          <div className="text-sm opacity-70">
-            No achievements yet — keep tapping! 💪
-          </div>
-        ) : (
-          <div className="space-y-2">
-            {Object.entries(achievementsState).map(([id, st]) => (
-              <div
-                key={id}
-                className="flex items-center justify-between bg-white/5 rounded-xl px-3 py-2"
-              >
-                <div className="text-sm">
-                  <div className="font-semibold">{niceId(id)}</div>
-                  <div className="opacity-70">
-                    {st.done ? "Completed" : "In progress"}
-                  </div>
-                </div>
-                <button
-                  disabled={!st.done || st.claimed}
-                  onClick={() => claim(id)}
-                  className={`px-3 py-2 rounded-lg text-sm font-semibold transition
-                    ${
-                      st.done && !st.claimed
-                        ? "bg-emerald-600 hover:bg-emerald-500"
-                        : "bg-white/10 opacity-60"
-                    }`}
-                >
-                  {st.claimed ? "Claimed" : "Claim +100"}
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </section>
+      {/* Small summary */}
+      <div className="mt-4 w-full max-w-md space-y-2 text-sm text-white/80">
+        <div className="flex justify-between bg-zinc-900/70 rounded-xl px-3 py-2">
+          <span className="text-white/60">Balance</span>
+          <span>${balance.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between bg-zinc-900/70 rounded-xl px-3 py-2">
+          <span className="text-white/60">Total earned</span>
+          <span>${totalEarnings.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between bg-zinc-900/70 rounded-xl px-3 py-2">
+          <span className="text-white/60">Total taps</span>
+          <span>{taps.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between bg-zinc-900/70 rounded-xl px-3 py-2">
+          <span className="text-white/60">Tap value</span>
+          <span>${tapValue.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between bg-zinc-900/70 rounded-xl px-3 py-2">
+          <span className="text-white/60">Auto per second</span>
+          <span>${autoPerSec.toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between bg-zinc-900/70 rounded-xl px-3 py-2">
+          <span className="text-white/60">Multiplier</span>
+          <span>x{multi.toFixed(2)}</span>
+        </div>
+      </div>
 
-      {/* Save & Import/Export */}
-      <section className="space-y-3">
-        <h2 className="text-lg font-bold">Save Management</h2>
-        <div className="grid grid-cols-2 gap-2">
+      {/* Save tools */}
+      <div className="mt-5 w-full max-w-md">
+        <div className="flex gap-3 mb-3">
           <button
             onClick={onExport}
-            className="rounded-xl py-3 bg-white/10 hover:bg-white/20 font-semibold"
+            className="flex-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold py-2.5"
           >
-            📤 Export Save
+            Export save
           </button>
           <button
             onClick={onReset}
-            className="rounded-xl py-3 bg-white/10 hover:bg-white/20 font-semibold"
+            className="flex-1 rounded-xl bg-red-600/80 hover:bg-red-500 text-sm font-semibold py-2.5"
           >
-            ♻️ Reset Progress
+            Reset progress
           </button>
         </div>
 
-        <div>
-          <textarea
-            value={importText}
-            onChange={(e) => setImportText(e.target.value)}
-            placeholder="Paste your save JSON here"
-            className="w-full h-28 rounded-xl bg-black/40 border border-white/10 p-3"
-          />
-          <div className="flex gap-2 mt-2">
-            <button
-              onClick={handleImport}
-              className="rounded-xl px-4 py-2 bg-emerald-600 hover:bg-emerald-500 font-semibold"
-            >
-              Import
-            </button>
-            {importError && (
-              <div className="text-sm text-red-400">{importError}</div>
-            )}
-          </div>
-          <div className="text-xs opacity-60 mt-1">
-            Tip: Export on one device and paste here to continue on another.
-          </div>
+        <div className="text-xs text-white/60 mb-1">
+          Import save (paste JSON and tap Import):
         </div>
-      </section>
+        <textarea
+          className="w-full h-24 rounded-xl bg-zinc-900/80 border border-white/10 px-3 py-2 text-xs outline-none focus:border-emerald-500"
+          value={importText}
+          onChange={(e) => setImportText(e.target.value)}
+          placeholder="{ ... }"
+        />
+        <button
+          onClick={() => {
+            if (!importText.trim()) return;
+            onImport(importText);
+          }}
+          className="mt-2 w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm font-semibold py-2.5"
+        >
+          Import save
+        </button>
+      </div>
     </div>
   );
 }
