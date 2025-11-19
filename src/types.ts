@@ -1,16 +1,15 @@
 // src/types.ts
 export type Tab =
   | "home"
-  | "shop"
   | "missions"
+  | "games"
+  | "shop"
+  | "inventory"
   | "leaderboard"
   | "profile"
-  | "inventory"
   | "cards"
   | "suits"
-  | "pets"
-  | "games"
-  | "world";
+  | "pets";
 
 export type Suit = {
   id: string;
