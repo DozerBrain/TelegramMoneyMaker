@@ -1,9 +1,9 @@
-// src/App.tsx
 import React, { useEffect, useMemo, useState } from "react";
 
 // UI
 import TopBar from "./components/TopBar";
 import Tabs from "./components/Tabs";
+import AppBackground from "./components/AppBackground"; // 👈 NEW
 
 // Pages
 import Home from "./pages/Home";
@@ -32,8 +32,6 @@ import {
   computeSuitMult,
   computePetMultipliers,
   TAPS_PER_COUPON,
-  computeEffectiveTapsPerCoupon,
-  computeAutoIncomePerSecond,
 } from "./incomeMath";
 
 // Types
@@ -131,10 +129,6 @@ export default function App() {
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
 
-  // 🌍 World Map bonuses (from MM_MAP_BONUS events)
-  const [mapApsBonus, setMapApsBonus] = useState<number>(0);
-  const [mapCouponBonus, setMapCouponBonus] = useState<number>(0);
-
   // Telegram init
   useEffect(() => {
     initTelegramUI();
@@ -169,25 +163,6 @@ export default function App() {
     };
   }, []);
 
-  // Listen to World Map bonus events
-  useEffect(() => {
-    const handler = (e: Event) => {
-      const ce = e as CustomEvent<{
-        apsBonus: number;
-        couponBonus: number;
-      }>;
-      const detail = ce.detail;
-      if (!detail) return;
-
-      setMapApsBonus(detail.apsBonus ?? 0);
-      setMapCouponBonus(detail.couponBonus ?? 0);
-    };
-
-    window.addEventListener("MM_MAP_BONUS", handler as EventListener);
-    return () =>
-      window.removeEventListener("MM_MAP_BONUS", handler as EventListener);
-  }, []);
-
   // Multipliers
   const suitMult = useMemo(
     () => computeSuitMult(equippedSuitId),
@@ -199,39 +174,34 @@ export default function App() {
   );
   const cardMultAll = useMemo(() => computeCardMultAll(cards), [cards]);
 
-  // Coupons – with coupon generator bonus + world coupon bonus
+  // Coupons – with coupon generator bonus
   const effectiveTapsPerCoupon = useMemo(
-    () =>
-      computeEffectiveTapsPerCoupon(couponBoostLevel, {
-        apsBonus: mapApsBonus,
-        couponBonus: mapCouponBonus,
-      }),
-    [couponBoostLevel, mapApsBonus, mapCouponBonus]
+    () => TAPS_PER_COUPON / (1 + couponBoostLevel * 0.1),
+    [couponBoostLevel]
   );
-
   const couponsEarned = useMemo(
     () => Math.floor(taps / effectiveTapsPerCoupon),
     [taps, effectiveTapsPerCoupon]
   );
   const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
 
-  // Auto income (includes autoBonusMult + world APS bonus now)
+  // Auto income (includes autoBonusMult now)
   useInterval(() => {
-    // If no auto and no map bonus, skip
-    if (autoPerSec <= 0 && mapApsBonus <= 0) return;
+    if (autoPerSec <= 0) return;
 
-    const incomePerSecond = computeAutoIncomePerSecond({
-      baseAutoPerSec: autoPerSec,
-      worldApsBonus: mapApsBonus,
-      multi,
-      autoBonusMult,
-      suitMult,
-      petAutoMult,
-      cardMultAll,
-      globalMult,
-    });
+    const gain = Math.max(
+      0,
+      Math.floor(
+        autoPerSec *
+          multi *
+          autoBonusMult *
+          suitMult *
+          petAutoMult *
+          cardMultAll *
+          globalMult
+      )
+    );
 
-    const gain = Math.max(0, Math.floor(incomePerSecond));
     if (gain > 0) {
       setBalance((b) => b + gain);
       setTotalEarnings((t) => t + gain);
@@ -405,109 +375,115 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#0b0f13]">
-      <TopBar taps={taps} tapValue={tapValue} autoPerSec={autoPerSec} />
+    <div className="min-h-screen flex flex-col relative overflow-hidden bg-black">
+      {/* Premium animated background behind everything */}
+      <AppBackground />
 
-      <main className="flex-1">
-        {tab === "home" && (
-          <Home
-            balance={balance}
-            setBalance={setBalance}
-            totalEarnings={totalEarnings}
-            setTotalEarnings={setTotalEarnings}
-            taps={taps}
-            setTaps={setTaps}
-            tapValue={tapValue}
-            multi={multi}
-            currentSuitName={bestSuitName}
-            setCurrentSuitName={setBestSuitName}
-            suitMult={suitMult}
-            petTapMult={petTapMult}
-            cardMultAll={cardMultAll}
-            globalMult={globalMult}
-            equippedPetId={equippedPetId}
-            critChance={critChance}
-            critMult={critMult}
-          />
-        )}
+      {/* Foreground app content */}
+      <div className="relative z-10 flex flex-col min-h-screen">
+        <TopBar taps={taps} tapValue={tapValue} autoPerSec={autoPerSec} />
 
-        {tab === "shop" && (
-          <Shop
-            balance={balance}
-            setBalance={setBalance}
-            tapValue={tapValue}
-            setTapValue={setTapValue}
-            autoPerSec={autoPerSec}
-            setAutoPerSec={setAutoPerSec}
-            multi={multi}
-            setMulti={setMulti}
-            critChance={critChance}
-            setCritChance={setCritChance}
-            critMult={critMult}
-            setCritMult={setCritMult}
-            autoBonusMult={autoBonusMult}
-            setAutoBonusMult={setAutoBonusMult}
-            couponBoostLevel={couponBoostLevel}
-            setCouponBoostLevel={setCouponBoostLevel}
-            bulkDiscountLevel={bulkDiscountLevel}
-            setBulkDiscountLevel={setBulkDiscountLevel}
-          />
-        )}
+        <main className="flex-1">
+          {tab === "home" && (
+            <Home
+              balance={balance}
+              setBalance={setBalance}
+              totalEarnings={totalEarnings}
+              setTotalEarnings={setTotalEarnings}
+              taps={taps}
+              setTaps={setTaps}
+              tapValue={tapValue}
+              multi={multi}
+              currentSuitName={bestSuitName}
+              setCurrentSuitName={setBestSuitName}
+              suitMult={suitMult}
+              petTapMult={petTapMult}
+              cardMultAll={cardMultAll}
+              globalMult={globalMult}
+              equippedPetId={equippedPetId}
+              critChance={critChance}
+              critMult={critMult}
+            />
+          )}
 
-        {tab === "spin" && (
-          <Spin
-            balance={balance}
-            setBalance={setBalance}
-            tapValue={tapValue}
-            setTapValue={setTapValue}
-            autoPerSec={autoPerSec}
-            setAutoPerSec={setAutoPerSec}
-            multi={multi}
-            setMulti={setMulti}
-            spinCooldownEndsAt={spinCooldownEndsAt}
-            setSpinCooldownEndsAt={setSpinCooldownEndsAt}
-          />
-        )}
+          {tab === "shop" && (
+            <Shop
+              balance={balance}
+              setBalance={setBalance}
+              tapValue={tapValue}
+              setTapValue={setTapValue}
+              autoPerSec={autoPerSec}
+              setAutoPerSec={setAutoPerSec}
+              multi={multi}
+              setMulti={setMulti}
+              critChance={critChance}
+              setCritChance={setCritChance}
+              critMult={critMult}
+              setCritMult={setCritMult}
+              autoBonusMult={autoBonusMult}
+              setAutoBonusMult={setAutoBonusMult}
+              couponBoostLevel={couponBoostLevel}
+              setCouponBoostLevel={setCouponBoostLevel}
+              bulkDiscountLevel={bulkDiscountLevel}
+              setBulkDiscountLevel={setBulkDiscountLevel}
+            />
+          )}
 
-        {tab === "leaderboard" && <LeaderboardPage />}
-        {tab === "profile" && <ProfilePage />}
-        {tab === "suits" && <SuitsPage balance={balance} />}
-        {tab === "pets" && <PetsPage />}
+          {tab === "spin" && (
+            <Spin
+              balance={balance}
+              setBalance={setBalance}
+              tapValue={tapValue}
+              setTapValue={setTapValue}
+              autoPerSec={autoPerSec}
+              setAutoPerSec={setAutoPerSec}
+              multi={multi}
+              setMulti={setMulti}
+              spinCooldownEndsAt={spinCooldownEndsAt}
+              setSpinCooldownEndsAt={setSpinCooldownEndsAt}
+            />
+          )}
 
-        {tab === "cards" && (
-          <CardsPage
-            taps={taps}
-            cards={cards}
-            setCards={setCards}
-            couponsAvailable={couponsAvailable}
-            couponsSpent={couponsSpent}
-            setCouponsSpent={setCouponsSpent}
-            tapsPerCoupon={TAPS_PER_COUPON}
-            bulkDiscountLevel={bulkDiscountLevel}
-          />
-        )}
+          {tab === "leaderboard" && <LeaderboardPage />}
+          {tab === "profile" && <ProfilePage />}
+          {tab === "suits" && <SuitsPage balance={balance} />}
+          {tab === "pets" && <PetsPage />}
 
-        {tab === "more" && (
-          <More
-            balance={balance}
-            totalEarnings={totalEarnings}
-            taps={taps}
-            tapValue={tapValue}
-            autoPerSec={autoPerSec}
-            multi={multi}
-            achievementsState={achState}
-            onClaim={handleClaimAchievement}
-            onReset={handleReset}
-            onExport={handleExport}
-            onImport={handleImport}
-          />
-        )}
+          {tab === "cards" && (
+            <CardsPage
+              taps={taps}
+              cards={cards}
+              setCards={setCards}
+              couponsAvailable={couponsAvailable}
+              couponsSpent={couponsSpent}
+              setCouponsSpent={setCouponsSpent}
+              tapsPerCoupon={TAPS_PER_COUPON}
+              bulkDiscountLevel={bulkDiscountLevel}
+            />
+          )}
 
-        {/* ⭐ dedicated World Map mini-game tab */}
-        {tab === "world" && <WorldMapPage balance={balance} />}
-      </main>
+          {tab === "more" && (
+            <More
+              balance={balance}
+              totalEarnings={totalEarnings}
+              taps={taps}
+              tapValue={tapValue}
+              autoPerSec={autoPerSec}
+              multi={multi}
+              achievementsState={achState}
+              onClaim={handleClaimAchievement}
+              onReset={handleReset}
+              onExport={handleExport}
+              onImport={handleImport}
+            />
+          )}
 
-      <Tabs active={tab} onChange={setTab} />
+          {/* ⭐ World Map mini-game tab */}
+          {tab === "world" && <WorldMapPage balance={balance} />}
+        </main>
+
+        <Tabs active={tab} onChange={setTab} />
+      </div>
     </div>
   );
 }
