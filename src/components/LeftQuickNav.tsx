@@ -22,7 +22,6 @@ function goto(tab: "cards" | "suits" | "pets") {
 }
 
 // ---------- generic square button ----------
-
 type SquareButtonProps = {
   title: string;
   onClick: () => void;
@@ -43,14 +42,12 @@ function SquareButton({ title, onClick, preview }: SquareButtonProps) {
         active:scale-[0.96] transition-transform
       "
     >
-      {/* preview area */}
       <div className="flex-1 flex items-center justify-center pt-2">
         <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-2xl overflow-hidden">
           {preview}
         </div>
       </div>
 
-      {/* title */}
       <div className="w-full pb-1 pt-0.5 flex items-center justify-center">
         <span className="text-[11px] sm:text-[12px] font-semibold text-white/95 text-center">
           {title}
@@ -62,11 +59,7 @@ function SquareButton({ title, onClick, preview }: SquareButtonProps) {
 
 // ---------------------------------------------------------------------
 
-type LeftQuickNavProps = {
-  variant?: "home" | "inventory";
-};
-
-export default function LeftQuickNav({ variant = "home" }: LeftQuickNavProps) {
+export default function LeftQuickNav() {
   const [cardIndex, setCardIndex] = useState(0);
   const [suitIndex, setSuitIndex] = useState(0);
   const [petIndex, setPetIndex] = useState(0);
@@ -102,7 +95,6 @@ export default function LeftQuickNav({ variant = "home" }: LeftQuickNavProps) {
 
   const currentCard: CardRarity = CARD_RARITIES[cardIndex];
 
-  // Card preview – from /public/cards
   const cardPreview = (
     <picture>
       <source srcSet={`/cards/${currentCard}.png`} />
@@ -135,60 +127,26 @@ export default function LeftQuickNav({ variant = "home" }: LeftQuickNavProps) {
     />
   );
 
-  if (variant === "inventory") {
-    // 🔹 Top row in Inventory tab
-    return (
-      <div className="w-full pt-4 pb-2 flex flex-col items-center">
-        <div className="flex gap-3 sm:gap-4">
-          <SquareButton
-            title="Cards"
-            onClick={() => goto("cards")}
-            preview={cardPreview}
-          />
-          <SquareButton
-            title="Suits"
-            onClick={() => goto("suits")}
-            preview={suitPreview}
-          />
-          <SquareButton
-            title="Pets"
-            onClick={() => goto("pets")}
-            preview={petPreview}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // 🔹 Original left-side stacked layout (Home)
+  // 🔹 Horizontal row for INVENTORY tab
   return (
-    <>
-      {/* Cards – upper */}
-      <div className="pointer-events-auto absolute left-6 top-28 sm:left-8 sm:top-28 z-10">
+    <div className="w-full flex justify-center">
+      <div className="flex gap-3 sm:gap-4">
         <SquareButton
           title="Cards"
           onClick={() => goto("cards")}
           preview={cardPreview}
         />
-      </div>
-
-      {/* Suits – middle */}
-      <div className="pointer-events-auto absolute left-6 top-[12.5rem] sm:left-8 sm:top-[12.5rem] z-10">
         <SquareButton
           title="Suits"
           onClick={() => goto("suits")}
           preview={suitPreview}
         />
-      </div>
-
-      {/* Pets – lower */}
-      <div className="pointer-events-auto absolute left-6 top-[18rem] sm:left-8 sm:top-[18rem] z-10">
         <SquareButton
           title="Pets"
           onClick={() => goto("pets")}
           preview={petPreview}
         />
       </div>
-    </>
+    </div>
   );
 }
