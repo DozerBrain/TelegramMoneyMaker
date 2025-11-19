@@ -41,7 +41,7 @@ export default function ProfilePage({
     let nextUid = p.uid || "";
     let nextAvatar = p.avatarUrl as string | undefined;
 
-    // Try to override with Telegram debug info (finalUid, finalName, etc.)
+    // Try to override with Telegram debug info
     try {
       const raw = localStorage.getItem("mm_tg_debug");
       if (raw) {
@@ -54,7 +54,6 @@ export default function ProfilePage({
           if (dbg.finalName) nextName = String(dbg.finalName);
           if (dbg.finalCountry) nextCountry = String(dbg.finalCountry);
 
-          // if we don't already have avatar in profile, try extract from userJson
           if (!nextAvatar && dbg.userJson) {
             try {
               const u = JSON.parse(dbg.userJson);
@@ -78,10 +77,8 @@ export default function ProfilePage({
   }, []);
 
   function handleSave() {
-    // Only allow editing name + country manually
     setProfile({ name, country });
 
-    // Re-read profile after save (in case something else changed)
     const p = getProfile();
     setUid(p.uid);
     setAvatarUrl(p.avatarUrl);
@@ -126,9 +123,7 @@ export default function ProfilePage({
       </div>
 
       {/* Editable fields */}
-      <label className="block text-sm mb-1 text-white/70">
-        Display name
-      </label>
+      <label className="block text-sm mb-1 text-white/70">Display name</label>
       <input
         className="w-full mb-4 rounded-xl bg-zinc-900/80 border border-white/10 px-3 py-2 text-sm outline-none focus:border-emerald-500"
         value={name}
@@ -165,9 +160,7 @@ export default function ProfilePage({
 
       {/* ===== MIDDLE: CORE STATS ===== */}
       <div className="mb-6">
-        <h2 className="text-sm font-semibold text-white/80 mb-2">
-          Stats
-        </h2>
+        <h2 className="text-sm font-semibold text-white/80 mb-2">Stats</h2>
         <div className="grid grid-cols-2 gap-2 text-xs">
           <div className="rounded-xl bg-zinc-900/70 border border-white/10 p-3">
             <div className="text-white/50 mb-1">Balance</div>
@@ -176,7 +169,7 @@ export default function ProfilePage({
             </div>
           </div>
 
-          <div className="rounded-xl bg-zinc-900/70 border border-white/10 p-3">
+          <div className="rounded-xl bg-zinc-900/70 border border.white/10 p-3">
             <div className="text-white/50 mb-1">Total earned</div>
             <div className="text-emerald-300 font-semibold">
               ${formatMoneyShort(totalEarnings)}
@@ -197,9 +190,7 @@ export default function ProfilePage({
 
           <div className="rounded-xl bg-zinc-900/70 border border-white/10 p-3">
             <div className="text-white/50 mb-1">Auto income</div>
-            <div className="text-emerald-200 font-semibold">
-              {autoPerSec}/s
-            </div>
+            <div className="text-emerald-200 font-semibold">{autoPerSec}/s</div>
           </div>
 
           <div className="rounded-xl bg-zinc-900/70 border border-white/10 p-3">
@@ -253,11 +244,7 @@ export default function ProfilePage({
                         : "bg-zinc-800 text-white/50"
                     }`}
                   >
-                    {isClaimed
-                      ? "CLAIMED"
-                      : isDone
-                      ? "READY"
-                      : "LOCKED"}
+                    {isClaimed ? "CLAIMED" : isDone ? "READY" : "LOCKED"}
                   </span>
 
                   <button
@@ -278,7 +265,7 @@ export default function ProfilePage({
         </div>
       </div>
 
-      {/* Telegram debug info (kept at very bottom) */}
+      {/* Telegram debug info */}
       <div className="mt-6 text-xs text-white/40 break-all">
         <div className="font-semibold mb-1">Telegram debug:</div>
         <pre className="whitespace-pre-wrap break-all text-[10px]">
