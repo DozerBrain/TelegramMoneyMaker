@@ -8,18 +8,12 @@ type TabsProps = {
 };
 
 // Bottom nav: HOME | MISSIONS | GAMES | SHOP | INVENTORY
-// We keep the same internal tab ids so App.tsx logic still works:
-// - "home"   -> Home page
-// - "spin"   -> Missions (Spin page for now)
-// - "world"  -> Games (World Map mini-games)
-// - "shop"   -> Shop
-// - "more"   -> Inventory (old More page for now)
 const MAIN_TABS: { id: Tab; label: string }[] = [
   { id: "home", label: "HOME" },
-  { id: "spin", label: "MISSIONS" },
-  { id: "world", label: "GAMES" },
+  { id: "missions", label: "MISSIONS" },
+  { id: "games", label: "GAMES" },
   { id: "shop", label: "SHOP" },
-  { id: "more", label: "INVENTORY" },
+  { id: "inventory", label: "INVENTORY" },
 ];
 
 export default function Tabs({ active, onChange }: TabsProps) {
