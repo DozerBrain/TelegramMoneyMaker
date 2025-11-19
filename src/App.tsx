@@ -1,9 +1,10 @@
+// src/App.tsx
 import React, { useEffect, useMemo, useState } from "react";
 
 // UI
 import TopBar from "./components/TopBar";
 import Tabs from "./components/Tabs";
-import AppBackground from "./components/AppBackground"; // 👈 NEW
+import AppBackground from "./components/AppBackground";
 
 // Pages
 import Home from "./pages/Home";
@@ -15,7 +16,7 @@ import ProfilePage from "./pages/Profile";
 import PetsPage from "./pages/Pets";
 import SuitsPage from "./pages/Suits";
 import CardsPage from "./pages/Cards";
-import WorldMapPage from "./pages/WorldMap"; // ✅ World mini-game page
+import WorldMapPage from "./pages/WorldMap";
 
 // Storage / helpers
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
@@ -108,7 +109,7 @@ export default function App() {
     initial.equippedPet ?? null
   );
 
-  // Spin
+  // Missions (spin)
   const [spinCooldownEndsAt, setSpinCooldownEndsAt] = useState<number | null>(
     initial.spinCooldownEndsAt ?? null
   );
@@ -278,7 +279,7 @@ export default function App() {
       collection,
       couponsSpent,
 
-      // Spin & profile
+      // Missions & profile
       spinCooldownEndsAt,
       profile: prev.profile ?? defaultSave.profile,
     });
@@ -303,7 +304,7 @@ export default function App() {
     spinCooldownEndsAt,
   ]);
 
-  // Hash navigation
+  // Hash navigation for TopBar quick links
   useEffect(() => {
     const applyHash = () => {
       const h = (location.hash || "").toLowerCase();
@@ -315,7 +316,7 @@ export default function App() {
     return () => window.removeEventListener("hashchange", applyHash);
   }, []);
 
-  // Quick nav events (Cards / Suits / Pets / World)
+  // Quick nav events (Cards / Suits / Pets / Games)
   useEffect(() => {
     const onGoto = (e: Event) => {
       const ce = e as CustomEvent<{ goto: Tab }>;
@@ -327,7 +328,7 @@ export default function App() {
       window.removeEventListener("MM_GOTO", onGoto as EventListener);
   }, []);
 
-  // Handlers for More page
+  // Handlers for Inventory / export / reset
   function handleExport() {
     try {
       const snapshot = loadSave();
@@ -406,6 +407,26 @@ export default function App() {
             />
           )}
 
+          {/* MISSIONS (uses Spin page logic for now) */}
+          {tab === "missions" && (
+            <Spin
+              balance={balance}
+              setBalance={setBalance}
+              tapValue={tapValue}
+              setTapValue={setTapValue}
+              autoPerSec={autoPerSec}
+              setAutoPerSec={setAutoPerSec}
+              multi={multi}
+              setMulti={setMulti}
+              spinCooldownEndsAt={spinCooldownEndsAt}
+              setSpinCooldownEndsAt={setSpinCooldownEndsAt}
+            />
+          )}
+
+          {/* GAMES → World Map mini-games */}
+          {tab === "games" && <WorldMapPage balance={balance} />}
+
+          {/* SHOP */}
           {tab === "shop" && (
             <Shop
               balance={balance}
@@ -429,40 +450,8 @@ export default function App() {
             />
           )}
 
-          {tab === "spin" && (
-            <Spin
-              balance={balance}
-              setBalance={setBalance}
-              tapValue={tapValue}
-              setTapValue={setTapValue}
-              autoPerSec={autoPerSec}
-              setAutoPerSec={setAutoPerSec}
-              multi={multi}
-              setMulti={setMulti}
-              spinCooldownEndsAt={spinCooldownEndsAt}
-              setSpinCooldownEndsAt={setSpinCooldownEndsAt}
-            />
-          )}
-
-          {tab === "leaderboard" && <LeaderboardPage />}
-          {tab === "profile" && <ProfilePage />}
-          {tab === "suits" && <SuitsPage balance={balance} />}
-          {tab === "pets" && <PetsPage />}
-
-          {tab === "cards" && (
-            <CardsPage
-              taps={taps}
-              cards={cards}
-              setCards={setCards}
-              couponsAvailable={couponsAvailable}
-              couponsSpent={couponsSpent}
-              setCouponsSpent={setCouponsSpent}
-              tapsPerCoupon={TAPS_PER_COUPON}
-              bulkDiscountLevel={bulkDiscountLevel}
-            />
-          )}
-
-          {tab === "more" && (
+          {/* INVENTORY – placeholder using More page for now */}
+          {tab === "inventory" && (
             <More
               balance={balance}
               totalEarnings={totalEarnings}
@@ -478,8 +467,26 @@ export default function App() {
             />
           )}
 
-          {/* ⭐ World Map mini-game tab */}
-          {tab === "world" && <WorldMapPage balance={balance} />}
+          {/* TopBar-only pages (no bottom tab) */}
+          {tab === "leaderboard" && <LeaderboardPage />}
+          {tab === "profile" && <ProfilePage />}
+
+          {/* Dedicated sub-pages (opened from Inventory / quick nav) */}
+          {tab === "suits" && <SuitsPage balance={balance} />}
+          {tab === "pets" && <PetsPage />}
+
+          {tab === "cards" && (
+            <CardsPage
+              taps={taps}
+              cards={cards}
+              setCards={setCards}
+              couponsAvailable={couponsAvailable}
+              couponsSpent={couponsSpent}
+              setCouponsSpent={setCouponsSpent}
+              tapsPerCoupon={TAPS_PER_COUPON}
+              bulkDiscountLevel={bulkDiscountLevel}
+            />
+          )}
         </main>
 
         <Tabs active={tab} onChange={setTab} />
