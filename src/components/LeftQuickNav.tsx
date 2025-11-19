@@ -36,8 +36,7 @@ function SquareButton({ title, onClick, preview }: SquareButtonProps) {
       className="
         w-20 h-20 sm:w-24 sm:h-24
         rounded-3xl overflow-hidden
-        bg-emerald-500/5
-        backdrop-blur-sm
+        bg-[#050709]/80
         border border-emerald-400/40
         shadow-[0_0_18px_rgba(16,185,129,0.35)]
         flex flex-col items-center justify-center
@@ -51,7 +50,7 @@ function SquareButton({ title, onClick, preview }: SquareButtonProps) {
         </div>
       </div>
 
-      {/* title at bottom */}
+      {/* title */}
       <div className="w-full pb-1 pt-0.5 flex items-center justify-center">
         <span className="text-[11px] sm:text-[12px] font-semibold text-white/95 text-center">
           {title}
@@ -63,7 +62,11 @@ function SquareButton({ title, onClick, preview }: SquareButtonProps) {
 
 // ---------------------------------------------------------------------
 
-export default function LeftQuickNav() {
+type LeftQuickNavProps = {
+  variant?: "home" | "inventory";
+};
+
+export default function LeftQuickNav({ variant = "home" }: LeftQuickNavProps) {
   const [cardIndex, setCardIndex] = useState(0);
   const [suitIndex, setSuitIndex] = useState(0);
   const [petIndex, setPetIndex] = useState(0);
@@ -132,6 +135,32 @@ export default function LeftQuickNav() {
     />
   );
 
+  if (variant === "inventory") {
+    // 🔹 Top row in Inventory tab
+    return (
+      <div className="w-full pt-4 pb-2 flex flex-col items-center">
+        <div className="flex gap-3 sm:gap-4">
+          <SquareButton
+            title="Cards"
+            onClick={() => goto("cards")}
+            preview={cardPreview}
+          />
+          <SquareButton
+            title="Suits"
+            onClick={() => goto("suits")}
+            preview={suitPreview}
+          />
+          <SquareButton
+            title="Pets"
+            onClick={() => goto("pets")}
+            preview={petPreview}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // 🔹 Original left-side stacked layout (Home)
   return (
     <>
       {/* Cards – upper */}
