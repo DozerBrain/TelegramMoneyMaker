@@ -117,8 +117,8 @@ export default function Home({
     [equippedPetId]
   );
 
-  // 👇 Mini games / World Map opener → now goes to "games"
-  function openGames() {
+  // 👇 Mini games / World Map opener
+  function openWorldMap() {
     window.dispatchEvent(
       new CustomEvent("MM_GOTO", { detail: { goto: "games" } })
     );
@@ -126,13 +126,15 @@ export default function Home({
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
-      <LeftQuickNav />
+      {/* Left nav still here for now (if you want it). 
+          If you want it completely gone from Home, you can delete this line. */}
+      <LeftQuickNav variant="home" />
 
       <div className="mt-2 flex items-center justify-center">
         <div className="relative">
           {/* 👇 Mini games button – top right of mascot */}
           <button
-            onClick={openGames}
+            onClick={openWorldMap}
             className="absolute -top-2 -right-2 px-3 py-1 rounded-full bg-emerald-600 text-[10px] sm:text-[11px] font-semibold shadow-lg shadow-emerald-500/30 border border-emerald-300/60 flex items-center gap-1"
           >
             🎮 Mini games
