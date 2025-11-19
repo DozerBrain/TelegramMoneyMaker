@@ -32,6 +32,8 @@ import {
   computeSuitMult,
   computePetMultipliers,
   TAPS_PER_COUPON,
+  computeEffectiveTapsPerCoupon,
+  computeAutoIncomePerSecond,
 } from "./incomeMath";
 
 // Types
@@ -129,6 +131,10 @@ export default function App() {
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
 
+  // 🌍 World Map bonuses (from MM_MAP_BONUS events)
+  const [mapApsBonus, setMapApsBonus] = useState<number>(0);
+  const [mapCouponBonus, setMapCouponBonus] = useState<number>(0);
+
   // Telegram init
   useEffect(() => {
     initTelegramUI();
@@ -163,6 +169,25 @@ export default function App() {
     };
   }, []);
 
+  // Listen to World Map bonus events
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{
+        apsBonus: number;
+        couponBonus: number;
+      }>;
+      const detail = ce.detail;
+      if (!detail) return;
+
+      setMapApsBonus(detail.apsBonus ?? 0);
+      setMapCouponBonus(detail.couponBonus ?? 0);
+    };
+
+    window.addEventListener("MM_MAP_BONUS", handler as EventListener);
+    return () =>
+      window.removeEventListener("MM_MAP_BONUS", handler as EventListener);
+  }, []);
+
   // Multipliers
   const suitMult = useMemo(
     () => computeSuitMult(equippedSuitId),
@@ -174,34 +199,39 @@ export default function App() {
   );
   const cardMultAll = useMemo(() => computeCardMultAll(cards), [cards]);
 
-  // Coupons – with coupon generator bonus
+  // Coupons – with coupon generator bonus + world coupon bonus
   const effectiveTapsPerCoupon = useMemo(
-    () => TAPS_PER_COUPON / (1 + couponBoostLevel * 0.1),
-    [couponBoostLevel]
+    () =>
+      computeEffectiveTapsPerCoupon(couponBoostLevel, {
+        apsBonus: mapApsBonus,
+        couponBonus: mapCouponBonus,
+      }),
+    [couponBoostLevel, mapApsBonus, mapCouponBonus]
   );
+
   const couponsEarned = useMemo(
     () => Math.floor(taps / effectiveTapsPerCoupon),
     [taps, effectiveTapsPerCoupon]
   );
   const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
 
-  // Auto income (includes autoBonusMult now)
+  // Auto income (includes autoBonusMult + world APS bonus now)
   useInterval(() => {
-    if (autoPerSec <= 0) return;
+    // If no auto and no map bonus, skip
+    if (autoPerSec <= 0 && mapApsBonus <= 0) return;
 
-    const gain = Math.max(
-      0,
-      Math.floor(
-        autoPerSec *
-          multi *
-          autoBonusMult *
-          suitMult *
-          petAutoMult *
-          cardMultAll *
-          globalMult
-      )
-    );
+    const incomePerSecond = computeAutoIncomePerSecond({
+      baseAutoPerSec: autoPerSec,
+      worldApsBonus: mapApsBonus,
+      multi,
+      autoBonusMult,
+      suitMult,
+      petAutoMult,
+      cardMultAll,
+      globalMult,
+    });
 
+    const gain = Math.max(0, Math.floor(incomePerSecond));
     if (gain > 0) {
       setBalance((b) => b + gain);
       setTotalEarnings((t) => t + gain);
@@ -473,7 +503,7 @@ export default function App() {
           />
         )}
 
-        {/* ⭐ NEW: dedicated World Map mini-game tab */}
+        {/* ⭐ dedicated World Map mini-game tab */}
         {tab === "world" && <WorldMapPage balance={balance} />}
       </main>
 
