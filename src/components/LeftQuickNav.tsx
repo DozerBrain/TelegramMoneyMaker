@@ -36,7 +36,8 @@ function SquareButton({ title, onClick, preview }: SquareButtonProps) {
       className="
         w-20 h-20 sm:w-24 sm:h-24
         rounded-3xl overflow-hidden
-        bg-[#050709]/80
+        bg-emerald-500/5
+        backdrop-blur-sm
         border border-emerald-400/40
         shadow-[0_0_18px_rgba(16,185,129,0.35)]
         flex flex-col items-center justify-center
@@ -50,7 +51,7 @@ function SquareButton({ title, onClick, preview }: SquareButtonProps) {
         </div>
       </div>
 
-      {/* title at absolute bottom, no extra dark bar */}
+      {/* title at bottom */}
       <div className="w-full pb-1 pt-0.5 flex items-center justify-center">
         <span className="text-[11px] sm:text-[12px] font-semibold text-white/95 text-center">
           {title}
