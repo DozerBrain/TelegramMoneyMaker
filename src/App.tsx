@@ -469,18 +469,7 @@ export default function App() {
 
           {/* TopBar-only pages (no bottom tab) */}
           {tab === "leaderboard" && <LeaderboardPage />}
-          {tab === "profile" && (
-  <ProfilePage
-    balance={balance}
-    totalEarnings={totalEarnings}
-    taps={taps}
-    tapValue={tapValue}
-    autoPerSec={autoPerSec}
-    multi={multi}
-    achievementsState={achState}
-    onClaim={handleClaimAchievement}
-  />
-)}
+          {tab === "profile" && <ProfilePage />}
 
           {/* Dedicated sub-pages (opened from Inventory / quick nav) */}
           {tab === "suits" && <SuitsPage balance={balance} />}
