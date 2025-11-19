@@ -1,36 +1,35 @@
 // src/pages/Profile.tsx
 import React, { useEffect, useState } from "react";
 import { getProfile, setProfile } from "../lib/profile";
-import { loadSave } from "../lib/storage";
-import { formatMoneyShort } from "../lib/format";
-import { achievements, type Achievement } from "../data/achievements";
+import { achievements } from "../data/achievements";
 
-type Stats = {
-  taps: number;
+type ProfileProps = {
   balance: number;
   totalEarnings: number;
-  bestSuitName: string;
+  taps: number;
+  tapValue: number;
+  autoPerSec: number;
+  multi: number;
+  achievementsState: Record<string, { done: boolean; claimed: boolean }>;
+  onClaim: (id: string, reward: number) => void;
 };
 
-type AchState = Record<string, { done: boolean; claimed: boolean }>;
-
-export default function ProfilePage() {
+export default function ProfilePage({
+  balance,
+  totalEarnings,
+  taps,
+  tapValue,
+  autoPerSec,
+  multi,
+  achievementsState,
+  onClaim,
+}: ProfileProps) {
   const [name, setName] = useState("");
   const [country, setCountry] = useState("US");
   const [uid, setUid] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
   const [tgDebug, setTgDebug] = useState("no mm_tg_debug key");
 
-  const [stats, setStats] = useState<Stats>({
-    taps: 0,
-    balance: 0,
-    totalEarnings: 0,
-    bestSuitName: "Starter",
-  });
-
-  const [achState, setAchState] = useState<AchState>({});
-
-  // Load profile + stats + achievements from save
   useEffect(() => {
     const p = getProfile();
 
@@ -39,26 +38,10 @@ export default function ProfilePage() {
     let nextUid = p.uid || "";
     let nextAvatar = p.avatarUrl as string | undefined;
 
-    // Load stats + achievements from save
-    try {
-      const save = (loadSave() as any) ?? {};
-      setStats({
-        taps: save.taps ?? save.tap ?? 0,
-        balance: save.balance ?? save.score ?? 0,
-        totalEarnings: save.totalEarnings ?? save.score ?? 0,
-        bestSuitName: save.bestSuitName ?? "Starter",
-      });
-      setAchState(save.achievements ?? {});
-    } catch {
-      // ignore
-    }
-
-    // Try to override with Telegram debug info (finalUid, finalName, etc.)
     try {
       const raw = localStorage.getItem("mm_tg_debug");
       if (raw) {
         setTgDebug(raw);
-
         try {
           const dbg = JSON.parse(raw);
 
@@ -66,21 +49,20 @@ export default function ProfilePage() {
           if (dbg.finalName) nextName = String(dbg.finalName);
           if (dbg.finalCountry) nextCountry = String(dbg.finalCountry);
 
-          // if we don't already have avatar in profile, try extract from userJson
           if (!nextAvatar && dbg.userJson) {
             try {
               const u = JSON.parse(dbg.userJson);
               if (u.photo_url) nextAvatar = u.photo_url;
             } catch {
-              // ignore JSON error
+              // ignore
             }
           }
         } catch {
-          // ignore parse error
+          // ignore
         }
       }
     } catch {
-      // ignore storage error
+      // ignore
     }
 
     setName(nextName);
@@ -90,10 +72,8 @@ export default function ProfilePage() {
   }, []);
 
   function handleSave() {
-    // Only allow editing name + country manually
     setProfile({ name, country });
 
-    // Re-read profile after save (in case something else changed)
     const p = getProfile();
     setUid(p.uid);
     setAvatarUrl(p.avatarUrl);
@@ -115,8 +95,8 @@ export default function ProfilePage() {
       .toUpperCase() as string) || "P";
 
   return (
-    <div className="p-4 text-white pb-28">
-      {/* Avatar + basic info */}
+    <div className="p-4 pb-24 text-white">
+      {/* Avatar + name */}
       <div className="flex items-center gap-4 mb-6">
         {avatarUrl ? (
           <img
@@ -133,13 +113,11 @@ export default function ProfilePage() {
         <div className="text-sm text-white/70">
           <div className="font-semibold text-base">{name}</div>
           <div className="text-xs text-white/50">ID: {uid}</div>
-          <div className="text-xs text-white/40 mt-1">
-            Best suit: {stats.bestSuitName}
-          </div>
+          <div className="text-xs text-white/50">Country: {country}</div>
         </div>
       </div>
 
-      {/* Editable profile fields */}
+      {/* Name / country editing */}
       <label className="block text-sm mb-1 text-white/70">Display name</label>
       <input
         className="w-full mb-4 rounded-xl bg-zinc-900/80 border border-white/10 px-3 py-2 text-sm outline-none focus:border-emerald-500"
@@ -170,88 +148,90 @@ export default function ProfilePage() {
 
       <button
         onClick={handleSave}
-        className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold py-3 mt-1 mb-6"
+        className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold py-3 mb-6"
       >
         Save Profile
       </button>
 
-      {/* --- Stats section --- */}
-      <section className="mb-6">
-        <h2 className="text-sm font-semibold text-white/80 mb-2">
-          Player stats
-        </h2>
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <div className="rounded-xl bg-zinc-900/70 border border-white/10 px-3 py-2">
-            <div className="text-white/50">Total taps</div>
-            <div className="text-emerald-400 font-semibold text-sm">
-              {stats.taps.toLocaleString()}
-            </div>
-          </div>
-          <div className="rounded-xl bg-zinc-900/70 border border-white/10 px-3 py-2">
-            <div className="text-white/50">Best balance</div>
-            <div className="text-emerald-400 font-semibold text-sm">
-              ${formatMoneyShort(stats.balance)}
-            </div>
-          </div>
-          <div className="rounded-xl bg-zinc-900/70 border border-white/10 px-3 py-2 col-span-2">
-            <div className="text-white/50">Total earnings</div>
-            <div className="text-emerald-400 font-semibold text-sm">
-              ${formatMoneyShort(stats.totalEarnings)}
-            </div>
+      {/* STATS */}
+      <h2 className="text-sm font-semibold text-white/80 mb-2">Stats</h2>
+      <div className="grid grid-cols-2 gap-3 mb-6 text-sm">
+        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
+          <div className="text-xs text-white/50">Balance</div>
+          <div className="font-semibold">${balance.toLocaleString()}</div>
+        </div>
+        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
+          <div className="text-xs text-white/50">Total earned</div>
+          <div className="font-semibold">
+            ${totalEarnings.toLocaleString()}
           </div>
         </div>
-      </section>
+        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
+          <div className="text-xs text-white/50">Taps</div>
+          <div className="font-semibold">{taps.toLocaleString()}</div>
+        </div>
+        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
+          <div className="text-xs text-white/50">Tap value</div>
+          <div className="font-semibold">${tapValue.toLocaleString()}</div>
+        </div>
+        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
+          <div className="text-xs text-white/50">APS</div>
+          <div className="font-semibold">${autoPerSec.toLocaleString()}</div>
+        </div>
+        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
+          <div className="text-xs text-white/50">Multiplier</div>
+          <div className="font-semibold">x{multi.toFixed(2)}</div>
+        </div>
+      </div>
 
-      {/* --- Achievements summary (read-only) --- */}
-      <section className="mb-6">
-        <h2 className="text-sm font-semibold text-white/80 mb-2">
-          Achievements
-        </h2>
+      {/* ACHIEVEMENTS */}
+      <h2 className="text-sm font-semibold text-white/80 mb-2">
+        Achievements
+      </h2>
+      <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+        {achievements.map((a) => {
+          const st = achievementsState[a.id] || {
+            done: false,
+            claimed: false,
+          };
 
-        <div className="max-h-52 overflow-y-auto rounded-2xl bg-zinc-950/60 border border-white/10 px-3 py-2 space-y-2">
-          {achievements.map((a: Achievement) => {
-            const st = achState[a.id];
-            const done = st?.done ?? false;
-            const claimed = st?.claimed ?? false;
+          const canClaim = st.done && !st.claimed;
 
-            return (
-              <div
-                key={a.id}
-                className="flex items-start gap-2 rounded-xl px-2 py-2 bg-zinc-900/60"
-              >
-                <div className="mt-0.5">
-                  <div
-                    className={`h-3 w-3 rounded-full ${
-                      done
-                        ? claimed
-                          ? "bg-emerald-400"
-                          : "bg-amber-400"
-                        : "bg-zinc-700"
-                    }`}
-                  />
+          return (
+            <div
+              key={a.id}
+              className="rounded-xl bg-zinc-900/80 border border-white/5 px-3 py-2.5 flex items-center gap-3"
+            >
+              <div className="flex-1">
+                <div className="text-sm font-semibold text-white/90">
+                  {a.name}
                 </div>
-                <div className="flex-1">
-                  <div className="text-xs font-semibold text-white/90">
-                    {a.name}
-                  </div>
-                  <div className="text-[11px] text-white/55">{a.desc}</div>
-                  <div className="text-[11px] text-emerald-400/80 mt-0.5">
-                    Reward: ${a.reward.toLocaleString()}
-                  </div>
+                <div className="text-xs text-white/55">{a.desc}</div>
+                <div className="text-xs text-emerald-400 mt-0.5">
+                  Reward: +${a.reward.toLocaleString()}
                 </div>
               </div>
-            );
-          })}
-        </div>
 
-        <p className="mt-1 text-[10px] text-white/35">
-          Green = claimed, yellow = completed (claim in Inventory), grey =
-          locked.
-        </p>
-      </section>
+              <button
+                disabled={!canClaim}
+                onClick={() => onClaim(a.id, a.reward)}
+                className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${
+                  canClaim
+                    ? "bg-emerald-600 hover:bg-emerald-500 text-black"
+                    : st.claimed
+                    ? "bg-emerald-900/60 text-emerald-300"
+                    : "bg-zinc-800 text-white/50"
+                }`}
+              >
+                {st.claimed ? "Claimed" : st.done ? "Claim" : "Locked"}
+              </button>
+            </div>
+          );
+        })}
+      </div>
 
-      {/* Telegram debug info (unchanged) */}
-      <div className="mt-4 text-xs text-white/40 break-all">
+      {/* Telegram debug info */}
+      <div className="mt-6 text-xs text-white/40 break-all">
         <div className="font-semibold mb-1">Telegram debug:</div>
         <pre className="whitespace-pre-wrap break-all text-[10px]">
           {tgDebug}
