@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import BanknoteButton from "../components/BanknoteButton";
 import { comboTap } from "../lib/combo";
 import { submitScore } from "../lib/leaderboard";
-import LeftQuickNav from "../components/LeftQuickNav";
 import { PETS } from "../data/pets";
 import { formatMoneyShort } from "../lib/format";
 
@@ -97,10 +96,7 @@ export default function Home({
 
     setBalance((b) => {
       const updated = b + gain;
-
-      // 🔥 use totalEarnings + gain so leaderboard is correct
       pushLeaderboard(totalEarnings + gain);
-
       return updated;
     });
 
@@ -126,13 +122,9 @@ export default function Home({
 
   return (
     <div className="relative w-full h-full flex flex-col items-center justify-start pt-4 pb-24">
-      {/* Left nav still here for now (if you want it). 
-          If you want it completely gone from Home, you can delete this line. */}
-      <LeftQuickNav variant="home" />
-
       <div className="mt-2 flex items-center justify-center">
         <div className="relative">
-          {/* 👇 Mini games button – top right of mascot */}
+          {/* Mini games button – top right of mascot */}
           <button
             onClick={openWorldMap}
             className="absolute -top-2 -right-2 px-3 py-1 rounded-full bg-emerald-600 text-[10px] sm:text-[11px] font-semibold shadow-lg shadow-emerald-500/30 border border-emerald-300/60 flex items-center gap-1"
@@ -186,4 +178,4 @@ export default function Home({
       </div>
     </div>
   );
-}
+  }
