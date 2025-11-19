@@ -2,10 +2,10 @@
 export type Tab =
   | "home"
   | "shop"
-  | "spin"
+  | "missions"
   | "leaderboard"
   | "profile"
-  | "more"
+  | "inventory"
   | "cards"
   | "suits"
   | "pets"
