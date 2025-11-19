@@ -9,6 +9,7 @@ export type Tab =
   | "cards"
   | "suits"
   | "pets"
+  | "games"
   | "world";
 
 export type Suit = {
