@@ -1,4 +1,3 @@
-// src/pages/Leaderboard.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { topGlobal, type LeaderRow } from "../lib/leaderboard";
 import { getProfile } from "../lib/profile";
@@ -12,14 +11,13 @@ import { formatMoneyShort } from "../lib/format";
 
 type Mode = "global" | "friends";
 type CountryCode = string;
+type RegionFilter = RegionId | "ALL";
 
 // ---------- Helpers from countries.ts ----------
 
 function buildRegionLabelMap() {
   const map: Record<RegionId, string> = {} as Record<RegionId, string>;
-  for (const r of REGIONS) {
-    map[r.id] = r.label;
-  }
+  for (const r of REGIONS) map[r.id] = r.label;
   return map;
 }
 
@@ -57,10 +55,9 @@ export default function LeaderboardPage() {
   const [myCountry, setMyCountry] = useState<CountryCode>("US");
   const [myRegion, setMyRegion] = useState<RegionId>("NA");
 
-  const [selectedRegion, setSelectedRegion] = useState<RegionId>("NA");
-  const [selectedCountry, setSelectedCountry] = useState<CountryCode | "ALL">(
-    "ALL"
-  );
+  // ⭐ NEW: region filter can be "ALL"
+  const [selectedRegion, setSelectedRegion] = useState<RegionFilter>("ALL");
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode | "ALL">("ALL");
 
   // popup states
   const [showModePicker, setShowModePicker] = useState(false);
@@ -77,16 +74,16 @@ export default function LeaderboardPage() {
     setMyCountry(cc);
     setMyRegion(region);
 
-    setSelectedRegion(region);
+    // ⭐ DEFAULT = SEE EVERYONE IN GLOBAL
+    setSelectedRegion("ALL");
     setSelectedCountry("ALL");
   }, []);
 
-  // --- Load big global list (like TopBar, but once) ------------------------
+  // --- Load big global list -----------------------------------------------
   async function refreshGlobal() {
-    if (!myId) return; // wait until profile loaded
+    if (!myId) return;
     setLoading(true);
     try {
-      // big enough to always contain you + gf
       const data = await topGlobal(5000);
       data.sort((a, b) => b.score - a.score);
       setAllRows(data);
@@ -98,7 +95,6 @@ export default function LeaderboardPage() {
   useEffect(() => {
     if (!myId) return;
     refreshGlobal();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myId]);
 
   // --- Compute filtered rows ----------------------------------------------
@@ -110,13 +106,11 @@ export default function LeaderboardPage() {
     // Mode: friends = same country
     if (mode === "friends") {
       const cc = myCountry.toUpperCase();
-      list = list.filter(
-        (r) => (r.country || "").toUpperCase() === cc
-      );
+      list = list.filter((r) => (r.country || "").toUpperCase() === cc);
     }
 
-    // Region filter (optional – applied if you change it)
-    if (selectedRegion) {
+    // ⭐ Apply region filter ONLY if not ALL
+    if (selectedRegion !== "ALL") {
       list = list.filter((r) => {
         const rowRegion =
           (r.region as RegionId | undefined) ?? regionOfCountry(r.country);
@@ -124,21 +118,17 @@ export default function LeaderboardPage() {
       });
     }
 
-    // Country filter (optional)
+    // Country filter
     if (selectedCountry !== "ALL") {
       const cc = selectedCountry.toUpperCase();
-      list = list.filter(
-        (r) => (r.country || "").toUpperCase() === cc
-      );
+      list = list.filter((r) => (r.country || "").toUpperCase() === cc);
     }
 
     // sort by score
     list.sort((a, b) => b.score - a.score);
 
-    // 🔥 Make sure YOU are always in the list (even if filters would hide you)
-    const meGlobal = allRows.find(
-      (r) => String(r.uid) === String(myId)
-    );
+    // ⭐ Always keep YOU in the list
+    const meGlobal = allRows.find((r) => String(r.uid) === String(myId));
     if (meGlobal && !list.some((r) => String(r.uid) === String(myId))) {
       list.unshift(meGlobal);
     }
@@ -146,13 +136,16 @@ export default function LeaderboardPage() {
     setRows(list);
   }, [allRows, mode, selectedRegion, selectedCountry, myCountry, myId]);
 
-  const myRankIndex = rows.findIndex(
-    (r) => String(r.uid) === String(myId)
-  );
+  // --- ranking ----------------------------------------------
+  const myRankIndex = rows.findIndex((r) => String(r.uid) === String(myId));
   const myRank = myRankIndex >= 0 ? myRankIndex + 1 : undefined;
 
   const modeLabel = mode === "global" ? "Global" : "Friends";
-  const regionLabel = REGION_LABELS[selectedRegion] || "Region";
+
+  const regionLabel =
+    selectedRegion === "ALL"
+      ? "All regions"
+      : REGION_LABELS[selectedRegion];
 
   const countryLabel =
     selectedCountry === "ALL"
@@ -163,173 +156,12 @@ export default function LeaderboardPage() {
     selectedCountry === "ALL" ? "" : ` · ${countryLabel}`
   } leaderboard`;
 
-  const countriesInSelectedRegion = useMemo(
-    () => COUNTRIES.filter((c) => c.region === selectedRegion),
-    [selectedRegion]
-  );
-
-  // --- Popups --------------------------------------------------------------
-
-  function ModePicker() {
-    if (!showModePicker) return null;
-    return (
-      <div
-        className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
-        onClick={() => setShowModePicker(false)}
-      >
-        <div
-          className="mb-20 w-full max-w-md rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="text-xs text-white/50 px-1 pb-1">
-            Choose what you want to see
-          </div>
-          <button
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
-              mode === "global"
-                ? "bg-emerald-600 text-white"
-                : "bg-zinc-800 text-white/80"
-            }`}
-            onClick={() => {
-              setMode("global");
-              setShowModePicker(false);
-            }}
-          >
-            <span className="flex items-center gap-2">
-              <span>🌍</span>
-              <span>Global</span>
-            </span>
-            <span className="text-[10px] text-white/60">
-              Everyone worldwide
-            </span>
-          </button>
-
-          <button
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
-              mode === "friends"
-                ? "bg-emerald-600 text-white"
-                : "bg-zinc-800 text-white/80"
-            }`}
-            onClick={() => {
-              setMode("friends");
-              setShowModePicker(false);
-            }}
-          >
-            <span className="flex items-center gap-2">
-              <span>👥</span>
-              <span>Friends</span>
-            </span>
-            <span className="text-[10px] text-white/60">
-              Players from your country
-            </span>
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  function RegionPicker() {
-    if (!showRegionPicker) return null;
-    return (
-      <div
-        className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
-        onClick={() => setShowRegionPicker(false)}
-      >
-        <div
-          className="mb-20 w-full max-w-md rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="text-xs text-white/50 px-1 pb-1">
-            Choose a region
-          </div>
-          {REGIONS.map((r) => {
-            const active = r.id === selectedRegion;
-            return (
-              <button
-                key={r.id}
-                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
-                  active
-                    ? "bg-emerald-600 text-white"
-                    : "bg-zinc-800 text-white/80"
-                }`}
-                onClick={() => {
-                  setSelectedRegion(r.id);
-                  setSelectedCountry("ALL");
-                  setShowRegionPicker(false);
-                }}
-              >
-                <span>{r.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  function CountryPicker() {
-    if (!showCountryPicker) return null;
-    return (
-      <div
-        className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
-        onClick={() => setShowCountryPicker(false)}
-      >
-        <div
-          className="mb-20 w-full max-w-md max-h-[60vh] rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1 overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="text-xs text-white/50 px-1 pb-1">
-            Countries in {regionLabel}
-          </div>
-
-          <div className="max-h-[50vh] overflow-y-auto space-y-1 pr-1">
-            <button
-              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
-                selectedCountry === "ALL"
-                  ? "bg-emerald-600 text-white"
-                  : "bg-zinc-800 text-white/80"
-              }`}
-              onClick={() => {
-                setSelectedCountry("ALL");
-                setShowCountryPicker(false);
-              }}
-            >
-              <span className="flex items-center gap-2">
-                <span>🌐</span>
-                <span>All countries</span>
-              </span>
-            </button>
-
-            {countriesInSelectedRegion.map((c) => {
-              const active = selectedCountry === c.code;
-              return (
-                <button
-                  key={c.code}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
-                    active
-                      ? "bg-emerald-600 text-white"
-                      : "bg-zinc-800 text-white/80"
-                  }`}
-                  onClick={() => {
-                    setSelectedCountry(c.code);
-                    setShowCountryPicker(false);
-                  }}
-                >
-                  <span className="flex items-center gap-2">
-                    <span>{c.flag}</span>
-                    <span>{c.name}</span>
-                  </span>
-                  <span className="text-[10px] text-white/60">
-                    {c.code}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // For country picker
+  const countriesInSelectedRegion = useMemo(() => {
+    return selectedRegion === "ALL"
+      ? COUNTRIES
+      : COUNTRIES.filter((c) => c.region === selectedRegion);
+  }, [selectedRegion]);
 
   // -------------------------------------------------------------------------
 
@@ -395,9 +227,7 @@ export default function LeaderboardPage() {
 
         {rows.length === 0 ? (
           <div className="px-4 py-6 text-center text-sm text-white/60">
-            {loading
-              ? "Loading leaderboard..."
-              : "No players yet. Be the first to tap!"}
+            {loading ? "Loading leaderboard..." : "No players yet."}
           </div>
         ) : (
           rows.map((row, idx) => (
@@ -406,7 +236,7 @@ export default function LeaderboardPage() {
               className={`grid grid-cols-[40px_1.5fr_1.1fr_1fr] px-4 py-2 text-sm ${
                 String(row.uid) === String(myId)
                   ? "bg-emerald-500/10"
-                  : "bg-transparent"
+                  : ""
               }`}
             >
               <div className="text-white/60">{idx + 1}</div>
@@ -430,15 +260,227 @@ export default function LeaderboardPage() {
         Scope: {scopeLabel}
         {myRank && rows.length > 0 && (
           <span className="ml-2">
-            • You are currently ranked #{myRank} in this view.
+            • You are currently ranked #{myRank}
           </span>
         )}
       </div>
 
       {/* Popups */}
-      <ModePicker />
-      <RegionPicker />
-      <CountryPicker />
+      {showModePicker && (
+        <ModePickerPopup
+          mode={mode}
+          onClose={() => setShowModePicker(false)}
+          setMode={setMode}
+        />
+      )}
+
+      {showRegionPicker && (
+        <RegionPickerPopup
+          selectedRegion={selectedRegion}
+          onClose={() => setShowRegionPicker(false)}
+          setSelectedRegion={setSelectedRegion}
+          setSelectedCountry={setSelectedCountry}
+        />
+      )}
+
+      {showCountryPicker && (
+        <CountryPickerPopup
+          selectedCountry={selectedCountry}
+          countries={countriesInSelectedRegion}
+          regionLabel={regionLabel}
+          onClose={() => setShowCountryPicker(false)}
+          setSelectedCountry={setSelectedCountry}
+        />
+      )}
+    </div>
+  );
+}
+
+// Individual popup components
+
+function ModePickerPopup({ mode, onClose, setMode }) {
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="mb-20 w-full max-w-md rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-xs text-white/50 px-1 pb-1">
+          Choose what you want to see
+        </div>
+
+        <button
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+            mode === "global"
+              ? "bg-emerald-600 text-white"
+              : "bg-zinc-800 text-white/80"
+          }`}
+          onClick={() => {
+            setMode("global");
+            onClose();
+          }}
+        >
+          <span className="flex items-center gap-2">
+            <span>🌍</span>
+            <span>Global</span>
+          </span>
+          <span className="text-[10px] text-white/60">
+            Everyone worldwide
+          </span>
+        </button>
+
+        <button
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+            mode === "friends"
+              ? "bg-emerald-600 text-white"
+              : "bg-zinc-800 text-white/80"
+          }`}
+          onClick={() => {
+            setMode("friends");
+            onClose();
+          }}
+        >
+          <span className="flex items-center gap-2">
+            <span>👥</span>
+            <span>Friends</span>
+          </span>
+          <span className="text-[10px] text-white/60">
+            Players from your country
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RegionPickerPopup({
+  selectedRegion,
+  onClose,
+  setSelectedRegion,
+  setSelectedCountry,
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="mb-20 w-full max-w-md rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-xs text-white/50 px-1 pb-1">
+          Choose a region
+        </div>
+
+        {/* ALL REGIONS */}
+        <button
+          className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+            selectedRegion === "ALL"
+              ? "bg-emerald-600 text-white"
+              : "bg-zinc-800 text-white/80"
+          }`}
+          onClick={() => {
+            setSelectedRegion("ALL");
+            setSelectedCountry("ALL");
+            onClose();
+          }}
+        >
+          <span>All regions</span>
+        </button>
+
+        {/* List real regions */}
+        {REGIONS.map((r) => {
+          const active = r.id === selectedRegion;
+          return (
+            <button
+              key={r.id}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+                active
+                  ? "bg-emerald-600 text-white"
+                  : "bg-zinc-800 text-white/80"
+              }`}
+              onClick={() => {
+                setSelectedRegion(r.id);
+                setSelectedCountry("ALL");
+                onClose();
+              }}
+            >
+              <span>{r.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function CountryPickerPopup({
+  selectedCountry,
+  countries,
+  regionLabel,
+  onClose,
+  setSelectedCountry,
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
+      onClick={onClose}
+    >
+      <div
+        className="mb-20 w-full max-w-md max-h-[60vh] rounded-2xl bg-zinc-900 border border-white/10 p-3 space-y-1 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-xs text-white/50 px-1 pb-1">
+          Countries in {regionLabel}
+        </div>
+
+        <div className="max-h-[50vh] overflow-y-auto space-y-1 pr-1">
+          {/* ALL countries */}
+          <button
+            className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+              selectedCountry === "ALL"
+                ? "bg-emerald-600 text-white"
+                : "bg-zinc-800 text-white/80"
+            }`}
+            onClick={() => {
+              setSelectedCountry("ALL");
+              onClose();
+            }}
+          >
+            <span className="flex items-center gap-2">
+              <span>🌐</span>
+              <span>All countries</span>
+            </span>
+          </button>
+
+          {countries.map((c) => {
+            const active = selectedCountry === c.code;
+            return (
+              <button
+                key={c.code}
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm ${
+                  active
+                    ? "bg-emerald-600 text-white"
+                    : "bg-zinc-800 text-white/80"
+                }`}
+                onClick={() => {
+                  setSelectedCountry(c.code);
+                  onClose();
+                }}
+              >
+                <span className="flex items-center gap-2">
+                  <span>{c.flag}</span>
+                  <span>{c.name}</span>
+                </span>
+                <span className="text-[10px] text-white/60">{c.code}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 }
