@@ -1,13 +1,6 @@
 // src/lib/leaderboard.ts
 import { db } from "./firebase";
-import {
-  get,
-  set,
-  ref,
-  query,
-  orderByChild,
-  limitToLast,
-} from "firebase/database";
+import { get, set, ref } from "firebase/database";
 import { getProfile } from "./profile";
 import {
   getRegionForCountry,
@@ -23,17 +16,24 @@ export type LeaderRow = {
   score: number;
   updatedAt: number;
   region?: RegionId; // "NA", "EU", ...
-  avatarUrl?: string; // ✅ for avatar bubble
+  avatarUrl?: string; // for avatar bubble
 };
 
 // ----------------- Small helpers -----------------
 
 // Read from a path (or empty if not exist)
+// Simpler: no Firebase query, just get everything and sort in JS.
 async function readNode(path: string, limit: number): Promise<LeaderRow[]> {
-  const q = query(ref(db, path), orderByChild("score"), limitToLast(limit));
-  const snap = await get(q);
+  const snap = await get(ref(db, path));
   if (!snap.exists()) return [];
-  return Object.values(snap.val() as Record<string, LeaderRow>);
+
+  const raw = snap.val() as Record<string, LeaderRow> | null;
+  if (!raw) return [];
+
+  return Object.values(raw)
+    .filter((r) => r && typeof r.score === "number")
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
 }
 
 // Merge rows from multiple paths, dedupe by uid, keep best score
@@ -59,18 +59,12 @@ function mergeRows(lists: LeaderRow[][], limit: number): LeaderRow[] {
 export async function submitScore(totalEarnings: number) {
   const p = getProfile();
 
-  // ✅ use fields that actually exist on Profile
-  const uidRaw = p.uid || p.userId;
-  if (!uidRaw) {
-    console.warn("submitScore: no uid/userId in profile, skipping leaderboard write");
-    return;
-  }
-
-  const uid = String(uidRaw);
+  // Use uid from profile; fall back to userId; if nothing, still create a row
+  const uid = String(p.uid || p.userId || "local");
   const name = p.name || p.username || "Player";
   const country = (p.country || "US").toUpperCase();
-  const region = getRegionForCountry(country); // e.g. "NA", "EU", "AS"...
-  const avatarUrl = p.avatarUrl; // ✅ from Profile
+  const region = getRegionForCountry(country);
+  const avatarUrl = p.avatarUrl;
 
   const row: LeaderRow = {
     uid,
