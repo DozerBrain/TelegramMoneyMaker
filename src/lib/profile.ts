@@ -1,93 +1,124 @@
-// src/lib/profile.ts
+// src/lib/leaderboard.ts
+import { db } from "./firebase";
+import {
+  get,
+  set,
+  ref,
+  query,
+  orderByChild,
+  limitToLast,
+} from "firebase/database";
+import { getProfile } from "./profile";
+import {
+  getRegionForCountry,
+  type RegionId,
+} from "../data/countries";
 
-export type Profile = {
-  /** Stable in-game player ID (we want this to be Telegram user.id when available) */
+// ----------------- Types -----------------
+
+export type LeaderRow = {
   uid: string;
-  /** Raw Telegram user id as string (same as uid, but kept separately in case) */
-  userId?: string;
-
-  /** Displayed name in the game */
   name: string;
-
-  /** 2-letter country code like "US", "RU", etc. */
-  country: string;
-
-  /** Optional Telegram username like "DozerBrain" */
-  username?: string;
-
-  /** Avatar URL from Telegram */
-  avatarUrl?: string;
-
-  /** Where this profile data came from: "TG" | "LOCAL" */
-  source?: "TG" | "LOCAL";
+  country: string; // ISO code like "US"
+  score: number;
+  updatedAt: number;
+  region?: RegionId; // "NA", "EU", ...
+  avatarUrl?: string; // ✅ for avatar bubble
 };
 
-export type PlayerProfile = Profile; // 🔥 alias so imports work
+// ----------------- Small helpers -----------------
 
-const STORAGE_KEY = "moneymaker_profile_v1";
-
-const DEFAULT_PROFILE: Profile = {
-  uid: "", // will be filled on first save
-  name: "Player",
-  country: "US",
-};
-
-/** Load profile from localStorage or return default */
-export function getProfile(): Profile {
-  if (typeof window === "undefined") return { ...DEFAULT_PROFILE };
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_PROFILE };
-    const parsed = JSON.parse(raw) as Partial<Profile>;
-
-    return {
-      ...DEFAULT_PROFILE,
-      ...parsed,
-    };
-  } catch {
-    return { ...DEFAULT_PROFILE };
-  }
+// Read from a path (or empty if not exist)
+async function readNode(path: string, limit: number): Promise<LeaderRow[]> {
+  const q = query(ref(db, path), orderByChild("score"), limitToLast(limit));
+  const snap = await get(q);
+  if (!snap.exists()) return [];
+  return Object.values(snap.val() as Record<string, LeaderRow>);
 }
 
-/**
- * Merge new profile data with existing one.
- * - Never lose Telegram uid/avatar when you only update name / country.
- * - If uid is still empty, generate one (timestamp-based).
- */
-export function setProfile(update: Partial<Profile>): Profile {
-  const prev = getProfile();
+// Merge rows from multiple paths, dedupe by uid, keep best score
+function mergeRows(lists: LeaderRow[][], limit: number): LeaderRow[] {
+  const byId: Record<string, LeaderRow> = {};
 
-  // Merge old + new
-  let next: Profile = {
-    ...prev,
-    ...update,
-  };
-
-  // Ensure we always have a uid
-  if (!next.uid) {
-    if (update.uid) {
-      next.uid = String(update.uid);
-    } else if (prev.uid) {
-      next.uid = prev.uid;
-    } else if (update.userId) {
-      next.uid = String(update.userId);
-    } else {
-      // Fallback: local-only uid if no Telegram info
-      next.uid = String(Date.now());
+  for (const list of lists) {
+    for (const r of list) {
+      const key = String(r.uid);
+      if (!byId[key] || r.score > byId[key].score) {
+        byId[key] = r;
+      }
     }
   }
 
-  // If Telegram gave us an id but uid was empty, sync them
-  if (!prev.uid && update.userId && !update.uid) {
-    next.uid = String(update.userId);
+  return Object.values(byId)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
+// ----------------- Writer -----------------
+
+export async function submitScore(totalEarnings: number) {
+  const p = getProfile();
+
+  // ✅ use fields that actually exist on Profile
+  const uidRaw = p.uid || p.userId;
+  if (!uidRaw) {
+    console.warn("submitScore: no uid/userId in profile, skipping leaderboard write");
+    return;
   }
 
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // ignore storage errors
-  }
+  const uid = String(uidRaw);
+  const name = p.name || p.username || "Player";
+  const country = (p.country || "US").toUpperCase();
+  const region = getRegionForCountry(country); // e.g. "NA", "EU", "AS"...
+  const avatarUrl = p.avatarUrl; // ✅ from Profile
 
-  return next;
+  const row: LeaderRow = {
+    uid,
+    name,
+    country,
+    score: Math.floor(totalEarnings),
+    updatedAt: Date.now(),
+    region,
+    avatarUrl,
+  };
+
+  // New lowercase paths
+  await set(ref(db, `leaderboard/global/${uid}`), row);
+  await set(ref(db, `leaderboard/byCountry/${country}/${uid}`), row);
+  await set(ref(db, `leaderboard/byRegion/${region}/${uid}`), row);
+
+  // Mirror into old "Leaderboard" capital paths (for safety / old clients)
+  await set(ref(db, `Leaderboard/global/${uid}`), row);
+  await set(ref(db, `Leaderboard/byCountry/${country}/${uid}`), row);
+  await set(ref(db, `Leaderboard/byRegion/${region}/${uid}`), row);
+}
+
+// ----------------- Readers -----------------
+
+export async function topGlobal(limit = 50): Promise<LeaderRow[]> {
+  const lower = await readNode("leaderboard/global", limit);
+  const upper = await readNode("Leaderboard/global", limit);
+  return mergeRows([lower, upper], limit);
+}
+
+export async function topByCountry(
+  country: string,
+  limit = 50
+): Promise<LeaderRow[]> {
+  const cc = (country || "US").toUpperCase();
+
+  const lower = await readNode(`leaderboard/byCountry/${cc}`, limit);
+  const upper = await readNode(`Leaderboard/byCountry/${cc}`, limit);
+
+  return mergeRows([lower, upper], limit);
+}
+
+export async function topByRegion(
+  region: RegionId,
+  limit = 50
+): Promise<LeaderRow[]> {
+  const lower = await readNode(`leaderboard/byRegion/${region}`, limit);
+  const upper = await readNode(`Leaderboard/byRegion/${region}`, limit);
+
+  return mergeRows([lower, upper], limit);
 }
