@@ -23,7 +23,7 @@ export type LeaderRow = {
   score: number;
   updatedAt: number;
   region?: RegionId; // "NA", "EU", ...
-  avatarUrl?: string; // NEW: for avatar bubble in leaderboard
+  avatarUrl?: string; // ✅ for avatar bubble
 };
 
 // ----------------- Small helpers -----------------
@@ -59,10 +59,10 @@ function mergeRows(lists: LeaderRow[][], limit: number): LeaderRow[] {
 export async function submitScore(totalEarnings: number) {
   const p = getProfile();
 
-  // ❌ Don't fall back to "local" in production, it makes everyone overwrite the same row
-  const uidRaw = p.uid ?? p.userId ?? p.id;
+  // ✅ use fields that actually exist on Profile
+  const uidRaw = p.uid || p.userId;
   if (!uidRaw) {
-    console.warn("submitScore: no uid in profile, skipping leaderboard write");
+    console.warn("submitScore: no uid/userId in profile, skipping leaderboard write");
     return;
   }
 
@@ -70,13 +70,7 @@ export async function submitScore(totalEarnings: number) {
   const name = p.name || p.username || "Player";
   const country = (p.country || "US").toUpperCase();
   const region = getRegionForCountry(country); // e.g. "NA", "EU", "AS"...
-
-  // Try multiple possible avatar fields from profile; adjust if your profile uses a specific one
-  const avatarUrl =
-    (p as any).avatarUrl ||
-    (p as any).photoUrl ||
-    (p as any).imageUrl ||
-    undefined;
+  const avatarUrl = p.avatarUrl; // ✅ from Profile
 
   const row: LeaderRow = {
     uid,
@@ -88,7 +82,7 @@ export async function submitScore(totalEarnings: number) {
     avatarUrl,
   };
 
-  // Lowercase paths (new)
+  // New lowercase paths
   await set(ref(db, `leaderboard/global/${uid}`), row);
   await set(ref(db, `leaderboard/byCountry/${country}/${uid}`), row);
   await set(ref(db, `leaderboard/byRegion/${region}/${uid}`), row);
