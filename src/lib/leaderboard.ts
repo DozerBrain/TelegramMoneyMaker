@@ -23,6 +23,7 @@ export type LeaderRow = {
   score: number;
   updatedAt: number;
   region?: RegionId; // "NA", "EU", ...
+  avatarUrl?: string; // NEW: for avatar bubble in leaderboard
 };
 
 // ----------------- Small helpers -----------------
@@ -58,10 +59,24 @@ function mergeRows(lists: LeaderRow[][], limit: number): LeaderRow[] {
 export async function submitScore(totalEarnings: number) {
   const p = getProfile();
 
-  const uid = String(p.uid || "local");
+  // ❌ Don't fall back to "local" in production, it makes everyone overwrite the same row
+  const uidRaw = p.uid ?? p.userId ?? p.id;
+  if (!uidRaw) {
+    console.warn("submitScore: no uid in profile, skipping leaderboard write");
+    return;
+  }
+
+  const uid = String(uidRaw);
   const name = p.name || p.username || "Player";
   const country = (p.country || "US").toUpperCase();
   const region = getRegionForCountry(country); // e.g. "NA", "EU", "AS"...
+
+  // Try multiple possible avatar fields from profile; adjust if your profile uses a specific one
+  const avatarUrl =
+    (p as any).avatarUrl ||
+    (p as any).photoUrl ||
+    (p as any).imageUrl ||
+    undefined;
 
   const row: LeaderRow = {
     uid,
@@ -70,14 +85,15 @@ export async function submitScore(totalEarnings: number) {
     score: Math.floor(totalEarnings),
     updatedAt: Date.now(),
     region,
+    avatarUrl,
   };
 
-  // ✅ New lowercase paths
+  // Lowercase paths (new)
   await set(ref(db, `leaderboard/global/${uid}`), row);
   await set(ref(db, `leaderboard/byCountry/${country}/${uid}`), row);
   await set(ref(db, `leaderboard/byRegion/${region}/${uid}`), row);
 
-  // ✅ Mirror into old "Leaderboard" capital paths (for safety / old clients)
+  // Mirror into old "Leaderboard" capital paths (for safety / old clients)
   await set(ref(db, `Leaderboard/global/${uid}`), row);
   await set(ref(db, `Leaderboard/byCountry/${country}/${uid}`), row);
   await set(ref(db, `Leaderboard/byRegion/${region}/${uid}`), row);
