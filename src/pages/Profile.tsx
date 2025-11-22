@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { getProfile, setProfile } from "../lib/profile";
 import { achievements } from "../data/achievements";
+import { formatMoneyShort } from "../lib/format";
 
 type ProfileProps = {
   balance: number;
@@ -28,7 +29,6 @@ export default function ProfilePage({
   const [country, setCountry] = useState("US");
   const [uid, setUid] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
-  const [tgDebug, setTgDebug] = useState("no mm_tg_debug key");
 
   useEffect(() => {
     const p = getProfile();
@@ -38,10 +38,10 @@ export default function ProfilePage({
     let nextUid = p.uid || "";
     let nextAvatar = p.avatarUrl as string | undefined;
 
+    // Try to enrich from Telegram debug blob (for avatar / id / name)
     try {
       const raw = localStorage.getItem("mm_tg_debug");
       if (raw) {
-        setTgDebug(raw);
         try {
           const dbg = JSON.parse(raw);
 
@@ -77,13 +77,6 @@ export default function ProfilePage({
     const p = getProfile();
     setUid(p.uid);
     setAvatarUrl(p.avatarUrl);
-
-    try {
-      const raw = localStorage.getItem("mm_tg_debug");
-      if (raw) setTgDebug(raw);
-    } catch {
-      // ignore
-    }
   }
 
   const initials =
@@ -93,6 +86,12 @@ export default function ProfilePage({
       .join("")
       .slice(0, 2)
       .toUpperCase() as string) || "P";
+
+  // ---- format helpers ----
+  const fmtMoney = (n: number) => `$${formatMoneyShort(Math.floor(n))}`;
+  const fmtAps = (n: number) => `$${formatMoneyShort(Math.floor(n))}/s`;
+  const fmtInt = (n: number) => n.toLocaleString("en-US");
+  const fmtMultiplier = (m: number) => `x${formatMoneyShort(m)}`;
 
   return (
     <div className="p-4 pb-24 text-white">
@@ -158,29 +157,27 @@ export default function ProfilePage({
       <div className="grid grid-cols-2 gap-3 mb-6 text-sm">
         <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
           <div className="text-xs text-white/50">Balance</div>
-          <div className="font-semibold">${balance.toLocaleString()}</div>
+          <div className="font-semibold">{fmtMoney(balance)}</div>
         </div>
         <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
           <div className="text-xs text-white/50">Total earned</div>
-          <div className="font-semibold">
-            ${totalEarnings.toLocaleString()}
-          </div>
+          <div className="font-semibold">{fmtMoney(totalEarnings)}</div>
         </div>
         <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
           <div className="text-xs text-white/50">Taps</div>
-          <div className="font-semibold">{taps.toLocaleString()}</div>
+          <div className="font-semibold">{fmtInt(taps)}</div>
         </div>
         <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
           <div className="text-xs text-white/50">Tap value</div>
-          <div className="font-semibold">${tapValue.toLocaleString()}</div>
+          <div className="font-semibold">{fmtMoney(tapValue)}</div>
         </div>
         <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
           <div className="text-xs text-white/50">APS</div>
-          <div className="font-semibold">${autoPerSec.toLocaleString()}</div>
+          <div className="font-semibold">{fmtAps(autoPerSec)}</div>
         </div>
         <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
           <div className="text-xs text-white/50">Multiplier</div>
-          <div className="font-semibold">x{multi.toFixed(2)}</div>
+          <div className="font-semibold">{fmtMultiplier(multi)}</div>
         </div>
       </div>
 
@@ -228,14 +225,6 @@ export default function ProfilePage({
             </div>
           );
         })}
-      </div>
-
-      {/* Telegram debug info */}
-      <div className="mt-6 text-xs text-white/40 break-all">
-        <div className="font-semibold mb-1">Telegram debug:</div>
-        <pre className="whitespace-pre-wrap break-all text-[10px]">
-          {tgDebug}
-        </pre>
       </div>
     </div>
   );
