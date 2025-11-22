@@ -127,12 +127,6 @@ export default function LeaderboardPage() {
     // sort by score
     list.sort((a, b) => b.score - a.score);
 
-    // Always keep YOU in the list
-    const meGlobal = allRows.find((r) => String(r.uid) === String(myId));
-    if (meGlobal && !list.some((r) => String(r.uid) === String(myId))) {
-      list.unshift(meGlobal);
-    }
-
     setRows(list);
   }, [allRows, mode, selectedRegion, selectedCountry, myCountry, myId]);
 
