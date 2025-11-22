@@ -1,3 +1,4 @@
+// src/pages/Leaderboard.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import { topGlobal, type LeaderRow } from "../lib/leaderboard";
 import { getProfile } from "../lib/profile";
@@ -55,11 +56,11 @@ export default function LeaderboardPage() {
   const [myCountry, setMyCountry] = useState<CountryCode>("US");
   const [myRegion, setMyRegion] = useState<RegionId>("NA");
 
-  // ⭐ NEW: region filter can be "ALL"
   const [selectedRegion, setSelectedRegion] = useState<RegionFilter>("ALL");
-  const [selectedCountry, setSelectedCountry] = useState<CountryCode | "ALL">("ALL");
+  const [selectedCountry, setSelectedCountry] = useState<CountryCode | "ALL">(
+    "ALL"
+  );
 
-  // popup states
   const [showModePicker, setShowModePicker] = useState(false);
   const [showRegionPicker, setShowRegionPicker] = useState(false);
   const [showCountryPicker, setShowCountryPicker] = useState(false);
@@ -74,7 +75,6 @@ export default function LeaderboardPage() {
     setMyCountry(cc);
     setMyRegion(region);
 
-    // ⭐ DEFAULT = SEE EVERYONE IN GLOBAL
     setSelectedRegion("ALL");
     setSelectedCountry("ALL");
   }, []);
@@ -109,7 +109,7 @@ export default function LeaderboardPage() {
       list = list.filter((r) => (r.country || "").toUpperCase() === cc);
     }
 
-    // ⭐ Apply region filter ONLY if not ALL
+    // Region filter (only if not ALL)
     if (selectedRegion !== "ALL") {
       list = list.filter((r) => {
         const rowRegion =
@@ -127,7 +127,7 @@ export default function LeaderboardPage() {
     // sort by score
     list.sort((a, b) => b.score - a.score);
 
-    // ⭐ Always keep YOU in the list
+    // Always keep YOU in the list
     const meGlobal = allRows.find((r) => String(r.uid) === String(myId));
     if (meGlobal && !list.some((r) => String(r.uid) === String(myId))) {
       list.unshift(meGlobal);
@@ -136,8 +136,9 @@ export default function LeaderboardPage() {
     setRows(list);
   }, [allRows, mode, selectedRegion, selectedCountry, myCountry, myId]);
 
-  // --- ranking ----------------------------------------------
-  const myRankIndex = rows.findIndex((r) => String(r.uid) === String(myId));
+  const myRankIndex = rows.findIndex(
+    (r) => String(r.uid) === String(myId)
+  );
   const myRank = myRankIndex >= 0 ? myRankIndex + 1 : undefined;
 
   const modeLabel = mode === "global" ? "Global" : "Friends";
@@ -156,12 +157,13 @@ export default function LeaderboardPage() {
     selectedCountry === "ALL" ? "" : ` · ${countryLabel}`
   } leaderboard`;
 
-  // For country picker
-  const countriesInSelectedRegion = useMemo(() => {
-    return selectedRegion === "ALL"
-      ? COUNTRIES
-      : COUNTRIES.filter((c) => c.region === selectedRegion);
-  }, [selectedRegion]);
+  const countriesInSelectedRegion = useMemo(
+    () =>
+      selectedRegion === "ALL"
+        ? COUNTRIES
+        : COUNTRIES.filter((c) => c.region === selectedRegion),
+    [selectedRegion]
+  );
 
   // -------------------------------------------------------------------------
 
@@ -218,7 +220,7 @@ export default function LeaderboardPage() {
 
       {/* Table */}
       <div className="rounded-2xl bg-zinc-900/80 border border-white/10 overflow-hidden">
-        <div className="grid grid-cols-[40px_1.5fr_1.1fr_1fr] px-4 py-2 text-xs text-white/50 border-b border-white/5">
+        <div className="grid grid-cols-[40px_2fr_1.1fr_1fr] px-4 py-2 text-xs text-white/50 border-b border-white/5">
           <div>#</div>
           <div>Player</div>
           <div>Country</div>
@@ -230,29 +232,56 @@ export default function LeaderboardPage() {
             {loading ? "Loading leaderboard..." : "No players yet."}
           </div>
         ) : (
-          rows.map((row, idx) => (
-            <div
-              key={row.uid}
-              className={`grid grid-cols-[40px_1.5fr_1.1fr_1fr] px-4 py-2 text-sm ${
-                String(row.uid) === String(myId)
-                  ? "bg-emerald-500/10"
-                  : ""
-              }`}
-            >
-              <div className="text-white/60">{idx + 1}</div>
+          rows.map((row, idx) => {
+            // 🥇🥈🥉 medals for top 3
+            let rankDisplay: React.ReactNode = idx + 1;
+            if (idx === 0) rankDisplay = "🥇";
+            else if (idx === 1) rankDisplay = "🥈";
+            else if (idx === 2) rankDisplay = "🥉";
 
-              <div className="truncate">{row.name}</div>
+            const isMe = String(row.uid) === String(myId);
 
-              <div className="text-white/70 flex items-center gap-1">
-                <span>{codeToFlag(row.country)}</span>
-                <span>{row.country.toUpperCase()}</span>
+            return (
+              <div
+                key={row.uid}
+                className={`grid grid-cols-[40px_2fr_1.1fr_1fr] px-4 py-2 text-sm ${
+                  isMe ? "bg-emerald-500/10" : ""
+                }`}
+              >
+                {/* Rank / Medal */}
+                <div className="text-white/60 flex items-center">
+                  {rankDisplay}
+                </div>
+
+                {/* Avatar + Name */}
+                <div className="flex items-center gap-2 min-w-0">
+                  {row.avatarUrl ? (
+                    <img
+                      src={row.avatarUrl}
+                      alt={row.name}
+                      className="w-7 h-7 rounded-full object-cover flex-shrink-0"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-emerald-600/40 flex items-center justify-center text-[10px] flex-shrink-0">
+                      {row.name?.[0]?.toUpperCase() ?? "?"}
+                    </div>
+                  )}
+                  <span className="truncate">{row.name}</span>
+                </div>
+
+                {/* Country */}
+                <div className="text-white/70 flex items-center gap-1">
+                  <span>{codeToFlag(row.country)}</span>
+                  <span>{row.country.toUpperCase()}</span>
+                </div>
+
+                {/* Score */}
+                <div className="text-right font-semibold">
+                  {formatMoneyShort(row.score)}
+                </div>
               </div>
-
-              <div className="text-right font-semibold">
-                {formatMoneyShort(row.score)}
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -296,9 +325,17 @@ export default function LeaderboardPage() {
   );
 }
 
-// Individual popup components
+// --------------------------------------------------
+// Popups
+// --------------------------------------------------
 
-function ModePickerPopup({ mode, onClose, setMode }) {
+type ModePickerProps = {
+  mode: Mode;
+  onClose: () => void;
+  setMode: (m: Mode) => void;
+};
+
+function ModePickerPopup({ mode, onClose, setMode }: ModePickerProps) {
   return (
     <div
       className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
@@ -356,12 +393,19 @@ function ModePickerPopup({ mode, onClose, setMode }) {
   );
 }
 
+type RegionPickerProps = {
+  selectedRegion: RegionFilter;
+  onClose: () => void;
+  setSelectedRegion: (r: RegionFilter) => void;
+  setSelectedCountry: (c: CountryCode | "ALL") => void;
+};
+
 function RegionPickerPopup({
   selectedRegion,
   onClose,
   setSelectedRegion,
   setSelectedCountry,
-}) {
+}: RegionPickerProps) {
   return (
     <div
       className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
@@ -391,7 +435,6 @@ function RegionPickerPopup({
           <span>All regions</span>
         </button>
 
-        {/* List real regions */}
         {REGIONS.map((r) => {
           const active = r.id === selectedRegion;
           return (
@@ -417,13 +460,21 @@ function RegionPickerPopup({
   );
 }
 
+type CountryPickerProps = {
+  selectedCountry: CountryCode | "ALL";
+  countries: Country[];
+  regionLabel: string;
+  onClose: () => void;
+  setSelectedCountry: (c: CountryCode | "ALL") => void;
+};
+
 function CountryPickerPopup({
   selectedCountry,
   countries,
   regionLabel,
   onClose,
   setSelectedCountry,
-}) {
+}: CountryPickerProps) {
   return (
     <div
       className="fixed inset-0 z-30 flex items-end justify-center bg-black/40"
