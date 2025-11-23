@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { getProfile, setProfile } from "../lib/profile";
 import { achievements } from "../data/achievements";
 import { formatMoneyShort } from "../lib/format";
-import { connectGoogleAccount } from "../lib/auth";
+import { signInWithGoogle } from "../lib/googleAuth";
 
 type ProfileProps = {
   balance: number;
@@ -30,8 +30,8 @@ export default function ProfilePage({
   const [country, setCountry] = useState("US");
   const [uid, setUid] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
-  const [connectingGoogle, setConnectingGoogle] = useState(false);
-  const [googleError, setGoogleError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     const p = getProfile();
@@ -82,24 +82,20 @@ export default function ProfilePage({
     setAvatarUrl(p.avatarUrl);
   }
 
-  async function handleConnectGoogle() {
+  async function handleGoogleLogin() {
+    setAuthLoading(true);
+    setAuthError(null);
     try {
-      setConnectingGoogle(true);
-      setGoogleError(null);
-
-      await connectGoogleAccount();
-
-      // After Google login, refresh from profile
-      const p = getProfile();
-      setName(p.name || "Player");
-      setCountry(p.country || "US");
-      setUid(p.uid || "");
-      setAvatarUrl(p.avatarUrl);
+      const profile = await signInWithGoogle();
+      setName(profile.name);
+      setCountry(profile.country);
+      setUid(profile.uid);
+      setAvatarUrl(profile.avatarUrl);
     } catch (err) {
-      console.error("Google sign-in failed", err);
-      setGoogleError("Google sign-in failed. Please try again.");
+      console.error(err);
+      setAuthError("Google sign-in failed. Try again.");
     } finally {
-      setConnectingGoogle(false);
+      setAuthLoading(false);
     }
   }
 
@@ -140,16 +136,17 @@ export default function ProfilePage({
         </div>
       </div>
 
-      {/* Google connect button (web) */}
+      {/* Google login button */}
       <button
-        onClick={handleConnectGoogle}
-        disabled={connectingGoogle}
-        className="w-full mb-3 rounded-xl bg-zinc-900/80 border border-white/15 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold"
+        onClick={handleGoogleLogin}
+        disabled={authLoading}
+        className="w-full mb-3 rounded-xl bg-white text-black font-semibold py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
       >
-        {connectingGoogle ? "Connecting..." : "Sign in with Google (web account)"}
+        <span className="text-lg">G</span>
+        <span>{authLoading ? "Connecting Google..." : "Sign in with Google"}</span>
       </button>
-      {googleError && (
-        <div className="mb-3 text-xs text-red-400">{googleError}</div>
+      {authError && (
+        <div className="text-xs text-red-400 mb-3">{authError}</div>
       )}
 
       {/* Name / country editing */}
