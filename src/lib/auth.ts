@@ -8,19 +8,21 @@ import { getProfile, setProfile } from "./profile";
  * Returns the Firebase User if successful.
  */
 export async function connectGoogleAccount(): Promise<User> {
-  // Do popup sign-in
   const cred = await signInWithPopup(auth, googleProvider);
   const user = cred.user;
 
   const prev = getProfile();
 
-  // Build new profile info from Google user
   setProfile({
-    uid: user.uid,
-    userId: user.uid,
+    // use Firebase uid as our main uid, but fallback to previous if needed
+    uid: user.uid || prev.uid || "",
+    googleUid: user.uid,
+    userId: prev.userId, // keep Telegram id if it existed
     name: user.displayName || prev.name || "Player",
-    username: user.email || prev.username,
+    username: prev.username, // still for Telegram username
+    email: user.email || prev.email,
     avatarUrl: user.photoURL || prev.avatarUrl,
+    country: prev.country || "US",
     source: "GOOGLE",
   });
 
