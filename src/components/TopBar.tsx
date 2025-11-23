@@ -11,17 +11,17 @@ type Props = {
 
 function short(n: number): string {
   if (n >= 1_000_000_000)
-    return (n / 1_000_000_000)
-      .toFixed(1)
-      .replace(/\.0$/, "") + "B";
+    return (
+      (n / 1_000_000_000).toFixed(1).replace(/\.0$/, "") + "B"
+    );
   if (n >= 1_000_000)
-    return (n / 1_000_000)
-      .toFixed(1)
-      .replace(/\.0$/, "") + "M";
+    return (
+      (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M"
+    );
   if (n >= 1_000)
-    return (n / 1_000)
-      .toFixed(1)
-      .replace(/\.0$/, "") + "K";
+    return (
+      (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K"
+    );
   return String(Math.floor(n));
 }
 
@@ -100,33 +100,33 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
         </div>
       </div>
 
-      {/* CENTER : GAME TITLE */}
-      <div className="flex-1 min-w-0 flex flex-col items-center transform -translate-x-2">
-        {/* CREATURES — cyber royal gold */}
+      {/* CENTER : CREATURES / TAP TO RISE */}
+      <div className="flex-1 min-w-0 flex flex-col items-center transform -translate-x-1">
+        {/* CREATURES — Royal gold, sharp 3D */}
         <div
           className="
-            text-[16px] font-extrabold uppercase
-            tracking-[0.16em]
+            text-[15px] font-extrabold uppercase
+            tracking-[0.26em]
             max-w-[220px] text-center
-            bg-gradient-to-b from-yellow-200 via-amber-400 to-amber-600
+            bg-gradient-to-b from-yellow-100 via-amber-300 to-yellow-700
             bg-clip-text text-transparent
           "
           style={{
             textShadow:
-              // light top highlight
-              "0 1px 0 rgba(255,255,255,0.7)," +
-              // inner 3D edge
-              "0 2px 0 rgba(160,110,40,0.95)," +
-              // soft depth
-              "0 3px 4px rgba(0,0,0,0.7)," +
-              // outer glow
-              "0 0 10px rgba(250,214,120,0.7)"
+              // top highlight
+              "0 1px 0 rgba(255,255,255,0.85)," +
+              // main bevel edge
+              "0 2px 0 rgba(210,150,40,1)," +
+              // deep inner edge
+              "0 3px 0 rgba(120,70,10,1)," +
+              // subtle drop shadow
+              "0 3px 4px rgba(0,0,0,0.95)",
           }}
         >
           CREATURES
         </div>
 
-        {/* TAP TO RISE — emerald neon */}
+        {/* TAP TO RISE — emerald accent */}
         <div
           className="
             text-[10px] uppercase tracking-[0.24em]
@@ -134,9 +134,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
             text-emerald-300
           "
           style={{
-            textShadow:
-              "0 0 5px rgba(16,185,129,0.9)," +
-              "0 0 10px rgba(16,185,129,0.6)"
+            textShadow: "0 0 6px rgba(16,185,129,0.9)",
           }}
         >
           TAP TO RISE
