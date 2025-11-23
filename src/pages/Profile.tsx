@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { getProfile, setProfile } from "../lib/profile";
 import { achievements } from "../data/achievements";
 import { formatMoneyShort } from "../lib/format";
+import { connectGoogleAccount } from "../lib/auth";
 
 type ProfileProps = {
   balance: number;
@@ -29,6 +30,8 @@ export default function ProfilePage({
   const [country, setCountry] = useState("US");
   const [uid, setUid] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
+  const [connectingGoogle, setConnectingGoogle] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
 
   useEffect(() => {
     const p = getProfile();
@@ -79,6 +82,27 @@ export default function ProfilePage({
     setAvatarUrl(p.avatarUrl);
   }
 
+  async function handleConnectGoogle() {
+    try {
+      setConnectingGoogle(true);
+      setGoogleError(null);
+
+      await connectGoogleAccount();
+
+      // After Google login, refresh from profile
+      const p = getProfile();
+      setName(p.name || "Player");
+      setCountry(p.country || "US");
+      setUid(p.uid || "");
+      setAvatarUrl(p.avatarUrl);
+    } catch (err) {
+      console.error("Google sign-in failed", err);
+      setGoogleError("Google sign-in failed. Please try again.");
+    } finally {
+      setConnectingGoogle(false);
+    }
+  }
+
   const initials =
     (name
       .split(" ")
@@ -115,6 +139,18 @@ export default function ProfilePage({
           <div className="text-xs text-white/50">Country: {country}</div>
         </div>
       </div>
+
+      {/* Google connect button (web) */}
+      <button
+        onClick={handleConnectGoogle}
+        disabled={connectingGoogle}
+        className="w-full mb-3 rounded-xl bg-zinc-900/80 border border-white/15 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold"
+      >
+        {connectingGoogle ? "Connecting..." : "Sign in with Google (web account)"}
+      </button>
+      {googleError && (
+        <div className="mb-3 text-xs text-red-400">{googleError}</div>
+      )}
 
       {/* Name / country editing */}
       <label className="block text-sm mb-1 text-white/70">Display name</label>
