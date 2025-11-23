@@ -113,7 +113,7 @@ export default function Shop({
   const tenPackCost = Math.max(
     10 - bulkDiscountLevel,
     10 - MAX_BULK_DISCOUNT
-  ); // 10 -> 5
+  ); // from 10 down to 5
 
   const upgrades: Upgrade[] = [
     {
@@ -236,48 +236,52 @@ export default function Shop({
   }
 
   return (
-    <div className="max-w-xl mx-auto p-4 space-y-4">
-      <Card
-        title="Upgrades"
-        right={
+    <div className="w-full h-full flex flex-col items-center pt-3 pb-24 px-4 text-white">
+      <div className="w-full max-w-xl space-y-4">
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-lg font-semibold text-white">
+            Shop
+          </h1>
           <span className="text-sm text-emerald-300">
             Balance: ${formatMoneyShort(balance)}
           </span>
-        }
-      >
-        <div className="space-y-3">
-          {upgrades.map((u) => {
-            const affordable = balance >= u.cost && !u.disabled;
-            return (
-              <div
-                key={u.id}
-                className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3"
-              >
-                <div className="text-sm">
-                  <div className="font-semibold text-white">
-                    {u.title}
-                  </div>
-                  <div className="text-xs text-white/60">
-                    {u.desc}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleBuy(u)}
-                  disabled={!affordable}
-                  className={`min-w-[90px] px-4 py-2 rounded-full text-sm font-semibold
-                    ${
-                      affordable
-                        ? "bg-emerald-500 text-emerald-950 active:scale-[0.97]"
-                        : "bg-zinc-700 text-zinc-400 opacity-60 cursor-not-allowed"
-                    }`}
-                >
-                  ${formatMoneyShort(u.cost)}
-                </button>
-              </div>
-            );
-          })}
         </div>
-      </Card>
+
+        <Card title="Upgrades">
+          <div className="space-y-3">
+            {upgrades.map((u) => {
+              const affordable = balance >= u.cost && !u.disabled;
+              return (
+                <div
+                  key={u.id}
+                  className="flex items-center justify-between rounded-2xl bg-white/5 px-4 py-3"
+                >
+                  <div className="text-sm">
+                    <div className="font-semibold text-white">
+                      {u.title}
+                    </div>
+                    <div className="text-xs text-white/60">
+                      {u.desc}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleBuy(u)}
+                    disabled={!affordable}
+                    className={`min-w-[90px] px-4 py-2 rounded-full text-sm font-semibold
+                      ${
+                        affordable
+                          ? "bg-emerald-500 text-emerald-950 active:scale-[0.97]"
+                          : "bg-zinc-700 text-zinc-400 opacity-60 cursor-not-allowed"
+                      }`}
+                  >
+                    ${formatMoneyShort(u.cost)}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }
