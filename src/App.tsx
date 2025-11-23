@@ -130,6 +130,17 @@ export default function App() {
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
 
+  // 🔥 Local best score for leaderboard (never submit lower than this)
+  const [bestScore, setBestScore] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    try {
+      const raw = localStorage.getItem("mm_best_score_v1");
+      return raw ? Number(raw) || 0 : 0;
+    } catch {
+      return 0;
+    }
+  });
+
   // Telegram init
   useEffect(() => {
     initTelegramUI();
@@ -209,17 +220,34 @@ export default function App() {
     }
   }, 1000);
 
-  // 🔥 Auto-submit score to leaderboard EVERY time totalEarnings changes
+  // 🔥 Auto-submit to leaderboard ONLY when you beat your bestScore
   useEffect(() => {
     if (totalEarnings <= 0) return;
 
-    try {
-      submitScore(totalEarnings).catch(() => {
-        // ignore network errors for now
-      });
-    } catch {
-      // ignore
-    }
+    setBestScore((prevBest) => {
+      const nextBest = totalEarnings > prevBest ? totalEarnings : prevBest;
+
+      // If we actually improved, persist and submit
+      if (nextBest !== prevBest) {
+        try {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("mm_best_score_v1", String(nextBest));
+          }
+        } catch {
+          // ignore
+        }
+
+        try {
+          submitScore(nextBest).catch(() => {
+            // ignore network errors
+          });
+        } catch {
+          // ignore
+        }
+      }
+
+      return nextBest;
+    });
   }, [totalEarnings]);
 
   // Achievements checking
