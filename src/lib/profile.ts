@@ -1,10 +1,14 @@
 // src/lib/profile.ts
 
 export type Profile = {
-  /** Stable in-game player ID (we want this to be Telegram user.id when available) */
+  /** Stable in-game player ID (Telegram user.id or Google uid when available) */
   uid: string;
-  /** Raw Telegram user id as string (same as uid, but kept separately in case) */
+
+  /** Raw Telegram user id as string (same as uid for TG users, but kept separately in case) */
   userId?: string;
+
+  /** Optional Google account uid (Firebase Auth) */
+  googleUid?: string;
 
   /** Displayed name in the game */
   name: string;
@@ -15,11 +19,14 @@ export type Profile = {
   /** Optional Telegram username like "DozerBrain" */
   username?: string;
 
-  /** Avatar URL from Telegram */
+  /** Optional email (for Google users) */
+  email?: string;
+
+  /** Avatar URL from Telegram or Google photoURL */
   avatarUrl?: string;
 
-  /** Where this profile data came from: "TG" | "LOCAL" */
-  source?: "TG" | "LOCAL";
+  /** Where this profile data came from */
+  source?: "TG" | "LOCAL" | "GOOGLE";
 };
 
 export type PlayerProfile = Profile; // alias so imports work
@@ -55,7 +62,7 @@ export function getProfile(): Profile {
 
 /**
  * Merge new profile data with existing one.
- * - Never lose Telegram uid/avatar when you only update name / country.
+ * - Never lose Telegram or Google uid/avatar when you only update name / country.
  * - If uid is still empty, generate one (timestamp-based).
  */
 export function setProfile(update: Partial<Profile>): Profile {
@@ -67,7 +74,16 @@ export function setProfile(update: Partial<Profile>): Profile {
     ...update,
   };
 
-  // Ensure we always have a uid
+  // Prefer explicit provider-specific ids if present
+  // (e.g. Google login calling setProfile({ googleUid, uid: authUid, ... }))
+  if (update.googleUid && !next.googleUid) {
+    next.googleUid = String(update.googleUid);
+  }
+  if (update.userId && !next.userId) {
+    next.userId = String(update.userId);
+  }
+
+  // Ensure we always have a stable uid
   if (!next.uid) {
     if (update.uid) {
       next.uid = String(update.uid);
@@ -75,8 +91,10 @@ export function setProfile(update: Partial<Profile>): Profile {
       next.uid = prev.uid;
     } else if (update.userId) {
       next.uid = String(update.userId);
+    } else if (update.googleUid) {
+      next.uid = String(update.googleUid);
     } else {
-      // Fallback: local-only uid if no Telegram info
+      // Fallback: local-only uid if no Telegram/Google info
       next.uid = String(Date.now());
     }
   }
