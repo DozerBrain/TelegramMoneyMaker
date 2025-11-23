@@ -29,6 +29,11 @@ type Props = {
   couponsSpent: number;
   setCouponsSpent: React.Dispatch<React.SetStateAction<number>>;
   bulkDiscountLevel: number;
+
+  // Optional save handlers (so App.tsx can pass them without TS errors)
+  onExport?: () => void;
+  onImport?: (raw: string) => void;
+  onReset?: () => void;
 };
 
 export default function InventoryPage({
@@ -44,6 +49,12 @@ export default function InventoryPage({
   couponsSpent,
   setCouponsSpent,
   bulkDiscountLevel,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onExport,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onImport,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  onReset,
 }: Props) {
   const [tab, setTab] = useState<"cards" | "suits" | "pets">("cards");
 
