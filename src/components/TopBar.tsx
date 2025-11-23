@@ -50,9 +50,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
         // 🔥 Sort manually to guarantee proper ranking
         rows.sort((a, b) => b.score - a.score);
 
-        const pos = rows.findIndex(
-          (r) => String(r.uid) === String(p.uid)
-        );
+        const pos = rows.findIndex((r) => String(r.uid) === String(p.uid));
 
         // 🔥 Always show a rank, even if you're the ONLY one
         if (pos >= 0) setRank(pos + 1);
@@ -101,25 +99,24 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
       </div>
 
       {/* CENTER : title */}
-      <div className="flex-1 min-w-0 flex flex-col items-center">
-        {/* CREATURES — 3D metallic gold with glow */}
+      <div className="flex-1 min-w-0 flex flex-col items-start ml-6">
+        {/* CREATURES — 3D metallic gold with strong glow */}
         <div
           className="
-            text-[15px] font-extrabold uppercase
-            tracking-[0.18em]
-            max-w-[220px] text-center
-            bg-gradient-to-b from-yellow-200 via-yellow-400 to-amber-500
+            text-[17px] font-extrabold uppercase
+            tracking-[0.20em]
+            max-w-[240px]
+            bg-gradient-to-b from-yellow-100 via-yellow-300 to-amber-500
             bg-clip-text text-transparent
           "
           style={{
             textShadow:
-              // inner bevel + 3D depth + outer glow
-              "0 0 4px rgba(0,0,0,0.85)," + // deep core shadow
-              "0 1px 0 rgba(255,255,255,0.5)," + // top highlight
-              "0 2px 0 rgba(180,120,20,0.9)," + // main 3D step
-              "0 3px 2px rgba(0,0,0,0.85)," + // drop shadow
-              "0 0 12px rgba(250,220,120,0.9)," + // soft glow
-              "0 0 22px rgba(250,220,120,0.75)" // outer glow
+              "0 0 3px rgba(0,0,0,0.9)," + // deep core shadow
+              "0 1px 0 rgba(255,255,255,0.8)," + // bevel highlight
+              "0 2px 0 rgba(190,130,20,1)," + // 3D step
+              "0 3px 2px rgba(0,0,0,0.9)," + // drop shadow
+              "0 0 15px rgba(255,222,120,0.9)," + // inner glow
+              "0 0 25px rgba(255,222,120,0.8)" // outer glow
           }}
         >
           CREATURES
@@ -128,14 +125,14 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
         {/* TAP TO RISE — emerald accent */}
         <div
           className="
-            text-[10px] uppercase tracking-[0.24em]
-            mt-0.5 whitespace-nowrap font-semibold
+            text-[11px] uppercase tracking-[0.28em]
+            mt-1 whitespace-nowrap font-semibold
             text-emerald-300
           "
           style={{
             textShadow:
-              "0 0 6px rgba(16,185,129,0.9)," + // emerald glow
-              "0 0 12px rgba(16,185,129,0.6)"
+              "0 0 6px rgba(16,185,129,1)," +
+              "0 0 14px rgba(16,185,129,0.6)"
           }}
         >
           TAP TO RISE
