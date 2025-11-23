@@ -458,9 +458,12 @@ export default function App() {
               tapValue={tapValue}
               autoPerSec={autoPerSec}
               multi={multi}
-              onReset={handleReset}
-              onExport={handleExport}
-              onImport={handleImport}
+              cards={cards}
+              setCards={setCards}
+              couponsAvailable={couponsAvailable}
+              couponsSpent={couponsSpent}
+              setCouponsSpent={setCouponsSpent}
+              bulkDiscountLevel={bulkDiscountLevel}
             />
           )}
 
