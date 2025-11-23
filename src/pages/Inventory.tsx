@@ -1,6 +1,5 @@
 // src/pages/Inventory.tsx
 import React, { useState } from "react";
-import LeftQuickNav from "../components/LeftQuickNav";
 
 type Props = {
   balance: number;
@@ -10,7 +9,6 @@ type Props = {
   autoPerSec: number;
   multi: number;
 
-  // still passed from App but not used here now (keep for future Achievements if needed)
   achievementsState: Record<string, { done: boolean; claimed: boolean }>;
   onClaim: (id: string, reward: number) => void;
 
@@ -31,14 +29,68 @@ export default function InventoryPage({
   onImport,
 }: Props) {
   const [importText, setImportText] = useState("");
+  const [tab, setTab] = useState<"cards" | "suits" | "pets" | null>(null);
 
   return (
     <div className="w-full h-full flex flex-col items-center pt-3 pb-24 px-4 text-white">
-      {/* 🔹 Inventory header row: Cards / Suits / Pets */}
-      <LeftQuickNav />
+      
+      {/* 🔹 New top selector row */}
+      <div className="flex gap-3">
+        <button
+          className={`px-5 py-2 rounded-xl text-sm font-semibold ${
+            tab === "cards"
+              ? "bg-emerald-600"
+              : "bg-zinc-800 hover:bg-zinc-700"
+          }`}
+          onClick={() => setTab("cards")}
+        >
+          Cards
+        </button>
 
-      {/* 🔹 Summary cards */}
-      <div className="mt-4 w-full max-w-md space-y-2 text-sm text-white/80">
+        <button
+          className={`px-5 py-2 rounded-xl text-sm font-semibold ${
+            tab === "suits"
+              ? "bg-emerald-600"
+              : "bg-zinc-800 hover:bg-zinc-700"
+          }`}
+          onClick={() => setTab("suits")}
+        >
+          Suits
+        </button>
+
+        <button
+          className={`px-5 py-2 rounded-xl text-sm font-semibold ${
+            tab === "pets"
+              ? "bg-emerald-600"
+              : "bg-zinc-800 hover:bg-zinc-700"
+          }`}
+          onClick={() => setTab("pets")}
+        >
+          Pets
+        </button>
+      </div>
+
+      {/* 🔹 TAB CONTENT (clicking opens under it) */}
+      {tab === "cards" && (
+        <div className="mt-4 text-white/80">
+          <p>Cards content will go here.</p>
+        </div>
+      )}
+
+      {tab === "suits" && (
+        <div className="mt-4 text-white/80">
+          <p>Suits content will go here.</p>
+        </div>
+      )}
+
+      {tab === "pets" && (
+        <div className="mt-4 text-white/80">
+          <p>Pets content will go here.</p>
+        </div>
+      )}
+
+      {/* 🔹 Summary */}
+      <div className="mt-6 w-full max-w-md space-y-2 text-sm text-white/80">
         <div className="flex justify-between bg-zinc-900/70 rounded-xl px-3 py-2">
           <span className="text-white/60">Balance</span>
           <span>${balance.toLocaleString()}</span>
@@ -82,9 +134,6 @@ export default function InventoryPage({
           </button>
         </div>
 
-        <div className="text-xs text-white/60 mb-1">
-          Import save (paste JSON and tap Import):
-        </div>
         <textarea
           className="w-full h-24 rounded-xl bg-zinc-900/80 border border-white/10 px-3 py-2 text-xs outline-none focus:border-emerald-500"
           value={importText}
@@ -92,10 +141,7 @@ export default function InventoryPage({
           placeholder="{ ... }"
         />
         <button
-          onClick={() => {
-            if (!importText.trim()) return;
-            onImport(importText);
-          }}
+          onClick={() => importText.trim() && onImport(importText)}
           className="mt-2 w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 text-sm font-semibold py-2.5"
         >
           Import save
