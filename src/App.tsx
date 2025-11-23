@@ -10,6 +10,7 @@ import AppBackground from "./components/AppBackground";
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import Spin from "./pages/Spin";
+import InventoryPage from "./pages/Inventory";
 import LeaderboardPage from "./pages/Leaderboard";
 import ProfilePage from "./pages/Profile";
 import PetsPage from "./pages/Pets";
@@ -213,7 +214,6 @@ export default function App() {
     if (totalEarnings <= 0) return;
 
     try {
-      // submitScore reads profile (uid, name, country) from moneymaker_profile_v1
       submitScore(totalEarnings).catch(() => {
         // ignore network errors for now
       });
@@ -449,17 +449,15 @@ export default function App() {
             />
           )}
 
-          {/* INVENTORY – placeholder using More page for now */}
+          {/* INVENTORY – now real InventoryPage */}
           {tab === "inventory" && (
-            <More
+            <InventoryPage
               balance={balance}
               totalEarnings={totalEarnings}
               taps={taps}
               tapValue={tapValue}
               autoPerSec={autoPerSec}
               multi={multi}
-              achievementsState={achState}
-              onClaim={handleClaimAchievement}
               onReset={handleReset}
               onExport={handleExport}
               onImport={handleImport}
