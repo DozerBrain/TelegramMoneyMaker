@@ -1,24 +1,46 @@
 // src/pages/Inventory.tsx
-import React from "react";
-import LeftQuickNav from "../components/LeftQuickNav";
+import React, { useState } from "react";
+import CardCollection from "../components/cards/CardCollection";
+import Suits from "../components/suits/Suits";
+import Pets from "../components/pets/Pets";
 
 export default function InventoryPage() {
-  return (
-    <div className="w-full h-full flex flex-col items-center pt-2 pb-24">
-      {/* Top row: Cards / Suits / Pets */}
-      <LeftQuickNav />
+  const [tab, setTab] = useState<"cards" | "suits" | "pets">("cards");
 
-      {/* You can add more inventory content below later:
-          card summary, suit bonuses, pet bonuses, etc. */}
-      <div className="mt-4 px-4 w-full max-w-md text-center text-sm text-white/70">
-        <p>
-          Manage your{" "}
-          <span className="text-emerald-400 font-semibold">Cards</span>,{" "}
-          <span className="text-emerald-400 font-semibold">Suits</span> and{" "}
-          <span className="text-emerald-400 font-semibold">Pets</span>. Tap an
-          icon above to open its page.
-        </p>
+  return (
+    <div className="w-full h-full flex flex-col items-center pt-6 pb-24 px-4">
+
+      {/* Header Tabs */}
+      <div className="w-full max-w-md flex items-center justify-between gap-2">
+        {[
+          { id: "cards", label: "Cards" },
+          { id: "suits", label: "Suits" },
+          { id: "pets", label: "Pets" },
+        ].map((t) => (
+          <button
+            key={t.id}
+            onClick={() => setTab(t.id as any)}
+            className={`
+              flex-1 py-3 rounded-xl border text-center font-semibold
+              ${
+                tab === t.id
+                  ? "border-emerald-400 bg-emerald-500/10 text-emerald-300"
+                  : "border-white/10 bg-black/20 text-white/60"
+              }
+            `}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
+
+      {/* Content Under Tabs */}
+      <div className="w-full max-w-md mt-4">
+        {tab === "cards" && <CardCollection />}
+        {tab === "suits" && <Suits />}
+        {tab === "pets" && <Pets />}
+      </div>
+
     </div>
   );
 }
