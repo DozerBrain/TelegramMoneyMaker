@@ -10,7 +10,6 @@ import AppBackground from "./components/AppBackground";
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import Spin from "./pages/Spin";
-import More from "./pages/More";
 import LeaderboardPage from "./pages/Leaderboard";
 import ProfilePage from "./pages/Profile";
 import PetsPage from "./pages/Pets";
