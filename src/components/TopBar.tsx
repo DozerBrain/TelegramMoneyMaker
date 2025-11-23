@@ -43,7 +43,6 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
         rows.sort((a, b) => b.score - a.score);
 
         const pos = rows.findIndex((r) => String(r.uid) === String(p.uid));
-
         if (pos >= 0) setRank(pos + 1);
         else setRank(1);
       } catch {
@@ -89,24 +88,24 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
         </div>
       </div>
 
-      {/* CENTER : title (slightly left-biased, elegant gold) */}
-      <div className="flex-1 min-w-0 flex flex-col items-start pl-4">
+      {/* CENTER : title (clean, centered, subtle 3D) */}
+      <div className="flex-1 min-w-0 flex flex-col items-center">
         {/* CREATURES — elegant metallic gold */}
         <div
           className="
-            text-[15px] font-extrabold uppercase
-            tracking-[0.14em]
-            max-w-[220px] truncate
+            text-[14px] font-extrabold uppercase
+            tracking-[0.16em]
+            max-w-[180px] text-center truncate
             bg-gradient-to-b from-amber-200 via-amber-400 to-amber-600
             bg-clip-text text-transparent
           "
           style={{
             textShadow:
-              // subtle highlight + depth + soft outer glow
-              "0 1px 0 rgba(255,255,255,0.9)," + // top highlight
-              "0 2px 2px rgba(120,72,18,0.85)," + // main bevel / depth
-              "0 3px 5px rgba(0,0,0,0.8)," + // drop shadow
-              "0 0 8px rgba(250,214,165,0.9)", // soft gold glow
+              // light 3D + soft glow (no crazy halo)
+              "0 1px 0 rgba(255,255,255,0.7)," + // top highlight
+              "0 2px 2px rgba(120,72,18,0.9)," + // depth
+              "0 3px 4px rgba(0,0,0,0.85)," + // shadow
+              "0 0 6px rgba(250,214,165,0.8)", // gentle glow
           }}
         >
           CREATURES
@@ -120,9 +119,7 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
             text-emerald-300
           "
           style={{
-            textShadow:
-              "0 0 5px rgba(16,185,129,0.9)," +
-              "0 0 10px rgba(16,185,129,0.6)",
+            textShadow: "0 0 4px rgba(16,185,129,0.9)",
           }}
         >
           TAP TO RISE
