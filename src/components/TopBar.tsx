@@ -102,11 +102,43 @@ export default function TopBar({ taps, tapValue, autoPerSec }: Props) {
 
       {/* CENTER : title */}
       <div className="flex-1 min-w-0 flex flex-col items-center">
-        <div className="text-[15px] font-semibold text-emerald-400 max-w-[160px] truncate">
-          MoneyMaker 💸
+        {/* CREATURES — 3D metallic gold with glow */}
+        <div
+          className="
+            text-[15px] font-extrabold uppercase
+            tracking-[0.18em]
+            max-w-[220px] text-center
+            bg-gradient-to-b from-yellow-200 via-yellow-400 to-amber-500
+            bg-clip-text text-transparent
+          "
+          style={{
+            textShadow:
+              // inner bevel + 3D depth + outer glow
+              "0 0 4px rgba(0,0,0,0.85)," + // deep core shadow
+              "0 1px 0 rgba(255,255,255,0.5)," + // top highlight
+              "0 2px 0 rgba(180,120,20,0.9)," + // main 3D step
+              "0 3px 2px rgba(0,0,0,0.85)," + // drop shadow
+              "0 0 12px rgba(250,220,120,0.9)," + // soft glow
+              "0 0 22px rgba(250,220,120,0.75)" // outer glow
+          }}
+        >
+          CREATURES
         </div>
-        <div className="text-[10px] tracking-[0.18em] text-white/40 mt-0.5 whitespace-nowrap">
-          TAP • EARN • FLEX
+
+        {/* TAP TO RISE — emerald accent */}
+        <div
+          className="
+            text-[10px] uppercase tracking-[0.24em]
+            mt-0.5 whitespace-nowrap font-semibold
+            text-emerald-300
+          "
+          style={{
+            textShadow:
+              "0 0 6px rgba(16,185,129,0.9)," + // emerald glow
+              "0 0 12px rgba(16,185,129,0.6)"
+          }}
+        >
+          TAP TO RISE
         </div>
       </div>
 
