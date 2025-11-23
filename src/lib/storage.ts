@@ -63,6 +63,13 @@ export type SaveData = {
 
   bestSuitName: string;
 
+  // 🔥 Long-term upgrade stats
+  critChance: number;        // 0–1 (e.g. 0.05 = 5%)
+  critMult: number;          // e.g. 5 = x5
+  autoBonusMult: number;     // e.g. 1.2 = +20% auto
+  couponBoostLevel: number;  // integer levels
+  bulkDiscountLevel: number; // integer levels
+
   // Cards & coupons
   cards: any[]; // CardInstance[]
   couponsSpent: number;
@@ -105,6 +112,13 @@ export const defaultSave: SaveData = {
   multi: 1,
 
   bestSuitName: "Starter",
+
+  // Long-term upgrade stats (defaults)
+  critChance: 0,
+  critMult: 5,
+  autoBonusMult: 1,
+  couponBoostLevel: 0,
+  bulkDiscountLevel: 0,
 
   // Cards & coupons
   cards: [],
@@ -156,8 +170,7 @@ export function loadSave(): SaveData {
       ownedSuits: get(KEYS.ownedSuits, [] as string[]),
       equippedSuit: get(KEYS.equippedSuit, null as string | null),
       profile: get(KEY_PROFILE, defaultSave.profile),
-
-      // everything else uses defaults
+      // everything else uses defaults from defaultSave
     };
 
     set(FULL_SAVE_KEY, legacy);
