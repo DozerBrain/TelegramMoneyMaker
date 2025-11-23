@@ -142,6 +142,9 @@ export default function App() {
     }
   });
 
+  // 🔥 NEW: flag so we don't overwrite cloud before first sync
+  const [cloudReady, setCloudReady] = useState(false);
+
   // Telegram init
   useEffect(() => {
     initTelegramUI();
@@ -154,39 +157,43 @@ export default function App() {
     async function syncFromCloud() {
       try {
         const cloud = await loadCloudSave();
-        if (!cloud || cancelled) return;
+        if (cancelled) return;
 
-        // Overwrite state with cloud values
-        setBalance(cloud.balance ?? cloud.score ?? 0);
-        setTotalEarnings(cloud.totalEarnings ?? cloud.score ?? 0);
-        setTaps(cloud.taps ?? cloud.tap ?? 0);
-        setTapValue(cloud.tapValue ?? 1);
-        setAutoPerSec(cloud.autoPerSec ?? 0);
-        setMulti(cloud.multi ?? 1);
+        if (cloud) {
+          // Overwrite state with cloud values
+          setBalance(cloud.balance ?? cloud.score ?? 0);
+          setTotalEarnings(cloud.totalEarnings ?? cloud.score ?? 0);
+          setTaps(cloud.taps ?? cloud.tap ?? 0);
+          setTapValue(cloud.tapValue ?? 1);
+          setAutoPerSec(cloud.autoPerSec ?? 0);
+          setMulti(cloud.multi ?? 1);
 
-        setCritChance(cloud.critChance ?? 0);
-        setCritMult(cloud.critMult ?? 5);
-        setAutoBonusMult(cloud.autoBonusMult ?? 1);
-        setCouponBoostLevel(cloud.couponBoostLevel ?? 0);
-        setBulkDiscountLevel(cloud.bulkDiscountLevel ?? 0);
+          setCritChance(cloud.critChance ?? 0);
+          setCritMult(cloud.critMult ?? 5);
+          setAutoBonusMult(cloud.autoBonusMult ?? 1);
+          setCouponBoostLevel(cloud.couponBoostLevel ?? 0);
+          setBulkDiscountLevel(cloud.bulkDiscountLevel ?? 0);
 
-        setEquippedSuitId(cloud.equippedSuit ?? null);
-        setEquippedPetId(cloud.equippedPet ?? null);
-        setBestSuitName(cloud.bestSuitName ?? "Starter");
+          setEquippedSuitId(cloud.equippedSuit ?? null);
+          setEquippedPetId(cloud.equippedPet ?? null);
+          setBestSuitName(cloud.bestSuitName ?? "Starter");
 
-        setAchState(cloud.achievements ?? {});
-        setCards(Array.isArray(cloud.cards) ? cloud.cards : []);
-        setCouponsSpent(cloud.couponsSpent ?? 0);
-        setSpinCooldownEndsAt(cloud.spinCooldownEndsAt ?? null);
+          setAchState(cloud.achievements ?? {});
+          setCards(Array.isArray(cloud.cards) ? cloud.cards : []);
+          setCouponsSpent(cloud.couponsSpent ?? 0);
+          setSpinCooldownEndsAt(cloud.spinCooldownEndsAt ?? null);
 
-        // Sync bestScore from cloud too (never go down)
-        const cloudBest = cloud.totalEarnings ?? cloud.score ?? 0;
-        setBestScore((prev) => Math.max(prev, cloudBest));
+          // Sync bestScore from cloud too (never go down)
+          const cloudBest = cloud.totalEarnings ?? cloud.score ?? 0;
+          setBestScore((prev) => Math.max(prev, cloudBest));
 
-        // And mirror cloud -> local storage so everything stays in sync
-        saveSave(cloud as any);
+          // And mirror cloud -> local storage so everything stays in sync
+          saveSave(cloud as any);
+        }
       } catch {
         // ignore network errors
+      } finally {
+        if (!cancelled) setCloudReady(true);
       }
     }
 
@@ -317,6 +324,9 @@ export default function App() {
 
   // Save game (merge with existing save, never wipe) + 🔥 push to cloud
   useEffect(() => {
+    // ⛔ don't touch cloud until first cloud sync finished
+    if (!cloudReady) return;
+
     const prev: any = (loadSave() as any) ?? {};
     const collection = buildCollectionFromCards(cards);
 
@@ -369,6 +379,7 @@ export default function App() {
       // ignore network errors
     });
   }, [
+    cloudReady,
     balance,
     totalEarnings,
     taps,
