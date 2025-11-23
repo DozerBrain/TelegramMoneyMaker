@@ -26,6 +26,7 @@ import { initTelegramUI } from "./lib/telegram";
 import { suits } from "./data/suits";
 import { getEquippedPet, getEquippedSuit } from "./lib/storage";
 import { submitScore } from "./lib/leaderboard";
+import { loadCloudSave, saveCloudSave } from "./lib/cloudSave"; // 🔥 cloud save
 
 // Central income math
 import {
@@ -65,7 +66,7 @@ function buildCollectionFromCards(cards: CardInstance[]) {
 }
 
 export default function App() {
-  // Load save once
+  // Load *local* save once (fast) – cloud will override it later if found
   const initial = useMemo(() => (loadSave() as any) || {}, []);
 
   // Core state
@@ -144,6 +145,55 @@ export default function App() {
   // Telegram init
   useEffect(() => {
     initTelegramUI();
+  }, []);
+
+  // 🔥 On mount, try to override with CLOUD save (if exists for this UID)
+  useEffect(() => {
+    let cancelled = false;
+
+    async function syncFromCloud() {
+      try {
+        const cloud = await loadCloudSave();
+        if (!cloud || cancelled) return;
+
+        // Overwrite state with cloud values
+        setBalance(cloud.balance ?? cloud.score ?? 0);
+        setTotalEarnings(cloud.totalEarnings ?? cloud.score ?? 0);
+        setTaps(cloud.taps ?? cloud.tap ?? 0);
+        setTapValue(cloud.tapValue ?? 1);
+        setAutoPerSec(cloud.autoPerSec ?? 0);
+        setMulti(cloud.multi ?? 1);
+
+        setCritChance(cloud.critChance ?? 0);
+        setCritMult(cloud.critMult ?? 5);
+        setAutoBonusMult(cloud.autoBonusMult ?? 1);
+        setCouponBoostLevel(cloud.couponBoostLevel ?? 0);
+        setBulkDiscountLevel(cloud.bulkDiscountLevel ?? 0);
+
+        setEquippedSuitId(cloud.equippedSuit ?? null);
+        setEquippedPetId(cloud.equippedPet ?? null);
+        setBestSuitName(cloud.bestSuitName ?? "Starter");
+
+        setAchState(cloud.achievements ?? {});
+        setCards(Array.isArray(cloud.cards) ? cloud.cards : []);
+        setCouponsSpent(cloud.couponsSpent ?? 0);
+        setSpinCooldownEndsAt(cloud.spinCooldownEndsAt ?? null);
+
+        // Sync bestScore from cloud too (never go down)
+        const cloudBest = cloud.totalEarnings ?? cloud.score ?? 0;
+        setBestScore((prev) => Math.max(prev, cloudBest));
+
+        // And mirror cloud -> local storage so everything stays in sync
+        saveSave(cloud as any);
+      } catch {
+        // ignore network errors
+      }
+    }
+
+    syncFromCloud();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Sync equipped pet / suit from storage events (Pets/Suits pages)
@@ -265,12 +315,12 @@ export default function App() {
     });
   }, [taps, balance, totalEarnings, bestSuitName]);
 
-  // Save game (merge with existing save, never wipe)
+  // Save game (merge with existing save, never wipe) + 🔥 push to cloud
   useEffect(() => {
     const prev: any = (loadSave() as any) ?? {};
     const collection = buildCollectionFromCards(cards);
 
-    saveSave({
+    const next: any = {
       ...prev,
 
       // Legacy fields
@@ -309,6 +359,14 @@ export default function App() {
       // Missions & profile
       spinCooldownEndsAt,
       profile: prev.profile ?? defaultSave.profile,
+    };
+
+    // Local save
+    saveSave(next);
+
+    // Cloud save (fire and forget)
+    saveCloudSave(next).catch(() => {
+      // ignore network errors
     });
   }, [
     balance,
@@ -382,6 +440,8 @@ export default function App() {
     try {
       const parsed = JSON.parse(raw);
       saveSave(parsed as any);
+      // also push imported data to cloud
+      saveCloudSave(parsed as any).catch(() => {});
       location.reload();
     } catch {
       alert("Invalid save JSON.");
@@ -389,7 +449,9 @@ export default function App() {
   }
 
   function handleReset() {
-    saveSave({ ...defaultSave } as any);
+    const fresh = { ...defaultSave } as any;
+    saveSave(fresh);
+    saveCloudSave(fresh).catch(() => {});
     location.reload();
   }
 
@@ -492,6 +554,9 @@ export default function App() {
               couponsSpent={couponsSpent}
               setCouponsSpent={setCouponsSpent}
               bulkDiscountLevel={bulkDiscountLevel}
+              onExport={handleExport}
+              onImport={handleImport}
+              onReset={handleReset}
             />
           )}
 
