@@ -10,6 +10,7 @@ function get<T>(key: string, fallback: T): T {
     return fallback;
   }
 }
+
 function set<T>(key: string, value: T) {
   localStorage.setItem(key, JSON.stringify(value));
 }
@@ -39,9 +40,9 @@ export type PlayerProfile = {
   avatar?: string;
 };
 
-// 🔥 NEW: full save structure used by App.tsx
+// 🔥 NEW: full save structure for the whole game
 export type SaveData = {
-  // Legacy fields (still used by some parts)
+  // Legacy
   score: number;
   tap: number;
   collection: Collection;
@@ -53,7 +54,7 @@ export type SaveData = {
   equippedSuit: string | null;
   profile: PlayerProfile;
 
-  // 🔥 New core game fields
+  // Core
   balance: number;
   totalEarnings: number;
   taps: number;
@@ -63,22 +64,26 @@ export type SaveData = {
 
   bestSuitName: string;
 
-  // 🔥 Long-term upgrade stats
-  critChance: number;        // 0–1 (e.g. 0.05 = 5%)
-  critMult: number;          // e.g. 5 = x5
-  autoBonusMult: number;     // e.g. 1.2 = +20% auto
-  couponBoostLevel: number;  // integer levels
-  bulkDiscountLevel: number; // integer levels
+  // Long-term upgrades
+  critChance: number;
+  critMult: number;
+  autoBonusMult: number;
+  couponBoostLevel: number;
+  bulkDiscountLevel: number;
 
-  // Cards & coupons
-  cards: any[]; // CardInstance[]
+  // Cards
+  cards: any[];
   couponsSpent: number;
+
+  // Casino chips
+  chips: number;
+  chipExchangeUsed: number; // how much exchanged today
 
   // Progression
   achievements: Record<string, { done: boolean; claimed: boolean }>;
   quests: any[];
 
-  // Spin / misc
+  // Missions
   spinCooldownEndsAt: number | null;
 };
 
@@ -103,7 +108,7 @@ export const defaultSave: SaveData = {
   equippedSuit: null,
   profile: { username: "Player", region: "World" },
 
-  // New core
+  // Core
   balance: 0,
   totalEarnings: 0,
   taps: 0,
@@ -113,38 +118,42 @@ export const defaultSave: SaveData = {
 
   bestSuitName: "Starter",
 
-  // Long-term upgrade stats (defaults)
+  // Long-term stats
   critChance: 0,
   critMult: 5,
   autoBonusMult: 1,
   couponBoostLevel: 0,
   bulkDiscountLevel: 0,
 
-  // Cards & coupons
+  // Cards
   cards: [],
   couponsSpent: 0,
+
+  // Casino
+  chips: 0,
+  chipExchangeUsed: 0,
 
   // Progression
   achievements: {},
   quests: [],
 
-  // Spin
+  // Missions
   spinCooldownEndsAt: null,
 };
 
-// 🔑 Single unified key for full save
+// Unified save key
 const FULL_SAVE_KEY = "moneymaker_full_save_v1";
 
-// -------- CORE SAVE LOAD/SAVE ----------
+// -------- CORE LOAD/SAVE --------
 
-/** Load full SaveData, with migration from old split keys if needed */
+/** Load full SaveData (with migration from old keys) */
 export function loadSave(): SaveData {
   if (typeof window === "undefined" || typeof localStorage === "undefined") {
     return { ...defaultSave };
   }
 
   try {
-    // 1) Try new full-save key first
+    // Load the new format first
     const raw = localStorage.getItem(FULL_SAVE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
@@ -158,19 +167,19 @@ export function loadSave(): SaveData {
       };
     }
 
-    // 2) No full save yet? -> Migrate from legacy separate keys
+    // Migrate legacy
     const legacy: SaveData = {
       ...defaultSave,
       score: get(KEY_SCORE, 0),
       tap: get(KEY_TAP, 0),
       collection: get(KEY_COLLECTION, defaultSave.collection),
-      lastDrop: get(KEY_LAST_DROP, null as any | null),
+      lastDrop: get(KEY_LAST_DROP, null),
       ownedPets: get(KEYS.ownedPets, [] as string[]),
-      equippedPet: get(KEYS.equippedPet, null as string | null),
+      equippedPet: get(KEYS.equippedPet, null),
       ownedSuits: get(KEYS.ownedSuits, [] as string[]),
-      equippedSuit: get(KEYS.equippedSuit, null as string | null),
+      equippedSuit: get(KEYS.equippedSuit, null),
       profile: get(KEY_PROFILE, defaultSave.profile),
-      // everything else uses defaults from defaultSave
+      // all other fields are defaults
     };
 
     set(FULL_SAVE_KEY, legacy);
@@ -180,27 +189,26 @@ export function loadSave(): SaveData {
   }
 }
 
-/** Save full game state (partial allowed), merging with existing */
+/** Save full game state (merge patch) */
 export function saveSave(patch: Partial<SaveData>): void {
-  if (typeof window === "undefined" || typeof localStorage === "undefined") {
-    return;
-  }
+  if (typeof window === "undefined" || typeof localStorage === "undefined") return;
 
   try {
     const prev = loadSave();
     const next: SaveData = {
       ...prev,
       ...patch,
+
+      // merge collections
       collection: {
         ...prev.collection,
         ...(patch.collection ?? {}),
       },
     };
 
-    // Write unified save
     localStorage.setItem(FULL_SAVE_KEY, JSON.stringify(next));
 
-    // Mirror some important values to legacy keys for compatibility
+    // mirror essential legacy keys
     set(KEY_SCORE, next.score);
     set(KEY_TAP, next.tap);
     set(KEY_COLLECTION, next.collection);
@@ -211,23 +219,19 @@ export function saveSave(patch: Partial<SaveData>): void {
     set(KEYS.equippedSuit, next.equippedSuit);
     set(KEY_PROFILE, next.profile);
 
-    // Keep KEY_SAVE_SNAPSHOT as a debug/backup
+    // debug backup
     set(KEY_SAVE_SNAPSHOT, next);
 
-    // Notify listeners
-    try {
-      window.dispatchEvent(new Event("mm:save"));
-    } catch {
-      // ignore
-    }
+    // notify listeners
+    window.dispatchEvent(new Event("mm:save"));
   } catch {
     // ignore
   }
 }
 
-// ======= PUBLIC HELPERS (same names you already use) =======
+// ======= PUBLIC HELPERS =======
 
-// SCORE & TAP (now read from unified save)
+// SCORE & TAP
 export function getScore(): number {
   return loadSave().score ?? 0;
 }
@@ -291,11 +295,25 @@ export function getProfile(): PlayerProfile {
 }
 export function setProfile(patch: Partial<PlayerProfile>) {
   const current = getProfile();
-  const profile = { ...current, ...patch };
-  saveSave({ profile });
+  saveSave({ profile: { ...current, ...patch } });
 }
 
-// Legacy-like API object (keep signature)
+// CASINO
+export function getChips(): number {
+  return loadSave().chips ?? 0;
+}
+export function setChips(v: number) {
+  saveSave({ chips: v });
+}
+
+export function getChipExchangeUsed(): number {
+  return loadSave().chipExchangeUsed ?? 0;
+}
+export function setChipExchangeUsed(v: number) {
+  saveSave({ chipExchangeUsed: v });
+}
+
+// Reset
 export const StorageAPI = {
   load: loadSave,
   save: saveSave,
