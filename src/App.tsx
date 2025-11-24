@@ -16,7 +16,7 @@ import ProfilePage from "./pages/Profile";
 import PetsPage from "./pages/Pets";
 import SuitsPage from "./pages/Suits";
 import CardsPage from "./pages/Cards";
-import GamesPage from "./pages/Games"; // ✅ NEW: GAMES hub page
+import GamesPage from "./pages/Games"; // ✅ GAMES hub page
 
 // Storage / helpers
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
@@ -83,6 +83,9 @@ export default function App() {
   );
   const [multi, setMulti] = useState<number>(initial.multi ?? 1);
 
+  // 🔥 Casino chips
+  const [chips, setChips] = useState<number>(initial.chips ?? 0);
+
   // 🔥 New long-term stats
   const [critChance, setCritChance] = useState<number>(
     initial.critChance ?? 0
@@ -127,6 +130,10 @@ export default function App() {
   const [couponsSpent, setCouponsSpent] = useState<number>(
     initial.couponsSpent ?? 0
   );
+
+  // World Map bonuses
+  const [mapApsBonus, setMapApsBonus] = useState<number>(0);
+  const [mapCouponBonus, setMapCouponBonus] = useState<number>(0);
 
   // Tabs
   const [tab, setTab] = useState<Tab>("home");
@@ -184,6 +191,7 @@ export default function App() {
         setTapValue(cloud.tapValue ?? 1);
         setAutoPerSec(cloud.autoPerSec ?? 0);
         setMulti(cloud.multi ?? 1);
+        setChips(cloud.chips ?? 0);
 
         setCritChance(cloud.critChance ?? 0);
         setCritMult(cloud.critMult ?? 5);
@@ -253,6 +261,23 @@ export default function App() {
     };
   }, []);
 
+  // 🔥 Listen for WorldMap bonuses (APS + coupons)
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const ce = e as CustomEvent<{
+        apsBonus: number;
+        couponBonus: number;
+      }>;
+      if (!ce.detail) return;
+      setMapApsBonus(ce.detail.apsBonus ?? 0);
+      setMapCouponBonus(ce.detail.couponBonus ?? 0);
+    };
+
+    window.addEventListener("MM_MAP_BONUS", handler as EventListener);
+    return () =>
+      window.removeEventListener("MM_MAP_BONUS", handler as EventListener);
+  }, []);
+
   // Multipliers
   const suitMult = useMemo(
     () => computeSuitMult(equippedSuitId),
@@ -264,10 +289,10 @@ export default function App() {
   );
   const cardMultAll = useMemo(() => computeCardMultAll(cards), [cards]);
 
-  // Coupons – with coupon generator bonus
+  // Coupons – with coupon generator bonus + world map coupon bonus
   const effectiveTapsPerCoupon = useMemo(
-    () => TAPS_PER_COUPON / (1 + couponBoostLevel * 0.1),
-    [couponBoostLevel]
+    () => TAPS_PER_COUPON / (1 + couponBoostLevel * 0.1 + mapCouponBonus),
+    [couponBoostLevel, mapCouponBonus]
   );
   const couponsEarned = useMemo(
     () => Math.floor(taps / effectiveTapsPerCoupon),
@@ -281,14 +306,15 @@ export default function App() {
     [cards]
   );
 
-  // Auto income (includes autoBonusMult now)
+  // Auto income (includes autoBonusMult, suit, pet, cards, global, + world APS)
   useInterval(() => {
-    if (autoPerSec <= 0) return;
+    const baseAuto = autoPerSec + mapApsBonus;
+    if (baseAuto <= 0) return;
 
     const gain = Math.max(
       0,
       Math.floor(
-        autoPerSec *
+        baseAuto *
           multi *
           autoBonusMult *
           suitMult *
@@ -363,6 +389,7 @@ export default function App() {
         ? totalEarnings
         : 0;
       const safeTaps = Number.isFinite(taps) ? taps : 0;
+      const safeChips = Number.isFinite(chips) ? chips : 0;
 
       const next: any = {
         ...prev,
@@ -378,6 +405,9 @@ export default function App() {
         tapValue,
         autoPerSec,
         multi,
+
+        // Casino
+        chips: safeChips,
 
         // New stats
         critChance,
@@ -438,6 +468,7 @@ export default function App() {
     couponsSpent,
     spinCooldownEndsAt,
     collection,
+    chips,
   ]);
 
   // Hash navigation for TopBar quick links
@@ -567,7 +598,12 @@ export default function App() {
 
           {/* GAMES → hub page with Conquer + Casino */}
           {tab === "games" && (
-            <GamesPage balance={balance} setBalance={setBalance} />
+            <GamesPage
+              balance={balance}
+              setBalance={setBalance}
+              chips={chips}
+              setChips={setChips}
+            />
           )}
 
           {/* SHOP */}
@@ -630,26 +666,4 @@ export default function App() {
             />
           )}
 
-          {/* Dedicated sub-pages (opened from Inventory / quick nav) */}
-          {tab === "suits" && <SuitsPage balance={balance} />}
-          {tab === "pets" && <PetsPage />}
-
-          {tab === "cards" && (
-            <CardsPage
-              taps={taps}
-              cards={cards}
-              setCards={setCards}
-              couponsAvailable={couponsAvailable}
-              couponsSpent={couponsSpent}
-              setCouponsSpent={setCouponsSpent}
-              tapsPerCoupon={TAPS_PER_COUPON}
-              bulkDiscountLevel={bulkDiscountLevel}
-            />
-          )}
-        </main>
-
-        <Tabs active={tab} onChange={setTab} />
-      </div>
-    </div>
-  );
-}
+          {/* Dedicated sub-pages (opened from Invento
