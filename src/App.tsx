@@ -151,6 +151,7 @@ export default function App() {
   }, []);
 
   // 🔥 On mount, try to override with CLOUD save (if exists for this UID)
+  // but NEVER let an *older* cloud snapshot rewind newer local progress.
   useEffect(() => {
     let cancelled = false;
 
@@ -159,37 +160,57 @@ export default function App() {
         const cloud = await loadCloudSave();
         if (cancelled) return;
 
-        if (cloud) {
-          // Overwrite state with cloud values
-          setBalance(cloud.balance ?? cloud.score ?? 0);
-          setTotalEarnings(cloud.totalEarnings ?? cloud.score ?? 0);
-          setTaps(cloud.taps ?? cloud.tap ?? 0);
-          setTapValue(cloud.tapValue ?? 1);
-          setAutoPerSec(cloud.autoPerSec ?? 0);
-          setMulti(cloud.multi ?? 1);
-
-          setCritChance(cloud.critChance ?? 0);
-          setCritMult(cloud.critMult ?? 5);
-          setAutoBonusMult(cloud.autoBonusMult ?? 1);
-          setCouponBoostLevel(cloud.couponBoostLevel ?? 0);
-          setBulkDiscountLevel(cloud.bulkDiscountLevel ?? 0);
-
-          setEquippedSuitId(cloud.equippedSuit ?? null);
-          setEquippedPetId(cloud.equippedPet ?? null);
-          setBestSuitName(cloud.bestSuitName ?? "Starter");
-
-          setAchState(cloud.achievements ?? {});
-          setCards(Array.isArray(cloud.cards) ? cloud.cards : []);
-          setCouponsSpent(cloud.couponsSpent ?? 0);
-          setSpinCooldownEndsAt(cloud.spinCooldownEndsAt ?? null);
-
-          // Sync bestScore from cloud too (never go down)
-          const cloudBest = cloud.totalEarnings ?? cloud.score ?? 0;
-          setBestScore((prev) => Math.max(prev, cloudBest));
-
-          // And mirror cloud -> local storage so everything stays in sync
-          saveSave(cloud as any);
+        if (!cloud) {
+          // No cloud yet → just use local, allow writing new cloud later
+          return;
         }
+
+        // Compare which is "ahead": local vs cloud (by best totalEarnings/score)
+        const local = (loadSave() as any) || {};
+        const localBest = local.totalEarnings ?? local.score ?? 0;
+        const cloudBest = cloud.totalEarnings ?? cloud.score ?? 0;
+
+        // 👇 If local is already ahead, DO NOT overwrite with older cloud
+        if (cloudBest < localBest) {
+          // Push local → cloud so they match, but keep your current progress
+          saveCloudSave(local as any).catch(() => {});
+          return;
+        }
+
+        // ✅ Cloud is equal or ahead → apply it to state
+        setBalance(cloud.balance ?? cloud.score ?? 0);
+        setTotalEarnings(cloud.totalEarnings ?? cloud.score ?? 0);
+        setTaps(cloud.taps ?? cloud.tap ?? 0);
+        setTapValue(cloud.tapValue ?? 1);
+        setAutoPerSec(cloud.autoPerSec ?? 0);
+        setMulti(cloud.multi ?? 1);
+
+        setCritChance(cloud.critChance ?? 0);
+        setCritMult(cloud.critMult ?? 5);
+        setAutoBonusMult(cloud.autoBonusMult ?? 1);
+        setCouponBoostLevel(cloud.couponBoostLevel ?? 0);
+        setBulkDiscountLevel(cloud.bulkDiscountLevel ?? 0);
+
+        setEquippedSuitId(cloud.equippedSuit ?? null);
+        setEquippedPetId(cloud.equippedPet ?? null);
+        setBestSuitName(cloud.bestSuitName ?? "Starter");
+
+        setAchState(cloud.achievements ?? {});
+        setCards(Array.isArray(cloud.cards) ? cloud.cards : []);
+        setCouponsSpent(cloud.couponsSpent ?? 0);
+        setSpinCooldownEndsAt(cloud.spinCooldownEndsAt ?? null);
+
+        // Sync bestScore from cloud too (never go down)
+        setBestScore((prev) => Math.max(prev, cloudBest));
+
+        const fixedCloud = {
+          ...cloud,
+          score: cloud.balance ?? cloud.score ?? 0,
+          totalEarnings: cloud.totalEarnings ?? cloud.score ?? 0,
+        };
+
+        // Mirror cloud → local storage so everything stays in sync
+        saveSave(fixedCloud as any);
       } catch {
         // ignore network errors
       } finally {
@@ -314,9 +335,9 @@ export default function App() {
       const next = { ...prev };
       for (const a of achievements) {
         if (!next[a.id]) next[a.id] = { done: false, claimed: false };
-        if (!next[a.id].done && a.check(ctx)) {
-          next[a.id] = { ...next[a.id], done: true };
-        }
+          if (!next[a.id].done && a.check(ctx)) {
+            next[a.id] = { ...next[a.id], done: true };
+          }
       }
       return next;
     });
@@ -590,7 +611,7 @@ export default function App() {
           {tab === "suits" && <SuitsPage balance={balance} />}
           {tab === "pets" && <PetsPage />}
 
-          {tab === "cards" && (
+          {tab === "cards" &&
             <CardsPage
               taps={taps}
               cards={cards}
@@ -601,7 +622,7 @@ export default function App() {
               tapsPerCoupon={TAPS_PER_COUPON}
               bulkDiscountLevel={bulkDiscountLevel}
             />
-          )}
+          }
         </main>
 
         <Tabs active={tab} onChange={setTab} />
