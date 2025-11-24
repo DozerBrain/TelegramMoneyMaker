@@ -16,7 +16,7 @@ import ProfilePage from "./pages/Profile";
 import PetsPage from "./pages/Pets";
 import SuitsPage from "./pages/Suits";
 import CardsPage from "./pages/Cards";
-import WorldMapPage from "./pages/WorldMap";
+import GamesPage from "./pages/Games"; // ✅ NEW: GAMES hub page
 
 // Storage / helpers
 import { loadSave, saveSave, defaultSave } from "./lib/storage";
@@ -359,7 +359,9 @@ export default function App() {
 
       // safety: avoid NaN / Infinity corrupting the save
       const safeBalance = Number.isFinite(balance) ? balance : 0;
-      const safeTotal = Number.isFinite(totalEarnings) ? totalEarnings : 0;
+      const safeTotal = Number.isFinite(totalEarnings)
+        ? totalEarnings
+        : 0;
       const safeTaps = Number.isFinite(taps) ? taps : 0;
 
       const next: any = {
@@ -470,7 +472,9 @@ export default function App() {
       navigator.clipboard.writeText(json).then(
         () => alert("Save copied to clipboard!"),
         () => {
-          const blob = new Blob([json], { type: "application/json" });
+          const blob = new Blob([json], {
+            type: "application/json",
+          });
           const url = URL.createObjectURL(blob);
           const a = document.createElement("a");
           a.href = url;
@@ -561,8 +565,10 @@ export default function App() {
             />
           )}
 
-          {/* GAMES → World Map mini-games */}
-          {tab === "games" && <WorldMapPage balance={balance} />}
+          {/* GAMES → hub page with Conquer + Casino */}
+          {tab === "games" && (
+            <GamesPage balance={balance} setBalance={setBalance} />
+          )}
 
           {/* SHOP */}
           {tab === "shop" && (
