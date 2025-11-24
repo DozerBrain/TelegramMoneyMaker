@@ -666,4 +666,26 @@ export default function App() {
             />
           )}
 
-          {/* Dedicated sub-pages (opened from Invento
+          {/* Dedicated sub-pages (opened from Inventory / quick nav) */}
+          {tab === "suits" && <SuitsPage balance={balance} />}
+          {tab === "pets" && <PetsPage />}
+
+          {tab === "cards" && (
+            <CardsPage
+              taps={taps}
+              cards={cards}
+              setCards={setCards}
+              couponsAvailable={couponsAvailable}
+              couponsSpent={couponsSpent}
+              setCouponsSpent={setCouponsSpent}
+              tapsPerCoupon={TAPS_PER_COUPON}
+              bulkDiscountLevel={bulkDiscountLevel}
+            />
+          )}
+        </main>
+
+        <Tabs active={tab} onChange={setTab} />
+      </div>
+    </div>
+  );
+}
