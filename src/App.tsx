@@ -275,6 +275,12 @@ export default function App() {
   );
   const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
 
+  // Build collection memoized, used in save effect
+  const collection = useMemo(
+    () => buildCollectionFromCards(cards),
+    [cards]
+  );
+
   // Auto income (includes autoBonusMult now)
   useInterval(() => {
     if (autoPerSec <= 0) return;
@@ -335,70 +341,80 @@ export default function App() {
       const next = { ...prev };
       for (const a of achievements) {
         if (!next[a.id]) next[a.id] = { done: false, claimed: false };
-          if (!next[a.id].done && a.check(ctx)) {
-            next[a.id] = { ...next[a.id], done: true };
-          }
+        if (!next[a.id].done && a.check(ctx)) {
+          next[a.id] = { ...next[a.id], done: true };
+        }
       }
       return next;
     });
   }, [taps, balance, totalEarnings, bestSuitName]);
 
-  // Save game (merge with existing save, never wipe) + 🔥 push to cloud
+  // ==== DEBOUNCED SAVE TO LOCAL + CLOUD ====
   useEffect(() => {
-    // ⛔ don't touch cloud until first cloud sync finished
     if (!cloudReady) return;
 
-    const prev: any = (loadSave() as any) ?? {};
-    const collection = buildCollectionFromCards(cards);
+    // wait 1.2s after last change before saving
+    const handle = window.setTimeout(() => {
+      const prev: any = (loadSave() as any) ?? {};
 
-    const next: any = {
-      ...prev,
+      // safety: avoid NaN / Infinity corrupting the save
+      const safeBalance = Number.isFinite(balance) ? balance : 0;
+      const safeTotal = Number.isFinite(totalEarnings) ? totalEarnings : 0;
+      const safeTaps = Number.isFinite(taps) ? taps : 0;
 
-      // Legacy fields
-      score: balance,
-      tap: taps,
+      const next: any = {
+        ...prev,
 
-      // Core
-      balance,
-      totalEarnings,
-      taps,
-      tapValue,
-      autoPerSec,
-      multi,
+        // Legacy fields
+        score: safeBalance,
+        tap: safeTaps,
 
-      // New stats
-      critChance,
-      critMult,
-      autoBonusMult,
-      couponBoostLevel,
-      bulkDiscountLevel,
+        // Core
+        balance: safeBalance,
+        totalEarnings: safeTotal,
+        taps: safeTaps,
+        tapValue,
+        autoPerSec,
+        multi,
 
-      // Suits / pets
-      bestSuitName,
-      equippedSuit: equippedSuitId ?? prev.equippedSuit ?? null,
-      equippedPet: equippedPetId ?? prev.equippedPet ?? null,
+        // New stats
+        critChance,
+        critMult,
+        autoBonusMult,
+        couponBoostLevel,
+        bulkDiscountLevel,
 
-      // Progression
-      achievements: achState,
-      quests: prev.quests ?? [],
+        // Suits / pets
+        bestSuitName,
+        equippedSuit: equippedSuitId ?? prev.equippedSuit ?? null,
+        equippedPet: equippedPetId ?? prev.equippedPet ?? null,
 
-      // Cards
-      cards,
-      collection,
-      couponsSpent,
+        // Progression
+        achievements: achState,
+        quests: prev.quests ?? [],
 
-      // Missions & profile
-      spinCooldownEndsAt,
-      profile: prev.profile ?? defaultSave.profile,
+        // Cards
+        cards,
+        collection,
+        couponsSpent,
+
+        // Missions & profile
+        spinCooldownEndsAt,
+        profile: prev.profile ?? defaultSave.profile,
+      };
+
+      // Local save
+      saveSave(next);
+
+      // Cloud save (fire and forget)
+      saveCloudSave(next).catch(() => {
+        // ignore network errors
+      });
+    }, 1200);
+
+    return () => {
+      window.clearTimeout(handle);
     };
-
-    // Local save
-    saveSave(next);
-
-    // Cloud save (fire and forget)
-    saveCloudSave(next).catch(() => {
-      // ignore network errors
-    });
   }, [
     cloudReady,
     balance,
@@ -419,6 +435,7 @@ export default function App() {
     cards,
     couponsSpent,
     spinCooldownEndsAt,
+    collection,
   ]);
 
   // Hash navigation for TopBar quick links
@@ -611,7 +628,7 @@ export default function App() {
           {tab === "suits" && <SuitsPage balance={balance} />}
           {tab === "pets" && <PetsPage />}
 
-          {tab === "cards" &&
+          {tab === "cards" && (
             <CardsPage
               taps={taps}
               cards={cards}
@@ -622,7 +639,7 @@ export default function App() {
               tapsPerCoupon={TAPS_PER_COUPON}
               bulkDiscountLevel={bulkDiscountLevel}
             />
-          }
+          )}
         </main>
 
         <Tabs active={tab} onChange={setTab} />
