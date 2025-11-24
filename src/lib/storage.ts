@@ -70,8 +70,8 @@ export type SaveData = {
   couponBoostLevel: number;  // integer levels
   bulkDiscountLevel: number; // integer levels
 
-  // 🔥 Casino currency
-  chips: number;             // casino chips
+  // Casino
+  chips: number;
 
   // Cards & coupons
   cards: any[]; // CardInstance[]
