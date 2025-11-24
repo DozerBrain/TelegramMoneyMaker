@@ -2,6 +2,7 @@
 import React, { useState } from "react";
 import Card from "../components/Card";
 import WorldMapPage from "./WorldMap";
+import { formatMoneyShort } from "../lib/format"; // ✅ big-number formatter
 
 type Props = {
   balance: number;
@@ -36,7 +37,9 @@ export default function GamesPage({
     const chipsGain = 100;
 
     if (chips >= 50_000) {
-      alert("You already have a lot of chips. Exchange locked above 50,000 chips.");
+      alert(
+        "You already have a lot of chips. Exchange locked above 50,000 chips."
+      );
       return;
     }
     if (balance < cost) {
@@ -94,7 +97,10 @@ export default function GamesPage({
         title="Games"
         right={
           <span className="text-xs text-white/60">
-            Balance: <span className="text-emerald-300">${balance.toLocaleString()}</span>
+            Balance:{" "}
+            <span className="text-emerald-300">
+              ${formatMoneyShort(balance)}
+            </span>
           </span>
         }
       >
@@ -123,9 +129,7 @@ export default function GamesPage({
       </Card>
 
       {/* Conquer the World */}
-      {tab === "world" && (
-        <WorldMapPage balance={balance} />
-      )}
+      {tab === "world" && <WorldMapPage balance={balance} />}
 
       {/* Casino */}
       {tab === "casino" && (
@@ -136,7 +140,7 @@ export default function GamesPage({
               <div>
                 <div className="text-xs text-white/60">Your chips</div>
                 <div className="text-2xl font-bold text-emerald-300">
-                  {chips.toLocaleString()}
+                  {formatMoneyShort(chips)}
                 </div>
               </div>
               <button
