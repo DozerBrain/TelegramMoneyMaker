@@ -1,45 +1,41 @@
 // src/pages/casino/BlackjackGame.tsx
 import React, { useMemo, useState } from "react";
-
-type CardSuit = "♠" | "♥" | "♦" | "♣";
-type CardRank = "A" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" | "10" | "J" | "Q" | "K";
-
-type Card = {
-  suit: CardSuit;
-  rank: CardRank;
-};
+import DealerHand from "./components/DealerHand";
+import PlayerHand from "./components/PlayerHand";
+import type { PlayingCard, Rank, Suit } from "./components/CardDisplay";
 
 type Props = {
   chips: number;
-  setChips: (next: number) => void; // ✅ this matches Games.tsx
+  setChips: React.Dispatch<React.SetStateAction<number>>;
 };
 
-type Phase = "betting" | "playerTurn" | "dealerTurn" | "finished";
+type Phase = "betting" | "playerTurn" | "dealerTurn" | "result";
 
-function makeDeck(): Card[] {
-  const suits: CardSuit[] = ["♠", "♥", "♦", "♣"];
-  const ranks: CardRank[] = [
-    "A",
-    "2",
-    "3",
-    "4",
-    "5",
-    "6",
-    "7",
-    "8",
-    "9",
-    "10",
-    "J",
-    "Q",
-    "K",
-  ];
-  const deck: Card[] = [];
-  for (const s of suits) {
-    for (const r of ranks) {
-      deck.push({ suit: s, rank: r });
+const SUITS: Suit[] = ["♠", "♥", "♦", "♣"];
+const RANKS: Rank[] = [
+  "A",
+  "2",
+  "3",
+  "4",
+  "5",
+  "6",
+  "7",
+  "8",
+  "9",
+  "10",
+  "J",
+  "Q",
+  "K",
+];
+
+function createDeck(): PlayingCard[] {
+  const deck: PlayingCard[] = [];
+  for (const suit of SUITS) {
+    for (const rank of RANKS) {
+      deck.push({ suit, rank });
     }
   }
-  // simple shuffle
+  // shuffle
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -47,362 +43,246 @@ function makeDeck(): Card[] {
   return deck;
 }
 
-function cardValue(rank: CardRank): number {
-  if (rank === "A") return 11; // handle later
-  if (rank === "J" || rank === "Q" || rank === "K") return 10;
-  return Number(rank);
+function cardValue(card: PlayingCard): number {
+  if (card.rank === "A") return 11;
+  if (card.rank === "K" || card.rank === "Q" || card.rank === "J")
+    return 10;
+  return Number(card.rank);
 }
 
-function handValue(hand: Card[]): { total: number; soft: boolean } {
+function handTotal(cards: PlayingCard[]): number {
   let total = 0;
   let aces = 0;
-
-  for (const c of hand) {
-    total += cardValue(c.rank);
-    if (c.rank === "A") aces += 1;
+  for (const c of cards) {
+    total += cardValue(c);
+    if (c.rank === "A") aces++;
   }
-
-  // downgrade aces from 11 to 1 if we bust
-  let soft = false;
   while (total > 21 && aces > 0) {
     total -= 10;
-    aces -= 1;
+    aces--;
   }
-  if (aces > 0) {
-    soft = true;
-  }
-  return { total, soft };
-}
-
-function isBlackjack(hand: Card[]) {
-  const { total } = handValue(hand);
-  return hand.length === 2 && total === 21;
+  return total;
 }
 
 export default function BlackjackGame({ chips, setChips }: Props) {
-  const [deck, setDeck] = useState<Card[]>(() => makeDeck());
-  const [playerHand, setPlayerHand] = useState<Card[]>([]);
-  const [dealerHand, setDealerHand] = useState<Card[]>([]);
-  const [bet, setBet] = useState<number>(50);
+  const [deck, setDeck] = useState<PlayingCard[]>(() => createDeck());
+  const [playerCards, setPlayerCards] = useState<PlayingCard[]>([]);
+  const [dealerCards, setDealerCards] = useState<PlayingCard[]>([]);
   const [phase, setPhase] = useState<Phase>("betting");
+  const [bet, setBet] = useState<number>(100);
   const [message, setMessage] = useState<string>("Place your bet to start.");
-  const [lastResult, setLastResult] = useState<string | null>(null);
 
-  const minBet = 10;
+  const playerTotal = useMemo(
+    () => handTotal(playerCards),
+    [playerCards]
+  );
+  const dealerTotal = useMemo(
+    () => (phase === "playerTurn" ? null : handTotal(dealerCards)),
+    [dealerCards, phase]
+  );
 
-  function drawCard(currentDeck: Card[]): [Card, Card[]] {
+  function drawCard(currentDeck: PlayingCard[]): [PlayingCard, PlayingCard[]] {
     if (currentDeck.length === 0) {
-      const fresh = makeDeck();
+      const fresh = createDeck();
       return [fresh[0], fresh.slice(1)];
     }
     const [card, ...rest] = currentDeck;
     return [card, rest];
   }
 
-  function resetHands() {
-    setPlayerHand([]);
-    setDealerHand([]);
+  function handleBetChange(raw: string) {
+    const n = Number(raw.replace(/\D/g, ""));
+    if (!Number.isFinite(n)) return;
+    const minBet = 10;
+    const clamped = Math.max(minBet, Math.min(n, chips));
+    setBet(clamped);
   }
 
   function startRound() {
+    const minBet = 10;
     if (bet < minBet) {
       alert(`Minimum bet is ${minBet} chips.`);
       return;
     }
     if (bet > chips) {
-      alert("You don't have enough chips for that bet.");
+      alert("Not enough chips for that bet.");
       return;
     }
 
-    // take bet up-front
-    setChips(chips - bet);
-    resetHands();
-    setLastResult(null);
+    // take bet
+    setChips((c) => c - bet);
 
-    let d = deck;
-    let p: Card[] = [];
-    let dealer: Card[] = [];
+    let newDeck = createDeck();
+    const p: PlayingCard[] = [];
+    const d: PlayingCard[] = [];
 
-    // deal player, dealer, player, dealer
-    [p[0], d] = drawCard(d);
-    [dealer[0], d] = drawCard(d);
-    [p[1], d] = drawCard(d);
-    [dealer[1], d] = drawCard(d);
+    let card;
+    [card, newDeck] = drawCard(newDeck);
+    p.push(card);
+    [card, newDeck] = drawCard(newDeck);
+    d.push(card);
+    [card, newDeck] = drawCard(newDeck);
+    p.push(card);
+    [card, newDeck] = drawCard(newDeck);
+    d.push(card);
 
-    setDeck(d);
-    setPlayerHand(p);
-    setDealerHand(dealer);
-
-    const playerBJ = isBlackjack(p);
-    const dealerBJ = isBlackjack(dealer);
-
-    if (playerBJ || dealerBJ) {
-      // immediate resolution
-      setPhase("finished");
-      if (playerBJ && dealerBJ) {
-        // push
-        setChips((c) => c + bet);
-        setMessage("Both you and dealer have blackjack. Push.");
-        setLastResult("Push");
-      } else if (playerBJ) {
-        const win = Math.floor(bet * 2.5); // 3:2 payout approximated
-        setChips((c) => c + win);
-        setMessage("Blackjack! You win 3:2.");
-        setLastResult("Blackjack win");
-      } else {
-        setMessage("Dealer has blackjack. You lose.");
-        setLastResult("Dealer blackjack");
-      }
-    } else {
-      setPhase("playerTurn");
-      setMessage("Hit or Stand?");
-    }
+    setDeck(newDeck);
+    setPlayerCards(p);
+    setDealerCards(d);
+    setPhase("playerTurn");
+    setMessage("Hit or Stand.");
   }
 
   function hit() {
     if (phase !== "playerTurn") return;
 
-    let d = deck;
-    let newHand = [...playerHand];
-    let card: Card;
-    [card, d] = drawCard(d);
-    newHand.push(card);
-    setDeck(d);
-    setPlayerHand(newHand);
+    let newDeck = deck.slice();
+    let card;
+    [card, newDeck] = drawCard(newDeck);
+    const newPlayer = [...playerCards, card];
 
-    const { total } = handValue(newHand);
+    setDeck(newDeck);
+    setPlayerCards(newPlayer);
+
+    const total = handTotal(newPlayer);
     if (total > 21) {
-      setPhase("finished");
+      // bust
+      setPhase("result");
       setMessage("You busted. Dealer wins.");
-      setLastResult("Bust");
-    } else {
-      setMessage("Hit or Stand?");
     }
   }
 
   function stand() {
     if (phase !== "playerTurn") return;
-
     setPhase("dealerTurn");
-    setMessage("Dealer's turn...");
 
-    let d = deck;
-    let dealer = [...dealerHand];
+    let newDeck = deck.slice();
+    let newDealer = dealerCards.slice();
 
-    // dealer hits until 17+ (classic rule)
-    while (true) {
-      const { total } = handValue(dealer);
-      if (total >= 17) break;
-      let card: Card;
-      [card, d] = drawCard(d);
-      dealer.push(card);
+    while (handTotal(newDealer) < 17) {
+      let card;
+      [card, newDeck] = drawCard(newDeck);
+      newDealer = [...newDealer, card];
     }
 
-    setDeck(d);
-    setDealerHand(dealer);
+    setDeck(newDeck);
+    setDealerCards(newDealer);
 
-    const playerTotal = handValue(playerHand).total;
-    const dealerTotal = handValue(dealer).total;
+    const pTotal = handTotal(playerCards);
+    const dTotal = handTotal(newDealer);
 
-    setPhase("finished");
-
-    if (dealerTotal > 21) {
-      // dealer busts, player wins
+    let msg = "";
+    if (dTotal > 21) {
+      // dealer busts → player wins 2x
       setChips((c) => c + bet * 2);
-      setMessage("Dealer busts. You win!");
-      setLastResult("Win");
-    } else if (dealerTotal === playerTotal) {
-      // push
+      msg = `Dealer busts with ${dTotal}. You win +${bet} chips.`;
+    } else if (pTotal > dTotal) {
+      setChips((c) => c + bet * 2);
+      msg = `You win! ${pTotal} vs ${dTotal}. +${bet} chips.`;
+    } else if (pTotal === dTotal) {
+      // push → return bet
       setChips((c) => c + bet);
-      setMessage("Push. Your bet is returned.");
-      setLastResult("Push");
-    } else if (playerTotal > dealerTotal) {
-      // normal win
-      setChips((c) => c + bet * 2);
-      setMessage("You win!");
-      setLastResult("Win");
+      msg = `Push. You both have ${pTotal}. Bet returned.`;
     } else {
-      setMessage("Dealer wins.");
-      setLastResult("Lose");
+      msg = `Dealer wins with ${dTotal} vs your ${pTotal}.`;
     }
+
+    setMessage(msg);
+    setPhase("result");
   }
 
-  function newRound() {
+  function resetRound() {
+    setPlayerCards([]);
+    setDealerCards([]);
     setPhase("betting");
     setMessage("Place your bet to start.");
-    resetHands();
-  }
-
-  const playerValue = useMemo(() => handValue(playerHand).total, [playerHand]);
-  const dealerValue = useMemo(() => handValue(dealerHand).total, [dealerHand]);
-
-  function handleBetChange(value: string) {
-    const n = Number(value.replace(/\D/g, ""));
-    if (!Number.isFinite(n)) return;
-    const clamped = Math.max(minBet, Math.min(n, chips));
-    setBet(clamped);
   }
 
   return (
-    <div className="text-sm text-white">
-      {/* Status */}
-      <div className="mb-3 text-xs text-white/70">{message}</div>
-
-      {/* Chips + bet */}
-      <div className="flex items-center justify-between mb-3">
-        <div>
-          <div className="text-[11px] text-white/60">Your chips</div>
-          <div className="text-lg font-bold text-emerald-300">
-            {chips.toLocaleString()} 🟡
-          </div>
-        </div>
-        <div className="text-right">
-          <div className="text-[11px] text-white/60">Bet</div>
+    <div className="space-y-4">
+      {/* Bet + status */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex-1">
+          <div className="text-xs text-white/60 mb-1">Bet amount</div>
           <input
             type="tel"
             value={bet}
             onChange={(e) => handleBetChange(e.target.value)}
             disabled={phase !== "betting"}
-            className="w-24 px-2 py-1 rounded-lg bg-black/60 border border-white/20 text-right text-sm"
+            className="w-full rounded-xl bg-black/60 border border-white/15 px-3 py-2 text-sm text-white focus:outline-none disabled:opacity-50"
           />
-          <div className="flex gap-1 mt-1 justify-end">
+          <div className="mt-1 flex gap-1">
             {[10, 50, 100, 500].map((v) => (
               <button
                 key={v}
-                onClick={() => phase === "betting" && setBet(Math.min(v, chips))}
-                className="px-2 py-0.5 rounded-full bg-zinc-800 text-[11px] text-white/70"
+                disabled={phase !== "betting" || v > chips}
+                onClick={() => setBet(v)}
+                className="px-2 py-1 rounded-full bg-zinc-800 text-[11px] text-white/70 disabled:opacity-40"
               >
                 {v}
               </button>
             ))}
           </div>
         </div>
-      </div>
-
-      {/* Dealer hand */}
-      <div className="mb-3">
-        <div className="text-[11px] text-white/60 mb-1">
-          Dealer{" "}
-          {phase === "betting" && "(waiting)"}
-          {phase !== "betting" && `(${dealerValue})`}
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {dealerHand.length === 0 ? (
-            <div className="text-[11px] text-white/40">No cards yet.</div>
-          ) : (
-            dealerHand.map((c, idx) => (
-              <div
-                key={idx}
-                className="w-10 h-14 rounded-lg bg-zinc-900 border border-white/20 flex flex-col items-center justify-center text-xs"
-              >
-                <div
-                  className={
-                    c.suit === "♥" || c.suit === "♦"
-                      ? "text-red-400"
-                      : "text-white"
-                  }
-                >
-                  {c.rank}
-                </div>
-                <div className="text-[13px] mt-0.5">
-                  {c.suit}
-                </div>
-              </div>
-            ))
-          )}
+        <div className="text-right text-xs">
+          <div className="text-white/60">Your chips</div>
+          <div className="text-lg font-bold text-emerald-300">
+            {chips.toLocaleString()} 🟡
+          </div>
         </div>
       </div>
 
-      {/* Player hand */}
-      <div className="mb-4">
-        <div className="text-[11px] text-white/60 mb-1">
-          You ({playerValue})
-        </div>
-        <div className="flex gap-2 flex-wrap">
-          {playerHand.length === 0 ? (
-            <div className="text-[11px] text-white/40">
-              No cards yet. Place a bet to start.
-            </div>
-          ) : (
-            playerHand.map((c, idx) => (
-              <div
-                key={idx}
-                className="w-10 h-14 rounded-lg bg-zinc-900 border border-emerald-300/50 flex flex-col items-center justify-center text-xs"
-              >
-                <div
-                  className={
-                    c.suit === "♥" || c.suit === "♦"
-                      ? "text-red-400"
-                      : "text-white"
-                  }
-                >
-                  {c.rank}
-                </div>
-                <div className="text-[13px] mt-0.5">
-                  {c.suit}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+      {/* Hands */}
+      <div className="space-y-4 rounded-2xl bg-zinc-950/80 border border-white/10 p-3">
+        <DealerHand
+          cards={dealerCards}
+          hideHole={phase === "playerTurn"}
+          total={dealerTotal}
+        />
+        <div className="h-px bg-white/10 my-1" />
+        <PlayerHand cards={playerCards} total={playerTotal} />
       </div>
 
       {/* Controls */}
-      <div className="flex gap-2">
+      <div className="space-y-2">
         {phase === "betting" && (
           <button
             onClick={startRound}
-            className="flex-1 py-2 rounded-full bg-emerald-500 text-emerald-950 font-semibold text-sm active:scale-[0.97]"
-            disabled={chips < minBet}
+            disabled={chips <= 0}
+            className="w-full py-3 rounded-full bg-emerald-500 text-emerald-950 font-semibold text-sm active:scale-[0.97] disabled:opacity-40"
           >
-            Deal
+            Deal cards
           </button>
         )}
 
         {phase === "playerTurn" && (
-          <>
+          <div className="flex gap-2">
             <button
               onClick={hit}
-              className="flex-1 py-2 rounded-full bg-emerald-500 text-emerald-950 font-semibold text-sm active:scale-[0.97]"
+              className="flex-1 py-3 rounded-full bg-emerald-500 text-emerald-950 font-semibold text-sm active:scale-[0.97]"
             >
               Hit
             </button>
             <button
               onClick={stand}
-              className="flex-1 py-2 rounded-full bg-zinc-700 text-white font-semibold text-sm active:scale-[0.97]"
+              className="flex-1 py-3 rounded-full bg-zinc-800 text-white font-semibold text-sm active:scale-[0.97]"
             >
               Stand
             </button>
-          </>
+          </div>
         )}
 
-        {phase === "finished" && (
+        {phase === "result" && (
           <button
-            onClick={newRound}
-            className="flex-1 py-2 rounded-full bg-emerald-500 text-emerald-950 font-semibold text-sm active:scale-[0.97]"
+            onClick={resetRound}
+            className="w-full py-3 rounded-full bg-zinc-800 text-white font-semibold text-sm active:scale-[0.97]"
           >
-            New Round
+            New hand
           </button>
         )}
-      </div>
 
-      {/* Last result */}
-      {lastResult && (
-        <div className="mt-3 text-[11px] text-white/60">
-          Last result:{" "}
-          <span
-            className={
-              lastResult === "Win" || lastResult === "Blackjack win"
-                ? "text-emerald-400 font-semibold"
-                : lastResult === "Push"
-                ? "text-white font-semibold"
-                : "text-red-400 font-semibold"
-            }
-          >
-            {lastResult}
-          </span>
-        </div>
-      )}
+        <div className="text-[11px] text-white/60 mt-1">{message}</div>
+      </div>
     </div>
   );
 }
