@@ -1,15 +1,15 @@
 // src/pages/casino/SlotsGame.tsx
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { formatMoneyShort } from "../../lib/format";
 
 type Props = {
   chips: number;
-  onChipsChange: (next: number) => void;
+  setChips: React.Dispatch<React.SetStateAction<number>>;
 };
 
 type ResultKind = "none" | "lose" | "small" | "medium" | "big" | "jackpot";
 
-export default function SlotsGame({ chips, onChipsChange }: Props) {
+export default function SlotsGame({ chips, setChips }: Props) {
   const MIN_BET = 10;
 
   const [bet, setBet] = useState<number>(MIN_BET);
@@ -27,12 +27,10 @@ export default function SlotsGame({ chips, onChipsChange }: Props) {
   }, [chips]);
 
   // keep bet always valid if chips change
-  React.useEffect(() => {
+  useEffect(() => {
     setBet((prev) => {
-      const clamped = Math.max(
-        MIN_BET,
-        Math.min(prev || MIN_BET, maxBet, chips)
-      );
+      const base = prev || MIN_BET;
+      const clamped = Math.max(MIN_BET, Math.min(base, maxBet, chips));
       return clamped;
     });
   }, [chips, maxBet]);
@@ -66,12 +64,7 @@ export default function SlotsGame({ chips, onChipsChange }: Props) {
 
     setSpinning(true);
 
-    // 🎲 Outcome probabilities (total-return RTP ≈ 84%)
-    // 72%  -> lose (0x)
-    // 18%  -> small win (~1.05–1.3x)
-    // 7%   -> medium win (~2–4x)
-    // 2.8% -> big win (~8–15x)
-    // 0.2% -> JACKPOT (50x)
+    // 🎲 Outcome probabilities (RTP ≈ 84%)
     let r = Math.random();
     let outcome: ResultKind;
     let multiplier: number;
@@ -115,21 +108,23 @@ export default function SlotsGame({ chips, onChipsChange }: Props) {
         newReels = ["💎", "💎", "💎"];
     }
 
-    // chips math
     const winTotal = Math.floor(bet * multiplier); // total returned
     const netDelta = winTotal - bet; // profit (can be negative)
-    let nextChips = chips - bet + winTotal;
-    if (!Number.isFinite(nextChips) || nextChips < 0) nextChips = 0;
 
-    // apply
     setTimeout(() => {
-      onChipsChange(nextChips);
+      // update chips based on *current* value, safe even if something else changed them
+      setChips((current) => {
+        let next = current - bet + winTotal;
+        if (!Number.isFinite(next) || next < 0) next = 0;
+        return next;
+      });
+
       setReels(newReels);
       setKind(outcome);
       setDelta(netDelta);
       setTotalWin(winTotal);
       setSpinning(false);
-    }, 450); // tiny delay feels more like a spin
+    }, 450);
   }
 
   // ---- helper labels / colors ---------------------------------------------
@@ -221,8 +216,8 @@ export default function SlotsGame({ chips, onChipsChange }: Props) {
       <div className={`text-xs ${resultColor}`}>{resultLabel()}</div>
 
       <div className="mt-1 text-[10px] text-white/35">
-        Design note: this slot is high-volatility. Most spins lose, but sometimes
-        you hit huge multipliers. Over time the casino still wins.
+        Design note: this slot is high-volatility. Most spins lose, but
+        sometimes you hit huge multipliers. Over time the casino still wins.
       </div>
     </div>
   );
