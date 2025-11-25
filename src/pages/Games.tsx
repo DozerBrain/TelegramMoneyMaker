@@ -2,7 +2,8 @@
 import React, { useState } from "react";
 import Card from "../components/Card";
 import WorldMapPage from "./WorldMap";
-import BlackjackGame from "./casino/BlackjackGame"; // ✅ connect blackjack
+import BlackjackGame from "./casino/BlackjackGame"; // ✅ Blackjack real game
+import { formatMoneyShort } from "../lib/format";   // ✅ big number formatter
 
 type Props = {
   balance: number;
@@ -96,7 +97,7 @@ export default function GamesPage({
           <span className="text-xs text-white/60">
             Balance:{" "}
             <span className="text-emerald-300">
-              ${balance.toLocaleString()}
+              ${formatMoneyShort(balance)}
             </span>
           </span>
         }
@@ -137,7 +138,7 @@ export default function GamesPage({
               <div>
                 <div className="text-xs text-white/60">Your chips</div>
                 <div className="text-2xl font-bold text-emerald-300">
-                  {chips.toLocaleString()}
+                  {formatMoneyShort(chips)}
                 </div>
               </div>
               <button
