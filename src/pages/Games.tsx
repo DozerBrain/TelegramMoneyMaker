@@ -2,7 +2,7 @@
 import React, { useState } from "react";
 import Card from "../components/Card";
 import WorldMapPage from "./WorldMap";
-import { formatMoneyShort } from "../lib/format"; // ✅ big-number formatter
+import BlackjackGame from "./casino/BlackjackGame"; // ✅ connect blackjack
 
 type Props = {
   balance: number;
@@ -32,14 +32,11 @@ export default function GamesPage({
   const minBet = 10;
 
   function handleExchangeToChips() {
-    // Example: 1,000,000 money -> +100 chips
     const cost = 1_000_000;
     const chipsGain = 100;
 
     if (chips >= 50_000) {
-      alert(
-        "You already have a lot of chips. Exchange locked above 50,000 chips."
-      );
+      alert("You already have a lot of chips. Exchange locked above 50,000 chips.");
       return;
     }
     if (balance < cost) {
@@ -99,7 +96,7 @@ export default function GamesPage({
           <span className="text-xs text-white/60">
             Balance:{" "}
             <span className="text-emerald-300">
-              ${formatMoneyShort(balance)}
+              ${balance.toLocaleString()}
             </span>
           </span>
         }
@@ -140,7 +137,7 @@ export default function GamesPage({
               <div>
                 <div className="text-xs text-white/60">Your chips</div>
                 <div className="text-2xl font-bold text-emerald-300">
-                  {formatMoneyShort(chips)}
+                  {chips.toLocaleString()}
                 </div>
               </div>
               <button
@@ -171,7 +168,7 @@ export default function GamesPage({
                   Blackjack
                 </div>
                 <div className="text-[10px] text-white/50 mt-1">
-                  Coming soon – classic 21 card game.
+                  Classic 21 card game.
                 </div>
               </button>
 
@@ -192,16 +189,14 @@ export default function GamesPage({
               </button>
             </div>
 
+            {/* BLACKJACK GAME */}
             {casinoTab === "blackjack" && (
-              <div className="text-xs text-white/60">
-                Blackjack is not implemented yet, but the Casino structure is
-                ready. We can add full logic later.
-              </div>
+              <BlackjackGame chips={chips} setChips={setChips} />
             )}
 
+            {/* COIN FLIP GAME */}
             {casinoTab === "coinflip" && (
               <div className="mt-2 space-y-3">
-                {/* Choose side */}
                 <div className="flex gap-2">
                   <button
                     onClick={() => setChoice("heads")}
@@ -225,7 +220,6 @@ export default function GamesPage({
                   </button>
                 </div>
 
-                {/* Bet input + quick bets */}
                 <div className="space-y-2">
                   <div className="text-xs text-white/60">
                     Bet (min {minBet} chips)
@@ -251,7 +245,6 @@ export default function GamesPage({
                   </div>
                 </div>
 
-                {/* Flip button */}
                 <button
                   onClick={handleFlip}
                   className="w-full py-3 rounded-full bg-emerald-500 text-emerald-950 font-semibold text-sm active:scale-[0.97]"
@@ -259,7 +252,6 @@ export default function GamesPage({
                   Flip the Coin
                 </button>
 
-                {/* Last result */}
                 <div className="text-xs text-white/60">
                   {lastFlip === null ? (
                     <span>No flips yet.</span>
