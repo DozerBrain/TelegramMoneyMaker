@@ -3,28 +3,26 @@ import React, { useState } from "react";
 
 type Props = {
   chips: number;
-  onChipsChange: (next: number) => void;
+  setChips: React.Dispatch<React.SetStateAction<number>>;
 };
 
-type Side = "heads" | "tails";
+const MIN_BET = 10;
 
-export default function CoinFlipGame({ chips, onChipsChange }: Props) {
-  const [bet, setBet] = useState<number>(10);
-  const [choice, setChoice] = useState<Side>("heads");
-  const [lastFlip, setLastFlip] = useState<Side | null>(null);
+export default function CoinFlipGame({ chips, setChips }: Props) {
+  const [bet, setBet] = useState<number>(MIN_BET);
+  const [choice, setChoice] = useState<"heads" | "tails">("heads");
+  const [lastFlip, setLastFlip] = useState<"heads" | "tails" | null>(null);
   const [lastWin, setLastWin] = useState<boolean | null>(null);
 
-  const minBet = 10;
-
-  function handleBetChange(value: string) {
-    const n = Number(value.replace(/\D/g, ""));
+  function handleBetChange(raw: string) {
+    const n = Number(raw.replace(/\D/g, ""));
     if (!Number.isFinite(n)) return;
-    const clamped = Math.max(minBet, Math.min(n, chips));
+    const clamped = Math.max(MIN_BET, Math.min(n, chips));
     setBet(clamped);
   }
 
-  function setQuickBet(amount: number) {
-    const clamped = Math.max(minBet, Math.min(amount, chips));
+  function setQuickBet(value: number) {
+    const clamped = Math.max(MIN_BET, Math.min(value, chips));
     setBet(clamped);
   }
 
@@ -33,8 +31,8 @@ export default function CoinFlipGame({ chips, onChipsChange }: Props) {
       alert("You have no chips. Exchange money into chips first.");
       return;
     }
-    if (bet < minBet) {
-      alert(`Minimum bet is ${minBet} chips.`);
+    if (bet < MIN_BET) {
+      alert(`Minimum bet is ${MIN_BET} chips.`);
       return;
     }
     if (bet > chips) {
@@ -42,13 +40,13 @@ export default function CoinFlipGame({ chips, onChipsChange }: Props) {
       return;
     }
 
-    const flip: Side = Math.random() < 0.5 ? "heads" : "tails";
+    const flip: "heads" | "tails" = Math.random() < 0.5 ? "heads" : "tails";
     const win = flip === choice;
 
     if (win) {
-      onChipsChange(chips + bet);
+      setChips((c) => c + bet);
     } else {
-      onChipsChange(Math.max(0, chips - bet));
+      setChips((c) => Math.max(0, c - bet));
     }
 
     setLastFlip(flip);
@@ -56,7 +54,7 @@ export default function CoinFlipGame({ chips, onChipsChange }: Props) {
   }
 
   return (
-    <div className="space-y-3 text-sm text-white">
+    <div className="space-y-3">
       {/* Choose side */}
       <div className="flex gap-2">
         <button
@@ -84,7 +82,7 @@ export default function CoinFlipGame({ chips, onChipsChange }: Props) {
       {/* Bet input + quick bets */}
       <div className="space-y-2">
         <div className="text-xs text-white/60">
-          Bet (min {minBet} chips)
+          Bet (min {MIN_BET} chips)
         </div>
         <div className="flex items-center gap-2">
           <input
