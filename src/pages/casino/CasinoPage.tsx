@@ -1,16 +1,16 @@
 // src/pages/casino/CasinoPage.tsx
 import React, { useState } from "react";
-import BlackjackGame from "./BlackjackGame"; // ✅ REAL GAME
-import CoinFlipGame from "./CoinFlipGame";   // ✅ WORKING COIN FLIP
+import BlackjackGame from "./BlackjackGame";
+import CoinFlipGame from "./CoinFlipGame";
 
 type Props = {
   chips: number;
-  onChipsChange: (next: number) => void;
+  setChips: (next: number) => void; // ✅ FIXED — this MUST exist
 };
 
 type CasinoGame = "blackjack" | "coinflip";
 
-export default function CasinoPage({ chips, onChipsChange }: Props) {
+export default function CasinoPage({ chips, setChips }: Props) {
   const [activeGame, setActiveGame] = useState<CasinoGame>("blackjack");
 
   return (
@@ -22,9 +22,10 @@ export default function CasinoPage({ chips, onChipsChange }: Props) {
             Casino
           </div>
           <div className="text-[11px] text-white/60">
-            High risk, high reward — but chips never convert back to cash.
+            High risk, high reward — chips do NOT convert back easily.
           </div>
         </div>
+
         <div className="text-right">
           <div className="text-[11px] text-white/60">Your chips</div>
           <div className="text-lg font-bold text-emerald-300">
@@ -40,7 +41,7 @@ export default function CasinoPage({ chips, onChipsChange }: Props) {
           className={`flex-1 py-2 rounded-full text-sm font-semibold border
             ${
               activeGame === "blackjack"
-                ? "bg-emerald-500 text-emerald-950 border-emerald-300 shadow-lg shadow-emerald-500/30"
+                ? "bg-emerald-500 text-emerald-950 border-emerald-300 shadow-lg"
                 : "bg-zinc-900 text-white/70 border-white/10"
             }`}
         >
@@ -51,7 +52,7 @@ export default function CasinoPage({ chips, onChipsChange }: Props) {
           className={`flex-1 py-2 rounded-full text-sm font-semibold border
             ${
               activeGame === "coinflip"
-                ? "bg-emerald-500 text-emerald-950 border-emerald-300 shadow-lg shadow-emerald-500/30"
+                ? "bg-emerald-500 text-emerald-950 border-emerald-300 shadow-lg"
                 : "bg-zinc-900 text-white/70 border-white/10"
             }`}
         >
@@ -62,18 +63,16 @@ export default function CasinoPage({ chips, onChipsChange }: Props) {
       {/* Game panel */}
       <div className="rounded-2xl bg-zinc-950/80 border border-white/10 p-4">
         {activeGame === "blackjack" && (
-          <BlackjackGame chips={chips} onChipsChange={onChipsChange} />
+          <BlackjackGame chips={chips} setChips={setChips} />
         )}
 
         {activeGame === "coinflip" && (
-          <CoinFlipGame chips={chips} onChipsChange={onChipsChange} />
+          <CoinFlipGame chips={chips} setChips={setChips} />
         )}
       </div>
 
       <div className="mt-3 text-[10px] text-white/40">
-        Note: Casino games use a separate chip economy.  
-        Chips are **one–way only**: cash ➜ chips.  
-        You cannot convert chips back into money.
+        Casino games use your chips only — no conversion to money.
       </div>
     </div>
   );
