@@ -1,7 +1,7 @@
 // src/pages/casino/CasinoPage.tsx
 import React, { useState } from "react";
-import BlackjackPlaceholder from "./BlackjackPlaceholder";
-import CoinFlipGame from "./CoinFlipGame";
+import BlackjackGame from "./BlackjackGame"; // ✅ REAL GAME
+import CoinFlipGame from "./CoinFlipGame";   // ✅ WORKING COIN FLIP
 
 type Props = {
   chips: number;
@@ -22,7 +22,7 @@ export default function CasinoPage({ chips, onChipsChange }: Props) {
             Casino
           </div>
           <div className="text-[11px] text-white/60">
-            High risk, high reward – but chips don&apos;t convert easily.
+            High risk, high reward — but chips never convert back to cash.
           </div>
         </div>
         <div className="text-right">
@@ -61,15 +61,19 @@ export default function CasinoPage({ chips, onChipsChange }: Props) {
 
       {/* Game panel */}
       <div className="rounded-2xl bg-zinc-950/80 border border-white/10 p-4">
-        {activeGame === "blackjack" && <BlackjackPlaceholder />}
+        {activeGame === "blackjack" && (
+          <BlackjackGame chips={chips} onChipsChange={onChipsChange} />
+        )}
+
         {activeGame === "coinflip" && (
           <CoinFlipGame chips={chips} onChipsChange={onChipsChange} />
         )}
       </div>
 
       <div className="mt-3 text-[10px] text-white/40">
-        Note: Casino is designed as a separate risk playground. Chips are hard
-        to get and exchanging them back to cash will have strict limits.
+        Note: Casino games use a separate chip economy.  
+        Chips are **one–way only**: cash ➜ chips.  
+        You cannot convert chips back into money.
       </div>
     </div>
   );
