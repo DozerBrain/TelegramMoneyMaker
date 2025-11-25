@@ -11,156 +11,133 @@ type Side = "heads" | "tails";
 export default function CoinFlipGame({ chips, onChipsChange }: Props) {
   const [bet, setBet] = useState<number>(10);
   const [choice, setChoice] = useState<Side>("heads");
-  const [lastResult, setLastResult] = useState<null | {
-    win: boolean;
-    side: Side;
-    amount: number;
-  }>(null);
-  const [flipping, setFlipping] = useState(false);
+  const [lastFlip, setLastFlip] = useState<Side | null>(null);
+  const [lastWin, setLastWin] = useState<boolean | null>(null);
 
-  const maxBet = Math.max(10, Math.floor(chips / 2)); // can't bet more than half stack
+  const minBet = 10;
 
-  function handleBetChange(raw: string) {
-    const v = Number(raw.replace(/[^\d]/g, ""));
-    if (!Number.isFinite(v)) return;
-    const clamped = Math.min(Math.max(1, v), maxBet);
+  function handleBetChange(value: string) {
+    const n = Number(value.replace(/\D/g, ""));
+    if (!Number.isFinite(n)) return;
+    const clamped = Math.max(minBet, Math.min(n, chips));
     setBet(clamped);
   }
 
-  function handleAllIn() {
-    const v = Math.max(1, Math.floor(chips / 2));
-    setBet(v);
+  function setQuickBet(amount: number) {
+    const clamped = Math.max(minBet, Math.min(amount, chips));
+    setBet(clamped);
   }
 
   function handleFlip() {
-    if (flipping) return;
-    if (bet <= 0) return;
+    if (chips <= 0) {
+      alert("You have no chips. Exchange money into chips first.");
+      return;
+    }
+    if (bet < minBet) {
+      alert(`Minimum bet is ${minBet} chips.`);
+      return;
+    }
     if (bet > chips) {
       alert("You don't have enough chips for that bet.");
       return;
     }
 
-    setFlipping(true);
+    const flip: Side = Math.random() < 0.5 ? "heads" : "tails";
+    const win = flip === choice;
 
-    // subtract bet immediately
-    onChipsChange(chips - bet);
+    if (win) {
+      onChipsChange(chips + bet);
+    } else {
+      onChipsChange(Math.max(0, chips - bet));
+    }
 
-    setTimeout(() => {
-      const rolled: Side = Math.random() < 0.5 ? "heads" : "tails";
-      const win = rolled === choice;
-
-      let delta = -bet;
-      if (win) {
-        delta = bet; // net profit: +bet (because we already subtracted)
-      }
-
-      const finalChips = chips - bet + (win ? bet * 2 : 0);
-      onChipsChange(finalChips);
-
-      setLastResult({
-        win,
-        side: rolled,
-        amount: win ? bet : -bet,
-      });
-
-      setFlipping(false);
-    }, 900);
+    setLastFlip(flip);
+    setLastWin(win);
   }
 
   return (
-    <div className="space-y-3">
-      <div>
-        <div className="text-sm font-semibold text-white">
-          Coin Flip – 50 / 50
-        </div>
-        <div className="text-[11px] text-white/60">
-          Pick a side, place your bet, and pray to RNG. Winnings are in chips.
-        </div>
-      </div>
-
-      {/* Choice buttons */}
+    <div className="space-y-3 text-sm text-white">
+      {/* Choose side */}
       <div className="flex gap-2">
         <button
           onClick={() => setChoice("heads")}
-          className={`flex-1 py-2 rounded-xl border text-sm font-semibold
-            ${
-              choice === "heads"
-                ? "bg-emerald-500 text-emerald-950 border-emerald-300"
-                : "bg-zinc-900 text-white/70 border-white/10"
-            }`}
+          className={`flex-1 py-2 rounded-full text-sm font-semibold ${
+            choice === "heads"
+              ? "bg-emerald-500 text-emerald-950"
+              : "bg-zinc-800 text-white/70"
+          }`}
         >
           Heads
         </button>
         <button
           onClick={() => setChoice("tails")}
-          className={`flex-1 py-2 rounded-xl border text-sm font-semibold
-            ${
-              choice === "tails"
-                ? "bg-emerald-500 text-emerald-950 border-emerald-300"
-                : "bg-zinc-900 text-white/70 border-white/10"
-            }`}
+          className={`flex-1 py-2 rounded-full text-sm font-semibold ${
+            choice === "tails"
+              ? "bg-emerald-500 text-emerald-950"
+              : "bg-zinc-800 text-white/70"
+          }`}
         >
           Tails
         </button>
       </div>
 
-      {/* Bet input */}
-      <div className="rounded-2xl bg-zinc-900/80 border border-white/10 p-3 space-y-2">
-        <div className="flex items-center justify-between text-xs text-white/60">
-          <span>Bet amount (chips)</span>
-          <span>Max: {maxBet.toLocaleString()}</span>
+      {/* Bet input + quick bets */}
+      <div className="space-y-2">
+        <div className="text-xs text-white/60">
+          Bet (min {minBet} chips)
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <input
-            className="flex-1 rounded-xl bg-black/60 border border-white/15 px-3 py-1.5 text-sm outline-none focus:border-emerald-400"
+            type="tel"
             value={bet}
             onChange={(e) => handleBetChange(e.target.value)}
-            inputMode="numeric"
+            className="flex-1 rounded-xl bg-black/60 border border-white/15 px-3 py-2 text-sm text-white focus:outline-none"
           />
-          <button
-            onClick={handleAllIn}
-            className="px-3 py-1.5 rounded-xl bg-emerald-600 text-emerald-950 text-xs font-semibold"
-          >
-            1/2 STACK
-          </button>
+          <div className="flex gap-1">
+            {[10, 50, 100, 500].map((v) => (
+              <button
+                key={v}
+                onClick={() => setQuickBet(v)}
+                className="px-2 py-1 rounded-full bg-zinc-800 text-[11px] text-white/70"
+              >
+                {v}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Flip button */}
       <button
         onClick={handleFlip}
-        disabled={flipping || bet <= 0 || bet > chips}
-        className={`w-full py-2.5 rounded-2xl text-sm font-semibold mt-1
-          ${
-            flipping || bet <= 0 || bet > chips
-              ? "bg-zinc-700 text-zinc-400"
-              : "bg-emerald-500 text-emerald-950 active:scale-[0.97]"
-          }`}
+        className="w-full py-3 rounded-full bg-emerald-500 text-emerald-950 font-semibold text-sm active:scale-[0.97]"
       >
-        {flipping ? "Flipping..." : "Flip the coin"}
+        Flip the Coin
       </button>
 
       {/* Last result */}
-      {lastResult && (
-        <div
-          className={`mt-2 rounded-2xl p-3 text-sm border ${
-            lastResult.win
-              ? "bg-emerald-500/10 border-emerald-400/40 text-emerald-100"
-              : "bg-red-500/10 border-red-400/40 text-red-100"
-          }`}
-        >
-          <div className="font-semibold mb-1">
-            {lastResult.win ? "You won!" : "You lost."}
-          </div>
-          <div className="text-[13px]">
-            Coin landed on{" "}
-            <span className="font-semibold">{lastResult.side}</span>.{" "}
-            {lastResult.win
-              ? `+${lastResult.amount.toLocaleString()} chips`
-              : `${lastResult.amount.toLocaleString()} chips`}
-          </div>
-        </div>
-      )}
+      <div className="text-xs text-white/60">
+        {lastFlip === null ? (
+          <span>No flips yet.</span>
+        ) : (
+          <span>
+            Last flip:&nbsp;
+            <span className="font-semibold text-white">
+              {lastFlip.toUpperCase()}
+            </span>{" "}
+            –{" "}
+            {lastWin ? (
+              <span className="text-emerald-400 font-semibold">
+                YOU WON +{bet} chips
+              </span>
+            ) : (
+              <span className="text-red-400 font-semibold">
+                YOU LOST -{bet} chips
+              </span>
+            )}
+          </span>
+        )}
+      </div>
     </div>
   );
 }
