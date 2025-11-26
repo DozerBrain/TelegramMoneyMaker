@@ -4,11 +4,17 @@ import React from "react";
 type Props = {
   apsBonusTotal: number;
   couponBonusTotal: number;
+  tierLabel: string;
+  ownedCount: number;
+  nextTierAt: number | null;
 };
 
 export default function WorldHeader({
   apsBonusTotal,
   couponBonusTotal,
+  tierLabel,
+  ownedCount,
+  nextTierAt,
 }: Props) {
   return (
     <div className="flex items-center justify-between mb-3">
@@ -18,6 +24,24 @@ export default function WorldHeader({
         </div>
         <div className="text-[11px] text-white/60">
           Conquer countries to boost APS & coupons.
+        </div>
+        <div className="mt-1 text-[11px] text-emerald-300">
+          Rank: <span className="font-semibold">{tierLabel}</span>
+        </div>
+        <div className="text-[10px] text-white/45">
+          Countries owned:{" "}
+          <span className="text-white/80 font-semibold">
+            {ownedCount}
+          </span>
+          {nextTierAt !== null && (
+            <>
+              {" "}
+              · Next rank at{" "}
+              <span className="text-emerald-300 font-semibold">
+                {nextTierAt}
+              </span>
+            </>
+          )}
         </div>
       </div>
       <div className="text-right text-xs">
