@@ -18,7 +18,7 @@ type Props = {
   // For now, only read balance so we can show if user can afford.
   balance: number;
   // Later we can call setBalance to actually spend money:
-  // setBalance: (fn: (prev: number) => number) => void;
+  // setBalance?: (fn: (prev: number) => number) => void;
 };
 
 export default function WorldMapPage({ balance }: Props) {
@@ -83,11 +83,14 @@ export default function WorldMapPage({ balance }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [world.owned]);
 
-  // computed totals
-  const { apsBonusTotal, couponBonusTotal } = useMemo(
-    () => computeTotals(world.owned),
-    [world.owned]
-  );
+  // computed totals + tier
+  const {
+    apsBonusTotal,
+    couponBonusTotal,
+    tierLabel,
+    ownedCount,
+    nextTierAt,
+  } = useMemo(() => computeTotals(world.owned), [world.owned]);
 
   const ownedSet = useMemo(
     () => new Set(world.owned.map((c) => c.toUpperCase())),
@@ -115,6 +118,9 @@ export default function WorldMapPage({ balance }: Props) {
       <WorldHeader
         apsBonusTotal={apsBonusTotal}
         couponBonusTotal={couponBonusTotal}
+        tierLabel={tierLabel}
+        ownedCount={ownedCount}
+        nextTierAt={nextTierAt}
       />
 
       <RegionGrid
@@ -126,6 +132,7 @@ export default function WorldMapPage({ balance }: Props) {
       <CountryList
         selectedRegion={selectedRegion}
         ownedSet={ownedSet}
+        worldOwnedCount={ownedCount}
         balance={balance}
         onBuy={handleBuyCountry}
       />
