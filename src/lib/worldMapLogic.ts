@@ -33,11 +33,9 @@ export function findCountry(code: string): Country | undefined {
 }
 
 /**
- * Simple cost formula per country.
- * You can tweak these numbers later.
+ * Base cost per region, before scaling.
  */
-export function costForCountry(code: string): number {
-  const region = regionOfCountry(code);
+function baseCostForRegion(region: RegionId): number {
   switch (region) {
     case "NA":
       return 50_000;
@@ -59,7 +57,24 @@ export function costForCountry(code: string): number {
 }
 
 /**
- * APS bonus and coupon bonus for a single country.
+ * Cost per country with simple "later countries cost more" scaling.
+ * ownedCount = how many countries the player already owns (global).
+ */
+export function costForCountry(
+  code: string,
+  ownedCount: number = 0
+): number {
+  const region = regionOfCountry(code);
+  const base = baseCostForRegion(region);
+
+  // Each owned country increases future cost by +8%, capped at 8x
+  const scale = Math.min(1 + ownedCount * 0.08, 8);
+  const cost = Math.floor(base * scale);
+  return cost;
+}
+
+/**
+ * APS bonus and coupon bonus for a single country (base values).
  * - apsBonus = flat +APS
  * - couponBonus = +X (we interpret as +0.05 => +5% later)
  */
@@ -101,6 +116,70 @@ export const REGION_NEIGHBORS: Record<RegionId, RegionId[]> = {
   AF: ["SA", "EU", "MENA"],
 };
 
+// ==== WORLD RANK / TIER SYSTEM ============================================
+
+type WorldTier = {
+  id: number;
+  label: string;
+  minOwned: number; // countries needed to reach this tier
+  apsMult: number;
+  couponMult: number;
+};
+
+const WORLD_TIERS: WorldTier[] = [
+  {
+    id: 1,
+    label: "Local Boss",
+    minOwned: 1,
+    apsMult: 1.0,
+    couponMult: 1.0,
+  },
+  {
+    id: 2,
+    label: "Regional Overlord",
+    minOwned: 10,
+    apsMult: 1.25,
+    couponMult: 1.1,
+  },
+  {
+    id: 3,
+    label: "Global Tycoon",
+    minOwned: 25,
+    apsMult: 1.5,
+    couponMult: 1.2,
+  },
+  {
+    id: 4,
+    label: "World Emperor",
+    minOwned: 50,
+    apsMult: 1.8,
+    couponMult: 1.35,
+  },
+  {
+    id: 5,
+    label: "Universal Legend",
+    minOwned: 100,
+    apsMult: 2.2,
+    couponMult: 1.5,
+  },
+];
+
+export function getWorldTier(ownedCount: number) {
+  let current = WORLD_TIERS[0];
+  for (const tier of WORLD_TIERS) {
+    if (ownedCount >= tier.minOwned) {
+      current = tier;
+    }
+  }
+  const idx = WORLD_TIERS.indexOf(current);
+  const next = WORLD_TIERS[idx + 1] ?? null;
+
+  return {
+    tier: current,
+    nextTierAt: next ? next.minOwned : null,
+  };
+}
+
 export function loadWorldSave(
   homeCountry: string,
   homeRegion: RegionId
@@ -141,7 +220,20 @@ export function computeTotals(owned: string[]) {
     couponBonusTotal += couponBonus;
   }
 
-  return { apsBonusTotal, couponBonusTotal };
+  const ownedCount = owned.length;
+  const { tier, nextTierAt } = getWorldTier(ownedCount);
+
+  // Apply tier multipliers
+  apsBonusTotal *= tier.apsMult;
+  couponBonusTotal *= tier.couponMult;
+
+  return {
+    apsBonusTotal,
+    couponBonusTotal,
+    tierLabel: tier.label,
+    ownedCount,
+    nextTierAt,
+  };
 }
 
 export function saveWorldSave(save: WorldSave) {
