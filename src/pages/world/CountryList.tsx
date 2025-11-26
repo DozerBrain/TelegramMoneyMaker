@@ -6,12 +6,16 @@ import {
   type Country,
   type RegionId,
 } from "../../data/countries";
-import { costForCountry, countryBonuses } from "../../lib/worldMapLogic";
+import {
+  costForCountry,
+  countryBonuses,
+} from "../../lib/worldMapLogic";
 import { formatMoneyShort } from "../../lib/format";
 
 type Props = {
   selectedRegion: RegionId;
   ownedSet: Set<string>;
+  worldOwnedCount: number;
   balance: number;
   onBuy: (code: string) => void;
 };
@@ -19,6 +23,7 @@ type Props = {
 export default function CountryList({
   selectedRegion,
   ownedSet,
+  worldOwnedCount,
   balance,
   onBuy,
 }: Props) {
@@ -45,7 +50,7 @@ export default function CountryList({
         ) : (
           countriesInSelectedRegion.map((c) => {
             const owned = ownedSet.has(c.code.toUpperCase());
-            const cost = costForCountry(c.code);
+            const cost = costForCountry(c.code, worldOwnedCount);
             const { apsBonus, couponBonus } = countryBonuses(c.code);
 
             return (
@@ -91,7 +96,8 @@ export default function CountryList({
 
       <div className="mt-3 text-[10px] text-white/40">
         Tip: once you own all countries in a region, nearby regions will unlock
-        and appear on the map.
+        and appear on the map. Later countries cost more but also push you
+        toward higher world ranks with stronger bonuses.
       </div>
     </>
   );
