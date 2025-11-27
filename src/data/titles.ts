@@ -31,7 +31,6 @@ export type TitleDef = {
 
 /**
  * Central list of ALL titles in the game.
- * We start with some world titles – later we'll add card/creature titles here too.
  */
 export const TITLES: TitleDef[] = [
   // 🌍 WORLD TRACK (based on countries owned – 197 total)
@@ -92,6 +91,59 @@ export const TITLES: TitleDef[] = [
     description: "Full world domination. Nothing left to conquer.",
   },
 
+  // 🏆 ACHIEVEMENT / PROGRESSION TITLES
+  {
+    id: "rookie_tapper",
+    label: "Rookie Tapper",
+    rarity: "common",
+    source: "special",
+    description: "You started your tapping journey.",
+  },
+  {
+    id: "coupon_hoarder",
+    label: "Coupon Hoarder",
+    rarity: "uncommon",
+    source: "special",
+    description: "You love squeezing every bonus.",
+  },
+  {
+    id: "card_collector",
+    label: "Card Collector",
+    rarity: "rare",
+    source: "cards",
+    description: "Your collection is starting to look dangerous.",
+  },
+  {
+    id: "tap_myth",
+    label: "Tap Myth",
+    rarity: "legendary",
+    source: "special",
+    description: "Your taps are the stuff of legend.",
+  },
+  {
+    id: "ultra_being",
+    label: "Ultra Being",
+    rarity: "ultimate",
+    source: "special",
+    description: "You exist beyond normal tapper limits.",
+  },
+
+  // 🏆 SUIT-BASED TITLES (from suit achievements)
+  {
+    id: "suit_millionaire_mogul",
+    label: "Millionaire Mogul",
+    rarity: "legendary",
+    source: "special",
+    description: "Unlocked when you obtain the Millionaire suit.",
+  },
+  {
+    id: "suit_crypto_phantom",
+    label: "Crypto Phantom",
+    rarity: "mythic",
+    source: "special",
+    description: "Unlocked when you obtain the Crypto suit.",
+  },
+
   // 🃏 Example future card title (placeholder)
   // {
   //   id: "cards_king_of_cards",
@@ -117,7 +169,7 @@ export function getTitleDef(id: TitleId | null | undefined): TitleDef | undefine
 }
 
 export function getWorldTitles(): TitleDef[] {
-  return TITLES.filter((t) => t.source === "world" && t.worldMinOwned != null).sort(
-    (a, b) => (a.worldMinOwned ?? 0) - (b.worldMinOwned ?? 0)
-  );
+  return TITLES.filter(
+    (t) => t.source === "world" && t.worldMinOwned != null
+  ).sort((a, b) => (a.worldMinOwned ?? 0) - (b.worldMinOwned ?? 0));
 }
