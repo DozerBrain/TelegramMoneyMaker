@@ -1,6 +1,11 @@
 // src/AppRoutes.tsx
 import React from "react";
 
+// Types
+import type { Tab } from "./types";
+import type { CardInstance } from "./App";
+
+// Pages
 import Home from "./pages/Home";
 import Shop from "./pages/Shop";
 import Spin from "./pages/Spin";
@@ -12,74 +17,58 @@ import SuitsPage from "./pages/Suits";
 import CardsPage from "./pages/Cards";
 import GamesPage from "./pages/Games";
 
-import type { Tab } from "./types";
-import type { CardInstance } from "./App"; // we still export this from App.tsx
+// Income math constant
+import { TAPS_PER_COUPON } from "./incomeMath";
 
 type Props = {
   tab: Tab;
 
-  // Core game state
+  // Core
   balance: number;
   setBalance: (v: number | ((p: number) => number)) => void;
-
   totalEarnings: number;
   setTotalEarnings: (v: number | ((p: number) => number)) => void;
-
   taps: number;
   setTaps: (v: number | ((p: number) => number)) => void;
-
   tapValue: number;
   setTapValue: (v: number | ((p: number) => number)) => void;
-
   autoPerSec: number;
   setAutoPerSec: (v: number | ((p: number) => number)) => void;
-
   multi: number;
   setMulti: (v: number | ((p: number) => number)) => void;
 
-  // Casino
+  // Chips
   chips: number;
   setChips: (v: number | ((p: number) => number)) => void;
 
-  // Long-term upgrades
+  // Long-term stats
   critChance: number;
   setCritChance: (v: number | ((p: number) => number)) => void;
-
   critMult: number;
   setCritMult: (v: number | ((p: number) => number)) => void;
-
   autoBonusMult: number;
   setAutoBonusMult: (v: number | ((p: number) => number)) => void;
-
   couponBoostLevel: number;
   setCouponBoostLevel: (v: number | ((p: number) => number)) => void;
-
   bulkDiscountLevel: number;
   setBulkDiscountLevel: (v: number | ((p: number) => number)) => void;
 
-  // Suits / pets / bonuses
+  // Suits / pets
   bestSuitName: string;
   setBestSuitName: (v: string | ((p: string) => string)) => void;
-
   equippedPetId: string | null;
-
-  suitMult: number;
-  petTapMult: number;
-  cardMultAll: number;
-  globalMult: number;
 
   // Spin / missions
   spinCooldownEndsAt: number | null;
   setSpinCooldownEndsAt: (v: number | null | ((p: number | null) => number | null)) => void;
 
   // Achievements
-  achievementsState: Record<string, { done: boolean; claimed: boolean }>;
+  achState: Record<string, { done: boolean; claimed: boolean }>;
   onClaimAchievement: (id: string, reward: number) => void;
 
-  // Cards & coupons
+  // Cards / coupons
   cards: CardInstance[];
   setCards: (v: CardInstance[] | ((p: CardInstance[]) => CardInstance[])) => void;
-
   couponsAvailable: number;
   couponsSpent: number;
   setCouponsSpent: (v: number | ((p: number) => number)) => void;
@@ -88,6 +77,13 @@ type Props = {
   onExport: () => void;
   onImport: (raw: string) => void;
   onReset: () => void;
+
+  // Multipliers
+  suitMult: number;
+  petTapMult: number;
+  petAutoMult: number;
+  cardMultAll: number;
+  globalMult: number;
 };
 
 export default function AppRoutes(props: Props) {
@@ -120,13 +116,9 @@ export default function AppRoutes(props: Props) {
     bestSuitName,
     setBestSuitName,
     equippedPetId,
-    suitMult,
-    petTapMult,
-    cardMultAll,
-    globalMult,
     spinCooldownEndsAt,
     setSpinCooldownEndsAt,
-    achievementsState,
+    achState,
     onClaimAchievement,
     cards,
     setCards,
@@ -136,6 +128,11 @@ export default function AppRoutes(props: Props) {
     onExport,
     onImport,
     onReset,
+    suitMult,
+    petTapMult,
+    petAutoMult,
+    cardMultAll,
+    globalMult,
   } = props;
 
   return (
@@ -239,7 +236,7 @@ export default function AppRoutes(props: Props) {
           tapValue={tapValue}
           autoPerSec={autoPerSec}
           multi={multi}
-          achievementsState={achievementsState}
+          achievementsState={achState}
           onClaim={onClaimAchievement}
         />
       )}
@@ -256,7 +253,7 @@ export default function AppRoutes(props: Props) {
           couponsAvailable={couponsAvailable}
           couponsSpent={couponsSpent}
           setCouponsSpent={setCouponsSpent}
-          tapsPerCoupon={10_000} // using same constant you pass from App (TAPS_PER_COUPON)
+          tapsPerCoupon={TAPS_PER_COUPON}
           bulkDiscountLevel={bulkDiscountLevel}
         />
       )}
