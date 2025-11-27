@@ -1,13 +1,16 @@
 // src/pages/Profile.tsx
 import React, { useEffect, useState } from "react";
 import { getProfile, setProfile } from "../lib/profile";
-import { achievements } from "../data/achievements";
-import { formatMoneyShort } from "../lib/format";
 import { signInWithGoogle } from "../lib/googleAuth";
 
-// 🔥 NEW: title imports
+// Titles
 import { getTitleState, updateTitleState } from "../lib/storage";
 import { TITLES, getTitleDef, type TitleDef } from "../data/titles";
+
+// Tabs
+import ProfileStatsTab from "./profile/ProfileStatsTab";
+import ProfileAchievementsTab from "./profile/ProfileAchievementsTab";
+import ProfileSettingsTab from "./profile/ProfileSettingsTab";
 
 type ProfileProps = {
   balance: number;
@@ -19,6 +22,8 @@ type ProfileProps = {
   achievementsState: Record<string, { done: boolean; claimed: boolean }>;
   onClaim: (id: string, reward: number) => void;
 };
+
+type TabKey = "stats" | "achievements" | "settings";
 
 export default function ProfilePage({
   balance,
@@ -37,10 +42,13 @@ export default function ProfilePage({
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // 🔥 NEW: title UI state
+  // Titles UI state
   const [equippedTitleId, setEquippedTitleId] = useState<string>("");
   const [unlockedTitleIds, setUnlockedTitleIds] = useState<string[]>([]);
   const [equippedTitle, setEquippedTitle] = useState<TitleDef | null>(null);
+
+  // Right side nav
+  const [activeTab, setActiveTab] = useState<TabKey>("stats");
 
   useEffect(() => {
     const p = getProfile();
@@ -82,7 +90,7 @@ export default function ProfilePage({
     setUid(nextUid);
     setAvatarUrl(nextAvatar);
 
-    // 🔥 Load title state from save
+    // Load title state from save
     try {
       const ts = getTitleState();
       const eqId = ts.equippedTitleId ?? null;
@@ -94,7 +102,7 @@ export default function ProfilePage({
     }
   }, []);
 
-  function handleSave() {
+  function handleSaveProfile() {
     setProfile({ name, country });
 
     const p = getProfile();
@@ -127,21 +135,16 @@ export default function ProfilePage({
       .slice(0, 2)
       .toUpperCase() as string) || "P";
 
-  // ---- format helpers ----
-  const fmtMoney = (n: number) => `$${formatMoneyShort(Math.floor(n))}`;
-  const fmtAps = (n: number) => `$${formatMoneyShort(Math.floor(n))}/s`;
-  const fmtInt = (n: number) => n.toLocaleString("en-US");
-  const fmtMultiplier = (m: number) => `x${formatMoneyShort(m)}`;
-
-  // 🔥 Titles: filter list to only unlocked ones
+  // Titles lists
   const unlockedTitles: TitleDef[] = TITLES.filter((t) =>
     unlockedTitleIds.includes(t.id)
   );
+  const lockedTitles: TitleDef[] = TITLES.filter(
+    (t) => !unlockedTitleIds.includes(t.id)
+  );
 
-  function handleChangeTitle(e: React.ChangeEvent<HTMLSelectElement>) {
-    const value = e.target.value;
-    const id = value || null;
-
+  function handleChangeTitleId(id: string | null) {
+    const value = id ?? "";
     setEquippedTitleId(value);
     setEquippedTitle(id ? getTitleDef(id) ?? null : null);
 
@@ -157,195 +160,107 @@ export default function ProfilePage({
     });
   }
 
+  const tabButtonClass = (tab: TabKey) =>
+    `px-3 py-1.5 rounded-full text-xs font-semibold border ${
+      activeTab === tab
+        ? "bg-emerald-600 border-emerald-400 text-black"
+        : "bg-zinc-900/60 border-white/10 text-white/60"
+    }`;
+
   return (
     <div className="p-4 pb-24 text-white">
-      {/* Avatar + name */}
-      <div className="flex items-center gap-4 mb-6">
-        {avatarUrl ? (
-          <img
-            src={avatarUrl}
-            alt={name}
-            className="h-16 w-16 rounded-full object-cover border-2 border-emerald-500"
-          />
-        ) : (
-          <div className="h-16 w-16 rounded-full bg-emerald-900 text-emerald-200 flex items-center justify-center text-2xl font-bold">
-            {initials}
-          </div>
-        )}
-
-        <div className="text-sm text-white/70">
-          <div className="font-semibold text-base">{name}</div>
-          <div className="text-xs text-white/50">ID: {uid}</div>
-          <div className="text-xs text-white/50">Country: {country}</div>
-
-          {/* 🔥 Show equipped title (if any) */}
-          {equippedTitle && (
-            <div className="text-[11px] text-emerald-300 mt-0.5">
-              Title: {equippedTitle.label}
+      {/* Header: avatar + name + right-side nav */}
+      <div className="flex items-start justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          {avatarUrl ? (
+            <img
+              src={avatarUrl}
+              alt={name}
+              className="h-16 w-16 rounded-full object-cover border-2 border-emerald-500"
+            />
+          ) : (
+            <div className="h-16 w-16 rounded-full bg-emerald-900 text-emerald-200 flex items-center justify-center text-2xl font-bold">
+              {initials}
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Google login button */}
-      <button
-        onClick={handleGoogleLogin}
-        disabled={authLoading}
-        className="w-full mb-3 rounded-xl bg-white text-black font-semibold py-2.5 text-sm flex items-center justify-center gap-2 disabled:opacity-60"
-      >
-        <span className="text-lg">G</span>
-        <span>{authLoading ? "Connecting Google..." : "Sign in with Google"}</span>
-      </button>
-      {authError && (
-        <div className="text-xs text-red-400 mb-3">{authError}</div>
-      )}
+          <div className="text-sm text-white/70">
+            <div className="font-semibold text-base">{name}</div>
+            <div className="text-xs text-white/50">ID: {uid}</div>
+            <div className="text-xs text-white/50">Country: {country}</div>
 
-      {/* Name / country editing */}
-      <label className="block text-sm mb-1 text-white/70">Display name</label>
-      <input
-        className="w-full mb-4 rounded-xl bg-zinc-900/80 border border-white/10 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-      />
-
-      <label className="block text-sm mb-1 text-white/70">Country</label>
-      <select
-        className="w-full mb-4 rounded-xl bg-zinc-900/80 border border-white/10 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-        value={country}
-        onChange={(e) => setCountry(e.target.value)}
-      >
-        <option value="US">US</option>
-        <option value="RU">Russia</option>
-        <option value="DE">Germany</option>
-        <option value="TR">Turkey</option>
-        <option value="BR">Brazil</option>
-        <option value="IN">India</option>
-      </select>
-
-      <label className="block text-sm mb-1 text-white/70">Player ID</label>
-      <input
-        className="w-full mb-4 rounded-xl bg-zinc-900/60 border border-white/10 px-3 py-2 text-sm text-white/60"
-        value={uid}
-        readOnly
-      />
-
-      <button
-        onClick={handleSave}
-        className="w-full rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-semibold py-3 mb-6"
-      >
-        Save Profile
-      </button>
-
-      {/* 🔥 TITLE PICKER SECTION */}
-      <h2 className="text-sm font-semibold text-white/80 mb-2">Title</h2>
-      <div className="mb-6 rounded-xl bg-zinc-900/70 px-3 py-3">
-        {unlockedTitles.length === 0 ? (
-          <div className="text-xs text-white/50">
-            You don&apos;t have any titles unlocked yet.
-            <br />
-            Conquer countries, earn achievements, and you&apos;ll start
-            unlocking rare titles to flex.
-          </div>
-        ) : (
-          <>
-            <label className="block text-xs mb-1 text-white/60">
-              Equipped title
-            </label>
-            <select
-              className="w-full rounded-xl bg-zinc-950/80 border border-white/10 px-3 py-2 text-sm outline-none focus:border-emerald-500"
-              value={equippedTitleId}
-              onChange={handleChangeTitle}
-            >
-              <option value="">None</option>
-              {unlockedTitles.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.label} ({t.rarity})
-                </option>
-              ))}
-            </select>
-            {equippedTitle && equippedTitle.description && (
-              <div className="mt-1 text-[11px] text-white/45">
-                {equippedTitle.description}
+            {/* Equipped title */}
+            {equippedTitle && (
+              <div className="text-[11px] text-emerald-300 mt-0.5">
+                Title: {equippedTitle.label}
               </div>
             )}
-          </>
-        )}
-      </div>
+          </div>
+        </div>
 
-      {/* STATS */}
-      <h2 className="text-sm font-semibold text-white/80 mb-2">Stats</h2>
-      <div className="grid grid-cols-2 gap-3 mb-6 text-sm">
-        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
-          <div className="text-xs text-white/50">Balance</div>
-          <div className="font-semibold">{fmtMoney(balance)}</div>
-        </div>
-        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
-          <div className="text-xs text-white/50">Total earned</div>
-          <div className="font-semibold">{fmtMoney(totalEarnings)}</div>
-        </div>
-        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
-          <div className="text-xs text-white/50">Taps</div>
-          <div className="font-semibold">{fmtInt(taps)}</div>
-        </div>
-        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
-          <div className="text-xs text-white/50">Tap value</div>
-          <div className="font-semibold">{fmtMoney(tapValue)}</div>
-        </div>
-        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
-          <div className="text-xs text-white/50">APS</div>
-          <div className="font-semibold">{fmtAps(autoPerSec)}</div>
-        </div>
-        <div className="rounded-xl bg-zinc-900/70 px-3 py-2">
-          <div className="text-xs text-white/50">Multiplier</div>
-          <div className="font-semibold">{fmtMultiplier(multi)}</div>
-        </div>
-      </div>
-
-      {/* ACHIEVEMENTS */}
-      <h2 className="text-sm font-semibold text-white/80 mb-2">
-        Achievements
-      </h2>
-      <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
-        {achievements.map((a) => {
-          const st = achievementsState[a.id] || {
-            done: false,
-            claimed: false,
-          };
-
-          const canClaim = st.done && !st.claimed;
-
-          return (
-            <div
-              key={a.id}
-              className="rounded-xl bg-zinc-900/80 border border-white/5 px-3 py-2.5 flex items-center gap-3"
+        {/* Right-side nav */}
+        <div className="flex flex-col items-end gap-1 text-xs">
+          <span className="text-[11px] text-white/40 mb-0.5">PROFILE</span>
+          <div className="flex flex-col gap-1">
+            <button
+              className={tabButtonClass("stats")}
+              onClick={() => setActiveTab("stats")}
             >
-              <div className="flex-1">
-                <div className="text-sm font-semibold text-white/90">
-                  {a.name}
-                </div>
-                <div className="text-xs text-white/55">{a.desc}</div>
-                <div className="text-xs text-emerald-400 mt-0.5">
-                  Reward: +${a.reward.toLocaleString()}
-                </div>
-              </div>
-
-              <button
-                disabled={!canClaim}
-                onClick={() => onClaim(a.id, a.reward)}
-                className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${
-                  canClaim
-                    ? "bg-emerald-600 hover:bg-emerald-500 text-black"
-                    : st.claimed
-                    ? "bg-emerald-900/60 text-emerald-300"
-                    : "bg-zinc-800 text-white/50"
-                }`}
-              >
-                {st.claimed ? "Claimed" : st.done ? "Claim" : "Locked"}
-              </button>
-            </div>
-          );
-        })}
+              Stats
+            </button>
+            <button
+              className={tabButtonClass("achievements")}
+              onClick={() => setActiveTab("achievements")}
+            >
+              Achievements
+            </button>
+            <button
+              className={tabButtonClass("settings")}
+              onClick={() => setActiveTab("settings")}
+            >
+              Settings
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Tabs */}
+      {activeTab === "settings" && (
+        <ProfileSettingsTab
+          name={name}
+          country={country}
+          uid={uid}
+          authLoading={authLoading}
+          authError={authError}
+          onNameChange={setName}
+          onCountryChange={setCountry}
+          onSaveProfile={handleSaveProfile}
+          onGoogleLogin={handleGoogleLogin}
+          unlockedTitles={unlockedTitles}
+          lockedTitles={lockedTitles}
+          equippedTitleId={equippedTitleId}
+          equippedTitle={equippedTitle}
+          onChangeTitle={handleChangeTitleId}
+        />
+      )}
+
+      {activeTab === "stats" && (
+        <ProfileStatsTab
+          balance={balance}
+          totalEarnings={totalEarnings}
+          taps={taps}
+          tapValue={tapValue}
+          autoPerSec={autoPerSec}
+          multi={multi}
+        />
+      )}
+
+      {activeTab === "achievements" && (
+        <ProfileAchievementsTab
+          achievementsState={achievementsState}
+          onClaim={onClaim}
+        />
+      )}
     </div>
   );
 }
