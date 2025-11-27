@@ -5,6 +5,10 @@ import { achievements } from "../data/achievements";
 import { formatMoneyShort } from "../lib/format";
 import { signInWithGoogle } from "../lib/googleAuth";
 
+// 🔥 NEW: title imports
+import { getTitleState, updateTitleState } from "../lib/storage";
+import { TITLES, getTitleDef, type TitleDef } from "../data/titles";
+
 type ProfileProps = {
   balance: number;
   totalEarnings: number;
@@ -32,6 +36,11 @@ export default function ProfilePage({
   const [avatarUrl, setAvatarUrl] = useState<string | undefined>();
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+
+  // 🔥 NEW: title UI state
+  const [equippedTitleId, setEquippedTitleId] = useState<string>("");
+  const [unlockedTitleIds, setUnlockedTitleIds] = useState<string[]>([]);
+  const [equippedTitle, setEquippedTitle] = useState<TitleDef | null>(null);
 
   useEffect(() => {
     const p = getProfile();
@@ -72,6 +81,17 @@ export default function ProfilePage({
     setCountry(nextCountry);
     setUid(nextUid);
     setAvatarUrl(nextAvatar);
+
+    // 🔥 Load title state from save
+    try {
+      const ts = getTitleState();
+      const eqId = ts.equippedTitleId ?? null;
+      setUnlockedTitleIds(ts.unlockedTitleIds ?? []);
+      setEquippedTitleId(eqId ?? "");
+      setEquippedTitle(eqId ? getTitleDef(eqId) ?? null : null);
+    } catch {
+      // ignore if titles not ready
+    }
   }, []);
 
   function handleSave() {
@@ -113,6 +133,30 @@ export default function ProfilePage({
   const fmtInt = (n: number) => n.toLocaleString("en-US");
   const fmtMultiplier = (m: number) => `x${formatMoneyShort(m)}`;
 
+  // 🔥 Titles: filter list to only unlocked ones
+  const unlockedTitles: TitleDef[] = TITLES.filter((t) =>
+    unlockedTitleIds.includes(t.id)
+  );
+
+  function handleChangeTitle(e: React.ChangeEvent<HTMLSelectElement>) {
+    const value = e.target.value;
+    const id = value || null;
+
+    setEquippedTitleId(value);
+    setEquippedTitle(id ? getTitleDef(id) ?? null : null);
+
+    updateTitleState((prev) => {
+      if (id === null) {
+        return { ...prev, equippedTitleId: null };
+      }
+      if (!prev.unlockedTitleIds.includes(id)) {
+        // can't equip a title you don't own
+        return prev;
+      }
+      return { ...prev, equippedTitleId: id };
+    });
+  }
+
   return (
     <div className="p-4 pb-24 text-white">
       {/* Avatar + name */}
@@ -133,6 +177,13 @@ export default function ProfilePage({
           <div className="font-semibold text-base">{name}</div>
           <div className="text-xs text-white/50">ID: {uid}</div>
           <div className="text-xs text-white/50">Country: {country}</div>
+
+          {/* 🔥 Show equipped title (if any) */}
+          {equippedTitle && (
+            <div className="text-[11px] text-emerald-300 mt-0.5">
+              Title: {equippedTitle.label}
+            </div>
+          )}
         </div>
       </div>
 
@@ -184,6 +235,42 @@ export default function ProfilePage({
       >
         Save Profile
       </button>
+
+      {/* 🔥 TITLE PICKER SECTION */}
+      <h2 className="text-sm font-semibold text-white/80 mb-2">Title</h2>
+      <div className="mb-6 rounded-xl bg-zinc-900/70 px-3 py-3">
+        {unlockedTitles.length === 0 ? (
+          <div className="text-xs text-white/50">
+            You don&apos;t have any titles unlocked yet.
+            <br />
+            Conquer countries, earn achievements, and you&apos;ll start
+            unlocking rare titles to flex.
+          </div>
+        ) : (
+          <>
+            <label className="block text-xs mb-1 text-white/60">
+              Equipped title
+            </label>
+            <select
+              className="w-full rounded-xl bg-zinc-950/80 border border-white/10 px-3 py-2 text-sm outline-none focus:border-emerald-500"
+              value={equippedTitleId}
+              onChange={handleChangeTitle}
+            >
+              <option value="">None</option>
+              {unlockedTitles.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.label} ({t.rarity})
+                </option>
+              ))}
+            </select>
+            {equippedTitle && equippedTitle.description && (
+              <div className="mt-1 text-[11px] text-white/45">
+                {equippedTitle.description}
+              </div>
+            )}
+          </>
+        )}
+      </div>
 
       {/* STATS */}
       <h2 className="text-sm font-semibold text-white/80 mb-2">Stats</h2>
