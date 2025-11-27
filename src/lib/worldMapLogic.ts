@@ -1,7 +1,6 @@
 // src/lib/worldMapLogic.ts
 import {
   COUNTRIES,
-  REGIONS,
   type Country,
   type RegionId,
 } from "../data/countries";
@@ -33,42 +32,28 @@ export function findCountry(code: string): Country | undefined {
 }
 
 /**
- * Base cost per region, before scaling.
- */
-function baseCostForRegion(region: RegionId): number {
-  switch (region) {
-    case "NA":
-      return 50_000;
-    case "EU":
-      return 75_000;
-    case "SA":
-      return 40_000;
-    case "MENA":
-      return 55_000;
-    case "AF":
-      return 30_000;
-    case "AS":
-      return 65_000;
-    case "OC":
-      return 45_000;
-    default:
-      return 50_000;
-  }
-}
-
-/**
- * Cost per country with simple "later countries cost more" scaling.
+ * GLOBAL cost curve.
+ *
+ * Region does NOT affect price anymore.
+ * Every next country you own in the entire world makes all future countries more expensive.
+ *
  * ownedCount = how many countries the player already owns (global).
  */
 export function costForCountry(
   code: string,
   ownedCount: number = 0
 ): number {
-  const region = regionOfCountry(code);
-  const base = baseCostForRegion(region);
+  // Base starting price for the very first country
+  const base = 50_000;
 
-  // Each owned country increases future cost by +8%, capped at 8x
-  const scale = Math.min(1 + ownedCount * 0.08, 8);
+  // Safety: no negatives
+  const safeOwned = Math.max(0, ownedCount);
+
+  // Tapper-style exponential growth: +12% per owned country
+  // So cost grows smoothly and NEVER goes down, no matter the region.
+  const growthPerCountry = 1.12;
+  const scale = Math.pow(growthPerCountry, safeOwned);
+
   const cost = Math.floor(base * scale);
   return cost;
 }
@@ -77,6 +62,9 @@ export function costForCountry(
  * APS bonus and coupon bonus for a single country (base values).
  * - apsBonus = flat +APS
  * - couponBonus = +X (we interpret as +0.05 => +5% later)
+ *
+ * This still depends on REGION (not price), which is fine –
+ * cost is global, bonuses are flavor per region.
  */
 export function countryBonuses(
   code: string
