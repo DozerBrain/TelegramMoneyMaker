@@ -3,7 +3,7 @@ import React from "react";
 
 // Types
 import type { Tab } from "./types";
-import type { CardInstance } from "./App";
+import type { CardInstance } from "./types/cards";
 
 // Pages
 import Home from "./pages/Home";
