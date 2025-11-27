@@ -12,6 +12,7 @@ export type Achievement = {
     balance: number;
     totalEarnings: number;
     bestSuitName: string;
+    countriesOwned: number; // 🔥 NEW: for world / conquest achievements
   }) => boolean;
 };
 
@@ -33,7 +34,7 @@ const suitReached = (best: string, target: string) => {
 };
 
 export const achievements: Achievement[] = [
-  // Taps
+  // 🔹 TAPS
   {
     id: "tap_1",
     name: "First Tap",
@@ -58,7 +59,7 @@ export const achievements: Achievement[] = [
     check: (c) => c.taps >= 1_000,
   },
 
-  // Balance milestones (current balance)
+  // 🔹 BALANCE (current)
   {
     id: "bal_1k",
     name: "First K",
@@ -81,7 +82,7 @@ export const achievements: Achievement[] = [
     check: (c) => c.balance >= 100_000,
   },
 
-  // Total earnings (lifetime)
+  // 🔹 TOTAL EARNINGS (lifetime)
   {
     id: "tot_1m",
     name: "Million Made",
@@ -114,7 +115,7 @@ export const achievements: Achievement[] = [
     unlockTitleId: "ultra_being", // ultimate title
   },
 
-  // Suit unlocks – names + targets MUST match suits.ts `name`
+  // 🔹 SUIT UNLOCKS – names MUST match suits.ts `name`
   {
     id: "suit_emerald",
     name: "Emerald Drip",
@@ -144,6 +145,64 @@ export const achievements: Achievement[] = [
     reward: 500_000,
     check: (c) => suitReached(c.bestSuitName, "Crypto"),
     unlockTitleId: "suit_crypto_phantom",
+  },
+
+  // 🔹 WORLD / CONQUER THE WORLD – based on countries owned
+  {
+    id: "world_1",
+    name: "First Claim",
+    desc: "Own at least 1 country.",
+    reward: 50_000,
+    check: (c) => c.countriesOwned >= 1,
+    unlockTitleId: "world_local_boss",
+  },
+  {
+    id: "world_10",
+    name: "Regional Overlord",
+    desc: "Own at least 10 countries.",
+    reward: 150_000,
+    check: (c) => c.countriesOwned >= 10,
+    unlockTitleId: "world_regional_overlord",
+  },
+  {
+    id: "world_30",
+    name: "Continental Ruler",
+    desc: "Own at least 30 countries.",
+    reward: 400_000,
+    check: (c) => c.countriesOwned >= 30,
+    unlockTitleId: "world_continental_ruler",
+  },
+  {
+    id: "world_60",
+    name: "Global Expansion",
+    desc: "Own at least 60 countries.",
+    reward: 1_000_000,
+    check: (c) => c.countriesOwned >= 60,
+    unlockTitleId: "world_global_tycoon",
+  },
+  {
+    id: "world_100",
+    name: "Half-World Emperor",
+    desc: "Own at least 100 countries.",
+    reward: 3_000_000,
+    check: (c) => c.countriesOwned >= 100,
+    unlockTitleId: "world_emperor",
+  },
+  {
+    id: "world_150",
+    name: "Universal Legend",
+    desc: "Own at least 150 countries.",
+    reward: 7_500_000,
+    check: (c) => c.countriesOwned >= 150,
+    unlockTitleId: "world_universal_legend",
+  },
+  {
+    id: "world_197",
+    name: "Full Conquer",
+    desc: "Own all 197 countries.",
+    reward: 20_000_000,
+    check: (c) => c.countriesOwned >= 197,
+    unlockTitleId: "world_multiversal_overlord",
   },
 ];
 
