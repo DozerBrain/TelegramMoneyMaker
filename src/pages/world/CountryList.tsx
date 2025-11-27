@@ -17,7 +17,7 @@ type Props = {
   ownedSet: Set<string>;
   worldOwnedCount: number;
   balance: number;
-  onBuy: (code: string) => void; // now: start conquest for this country
+  onBuy: (code: string, cost: number) => void; // ⬅ cost included
 };
 
 export default function CountryList({
@@ -51,10 +51,8 @@ export default function CountryList({
           countriesInSelectedRegion.map((c, index) => {
             const owned = ownedSet.has(c.code.toUpperCase());
 
-            // 🔥 Each next country in the list is more expensive.
-            // We use worldOwnedCount + index so prices climb visually down the list.
+            // Each next country in the region costs more
             const cost = costForCountry(c.code, worldOwnedCount + index);
-
             const { apsBonus, couponBonus } = countryBonuses(c.code);
 
             return (
@@ -84,7 +82,7 @@ export default function CountryList({
                     </span>
                   ) : (
                     <button
-                      onClick={() => onBuy(c.code)}
+                      onClick={() => onBuy(c.code, cost)}
                       className="px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-600 disabled:bg-zinc-700 disabled:text-white/40"
                       disabled={balance < cost}
                     >
