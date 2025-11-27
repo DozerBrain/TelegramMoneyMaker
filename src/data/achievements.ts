@@ -1,10 +1,12 @@
 // src/data/achievements.ts
+import type { TitleId } from "./titles";
 
 export type Achievement = {
   id: string;
   name: string;
   desc: string;
-  reward: number; // cash reward
+  reward: number; // cash reward (small bonus, main reward = title)
+  unlockTitleId?: TitleId; // optional title reward
   check: (ctx: {
     taps: number;
     balance: number;
@@ -14,7 +16,13 @@ export type Achievement = {
 };
 
 // Helper to gate by suit – order MUST match suits.ts `name` values
-const SUIT_ORDER = ["Starter", "Emerald", "Velvet", "Millionaire", "Crypto"] as const;
+const SUIT_ORDER = [
+  "Starter",
+  "Emerald",
+  "Velvet",
+  "Millionaire",
+  "Crypto",
+] as const;
 
 const suitReached = (best: string, target: string) => {
   const order = SUIT_ORDER as readonly string[];
@@ -39,6 +47,8 @@ export const achievements: Achievement[] = [
     desc: "Reach 100 taps.",
     reward: 500,
     check: (c) => c.taps >= 100,
+    // First real title – early flex
+    unlockTitleId: "rookie_tapper",
   },
   {
     id: "tap_1k",
@@ -86,6 +96,23 @@ export const achievements: Achievement[] = [
     reward: 200_000,
     check: (c) => c.totalEarnings >= 10_000_000,
   },
+  // Mid / late game earnings for legendary / ultimate titles
+  {
+    id: "tot_1b",
+    name: "Billion Club",
+    desc: "Earn $1,000,000,000 total.",
+    reward: 500_000,
+    check: (c) => c.totalEarnings >= 1_000_000_000,
+    unlockTitleId: "tap_myth", // legendary title
+  },
+  {
+    id: "tot_1t",
+    name: "Trillion Flow",
+    desc: "Earn $1,000,000,000,000 total.",
+    reward: 5_000_000,
+    check: (c) => c.totalEarnings >= 1_000_000_000_000,
+    unlockTitleId: "ultra_being", // ultimate title
+  },
 
   // Suit unlocks – names + targets MUST match suits.ts `name`
   {
@@ -108,13 +135,15 @@ export const achievements: Achievement[] = [
     desc: "Unlock the Millionaire suit.",
     reward: 100_000,
     check: (c) => suitReached(c.bestSuitName, "Millionaire"),
+    unlockTitleId: "suit_millionaire_mogul",
   },
   {
     id: "suit_crypto",
     name: "Crypto King",
     desc: "Unlock the Crypto King suit.",
     reward: 500_000,
-    check: (c) => suitReached(c.bestSuitName, "Crypto"), // 👈 FIXED
+    check: (c) => suitReached(c.bestSuitName, "Crypto"),
+    unlockTitleId: "suit_crypto_phantom",
   },
 ];
 
