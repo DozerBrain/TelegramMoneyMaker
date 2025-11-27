@@ -1,7 +1,7 @@
 // src/components/cards/CardCollection.tsx
 import React, { useMemo, useState } from "react";
 import CardFrame, { Rarity } from "../CardFrame";
-import type { CardInstance } from "../../App";
+import type { CardInstance } from "../../types/cards";
 import {
   ART,
   RARITY_ORDER,
