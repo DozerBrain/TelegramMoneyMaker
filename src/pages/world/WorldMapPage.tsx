@@ -13,16 +13,17 @@ import {
 import WorldHeader from "./WorldHeader";
 import RegionGrid from "./RegionGrid";
 import CountryList from "./CountryList";
+import CountryConquest from "./CountryConquest";
 
 type Props = {
-  // For now, only read balance so we can show if user can afford.
+  // Current money balance
   balance: number;
-  // Later we can call setBalance to actually spend money:
-  // setBalance?: (fn: (prev: number) => number) => void;
+  // Optional: function to modify balance (we use this to deduct on win)
+  setBalance?: (fn: (prev: number) => number) => void;
 };
 
-export default function WorldMapPage({ balance }: Props) {
-  // --- figure out player home country / region from profile ---------------
+export default function WorldMapPage({ balance, setBalance }: Props) {
+  // --- player home country / region ----------------------------------------
   const { homeCountry, homeRegion } = useMemo(() => {
     const p = getProfile();
     const cc = (p.country || "US").toUpperCase();
@@ -37,14 +38,19 @@ export default function WorldMapPage({ balance }: Props) {
   const [selectedRegion, setSelectedRegion] =
     useState<RegionId>(homeRegion);
 
+  // Active conquest
+  const [activeCountry, setActiveCountry] = useState<string | null>(
+    null
+  );
+  const [pendingCost, setPendingCost] = useState<number | null>(null);
+
   // recompute unlockedRegions when owned changes
   useEffect(() => {
     const nextUnlocked = new Set<RegionId>(world.unlockedRegions);
 
-    // if somehow homeRegion is missing, always add it
+    // ensure homeRegion is always unlocked
     nextUnlocked.add(homeRegion);
 
-    // for every region, if all its countries are owned, unlock neighbors
     for (const r of REGIONS) {
       const countriesInRegion = COUNTRIES.filter(
         (c) => c.region === r.id
@@ -97,24 +103,44 @@ export default function WorldMapPage({ balance }: Props) {
     [world.owned]
   );
 
-  function handleBuyCountry(code: string) {
+  // Called when user presses "Conquer"
+  function handleBuyCountry(code: string, cost: number) {
     const upper = code.toUpperCase();
     if (ownedSet.has(upper)) return;
+    if (balance < cost) return; // extra safety
 
-    const updated: WorldSave = {
-      owned: [...world.owned, upper],
-      unlockedRegions: world.unlockedRegions,
-    };
+    // Open conquest for this country, remember entry cost
+    setActiveCountry(upper);
+    setPendingCost(cost);
+  }
 
-    setWorld(updated);
-    saveWorldSave(updated);
+  // Handle updating world save from CountryConquest
+  function handleUpdateWorld(next: WorldSave) {
+    // detect if the active country has just been newly owned
+    if (activeCountry && pendingCost != null && setBalance) {
+      const wasOwnedBefore = world.owned
+        .map((c) => c.toUpperCase())
+        .includes(activeCountry.toUpperCase());
+      const nowOwned = next.owned
+        .map((c) => c.toUpperCase())
+        .includes(activeCountry.toUpperCase());
 
-    // NOTE: we are NOT actually subtracting from balance yet.
-    // Later we can call a prop setBalance from App.tsx.
+      // Only deduct money when conquest actually succeeds
+      if (!wasOwnedBefore && nowOwned) {
+        setBalance((prev) => Math.max(0, prev - pendingCost));
+      }
+    }
+
+    setWorld(next);
+  }
+
+  function handleCloseConquest() {
+    setActiveCountry(null);
+    setPendingCost(null);
   }
 
   return (
-    <div className="p-4 pb-20 text-white">
+    <div className="p-4 pb-20 text-white relative">
       <WorldHeader
         apsBonusTotal={apsBonusTotal}
         couponBonusTotal={couponBonusTotal}
@@ -136,6 +162,18 @@ export default function WorldMapPage({ balance }: Props) {
         balance={balance}
         onBuy={handleBuyCountry}
       />
+
+      {activeCountry && (
+        <div className="fixed inset-0 z-40 bg-black/80 backdrop-blur-sm">
+          <CountryConquest
+            key={activeCountry}
+            countryCode={activeCountry}
+            save={world}
+            onUpdateSave={handleUpdateWorld}
+            onClose={handleCloseConquest}
+          />
+        </div>
+      )}
     </div>
   );
 }
