@@ -1,6 +1,6 @@
 // src/pages/Cards.tsx
 import React, { useState } from "react";
-import type { CardInstance } from "../App";
+import type { CardInstance } from "../types/cards";
 import CardChest from "../components/cards/CardChest";
 import CardCollection from "../components/cards/CardCollection";
 
