@@ -17,7 +17,7 @@ type Props = {
   ownedSet: Set<string>;
   worldOwnedCount: number;
   balance: number;
-  onBuy: (code: string) => void;
+  onBuy: (code: string) => void; // now: start conquest for this country
 };
 
 export default function CountryList({
@@ -48,9 +48,13 @@ export default function CountryList({
             No countries defined for this region yet.
           </div>
         ) : (
-          countriesInSelectedRegion.map((c) => {
+          countriesInSelectedRegion.map((c, index) => {
             const owned = ownedSet.has(c.code.toUpperCase());
-            const cost = costForCountry(c.code, worldOwnedCount);
+
+            // 🔥 Each next country in the list is more expensive.
+            // We use worldOwnedCount + index so prices climb visually down the list.
+            const cost = costForCountry(c.code, worldOwnedCount + index);
+
             const { apsBonus, couponBonus } = countryBonuses(c.code);
 
             return (
@@ -84,7 +88,7 @@ export default function CountryList({
                       className="px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-600 disabled:bg-zinc-700 disabled:text-white/40"
                       disabled={balance < cost}
                     >
-                      {balance < cost ? "Too expensive" : "Buy"}
+                      {balance < cost ? "Too expensive" : "Conquer"}
                     </button>
                   )}
                 </div>
@@ -96,8 +100,9 @@ export default function CountryList({
 
       <div className="mt-3 text-[10px] text-white/40">
         Tip: once you own all countries in a region, nearby regions will unlock
-        and appear on the map. Later countries cost more but also push you
-        toward higher world ranks with stronger bonuses.
+        and appear on the map. Later countries in each region cost more, but
+        conquering them also pushes you toward higher world ranks with stronger
+        bonuses.
       </div>
     </>
   );
