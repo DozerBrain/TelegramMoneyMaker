@@ -17,6 +17,10 @@ import {
 
 import type { Tab } from "../types";
 import type { CardInstance } from "../types/cards";
+import { useGameAutosave } from "./useGameAutosave";
+
+// 🔥 titles – so we can unlock titles from achievements
+import { updateTitleState } from "./storageTitles";
 
 type AchState = Record<string, { done: boolean; claimed: boolean }>;
 
@@ -111,10 +115,6 @@ function buildCollectionFromCards(cards: CardInstance[]) {
   return counts;
 }
 
-// 🔥 If you already have this hook from before, keep that file and just
-// make sure the signature matches how we call it here.
-import { useGameAutosave } from "./useGameAutosave";
-
 export function useGameState(): GameStateReturn {
   const initial = useMemo(() => (loadSave() as any) || {}, []);
 
@@ -184,6 +184,11 @@ export function useGameState(): GameStateReturn {
   const [mapApsBonus, setMapApsBonus] = useState<number>(0);
   const [mapCouponBonus, setMapCouponBonus] = useState<number>(0);
 
+  // 🔥 how many countries you own (for world achievements / titles)
+  const [countriesOwned, setCountriesOwned] = useState<number>(
+    initial.countriesOwned ?? 0
+  );
+
   // navigation
   const [tab, setTab] = useState<Tab>("home");
 
@@ -248,6 +253,9 @@ export function useGameState(): GameStateReturn {
         setCouponsSpent(cloud.couponsSpent ?? 0);
         setSpinCooldownEndsAt(cloud.spinCooldownEndsAt ?? null);
 
+        // NEW: countries owned from cloud
+        setCountriesOwned(cloud.countriesOwned ?? 0);
+
         setBestScore((prev) => Math.max(prev, cloudBest));
 
         const fixedCloud = {
@@ -270,7 +278,7 @@ export function useGameState(): GameStateReturn {
     };
   }, []);
 
-  // Sync equipped pet / suit
+  // Sync equipped pet / suit (and countries) from storage
   useEffect(() => {
     const syncEquip = () => {
       try {
@@ -283,6 +291,12 @@ export function useGameState(): GameStateReturn {
           setEquippedSuitId(suitId ?? null);
           const suit = suits.find((su) => su.id === (suitId ?? "starter"));
           if (suit) setBestSuitName(suit.name);
+        }
+
+        // 🔥 also refresh countriesOwned from save
+        const s = loadSave() as any;
+        if (typeof s.countriesOwned === "number") {
+          setCountriesOwned(s.countriesOwned);
         }
       } catch {
         // ignore
@@ -299,16 +313,20 @@ export function useGameState(): GameStateReturn {
     };
   }, []);
 
-  // World map bonuses
+  // World map bonuses + optional countries payload
   useEffect(() => {
     const handler = (e: Event) => {
       const ce = e as CustomEvent<{
         apsBonus: number;
         couponBonus: number;
+        countriesOwned?: number;
       }>;
       if (!ce.detail) return;
       setMapApsBonus(ce.detail.apsBonus ?? 0);
       setMapCouponBonus(ce.detail.couponBonus ?? 0);
+      if (typeof ce.detail.countriesOwned === "number") {
+        setCountriesOwned(ce.detail.countriesOwned);
+      }
     };
 
     window.addEventListener("MM_MAP_BONUS", handler as EventListener);
@@ -397,20 +415,20 @@ export function useGameState(): GameStateReturn {
     });
   }, [totalEarnings]);
 
-  // Achievements checking
+  // 🔥 Achievements checking (NOW includes countriesOwned)
   useEffect(() => {
-    const ctx = { taps, balance, totalEarnings, bestSuitName };
+    const ctx = { taps, balance, totalEarnings, bestSuitName, countriesOwned };
     setAchState((prev) => {
       const next = { ...prev };
       for (const a of achievements) {
         if (!next[a.id]) next[a.id] = { done: false, claimed: false };
-        if (!next[a.id].done && a.check(ctx)) {
+        if (!next[a.id].done && a.check(ctx as any)) {
           next[a.id] = { ...next[a.id], done: true };
         }
       }
       return next;
     });
-  }, [taps, balance, totalEarnings, bestSuitName]);
+  }, [taps, balance, totalEarnings, bestSuitName, countriesOwned]);
 
   // Autosave hook (local + cloud)
   useGameAutosave({
@@ -435,6 +453,8 @@ export function useGameState(): GameStateReturn {
     couponsSpent,
     spinCooldownEndsAt,
     chips,
+    // 👀 countriesOwned is already included in save object elsewhere (via loadSave/saveSave),
+    // but we can add it into that hook later if needed.
   });
 
   // Hash navigation
@@ -504,6 +524,7 @@ export function useGameState(): GameStateReturn {
     location.reload();
   }
 
+  // 🔥 when achievement is claimed, also unlock its title (if any)
   function handleClaimAchievement(id: string, reward: number) {
     setAchState((prev) => {
       const st = prev[id];
@@ -511,6 +532,17 @@ export function useGameState(): GameStateReturn {
       return { ...prev, [id]: { done: true, claimed: true } };
     });
     setBalance((b) => b + reward);
+
+    const ach = achievements.find((a) => a.id === id);
+    if (ach?.unlockTitleId) {
+      updateTitleState((prev) => {
+        if (prev.unlockedTitleIds.includes(ach.unlockTitleId!)) return prev;
+        return {
+          ...prev,
+          unlockedTitleIds: [...prev.unlockedTitleIds, ach.unlockTitleId!],
+        };
+      });
+    }
   }
 
   return {
