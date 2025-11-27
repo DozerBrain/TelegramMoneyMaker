@@ -2,6 +2,8 @@
 import React from "react";
 import { achievements } from "../../data/achievements";
 import { getTitleDef } from "../../data/titles";
+import { updateTitleState } from "../../lib/storage";
+import { unlockTitle } from "../../lib/titleLogic";
 
 type Props = {
   achievementsState: Record<string, { done: boolean; claimed: boolean }>;
@@ -29,6 +31,18 @@ export default function ProfileAchievementsTab({
             ? getTitleDef(a.unlockTitleId)
             : undefined;
 
+          function handleClaim() {
+            if (!canClaim) return;
+
+            // 💰 Money bonus (small, optional)
+            onClaim(a.id, a.reward || 0);
+
+            // 🏷 Title reward
+            if (a.unlockTitleId) {
+              updateTitleState((prev) => unlockTitle(prev, a.unlockTitleId!));
+            }
+          }
+
           return (
             <div
               key={a.id}
@@ -39,19 +53,28 @@ export default function ProfileAchievementsTab({
                   {a.name}
                 </div>
                 <div className="text-xs text-white/55">{a.desc}</div>
-                <div className="text-xs text-emerald-400 mt-0.5">
-                  Reward: +${a.reward.toLocaleString()}
+
+                <div className="mt-1 space-y-0.5">
                   {titleReward && (
-                    <span className="block text-[11px] text-white/70">
-                      + Title: {titleReward.label}
-                    </span>
+                    <div className="text-[11px] text-sky-300">
+                      Title reward: {titleReward.label}{" "}
+                      <span className="uppercase text-[10px] text-sky-400">
+                        ({titleReward.rarity})
+                      </span>
+                    </div>
+                  )}
+
+                  {a.reward > 0 && (
+                    <div className="text-xs text-emerald-400">
+                      Bonus: +${a.reward.toLocaleString()}
+                    </div>
                   )}
                 </div>
               </div>
 
               <button
                 disabled={!canClaim}
-                onClick={() => onClaim(a.id, a.reward)}
+                onClick={handleClaim}
                 className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${
                   canClaim
                     ? "bg-emerald-600 hover:bg-emerald-500 text-black"
