@@ -98,6 +98,23 @@ export default function WorldMapPage({ balance, setBalance }: Props) {
     nextTierAt,
   } = useMemo(() => computeTotals(world.owned), [world.owned]);
 
+  // 🔥 NEW: broadcast world bonuses + countriesOwned to the main game state
+  useEffect(() => {
+    try {
+      window.dispatchEvent(
+        new CustomEvent("MM_MAP_BONUS", {
+          detail: {
+            apsBonus: apsBonusTotal,
+            couponBonus: couponBonusTotal,
+            countriesOwned: ownedCount,
+          },
+        })
+      );
+    } catch {
+      // ignore if window/custom event not available
+    }
+  }, [apsBonusTotal, couponBonusTotal, ownedCount]);
+
   const ownedSet = useMemo(
     () => new Set(world.owned.map((c) => c.toUpperCase())),
     [world.owned]
