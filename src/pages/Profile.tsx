@@ -3,8 +3,8 @@ import React, { useEffect, useState } from "react";
 import { getProfile, setProfile } from "../lib/profile";
 import { signInWithGoogle } from "../lib/googleAuth";
 
-// Titles
-import { getTitleState, updateTitleState } from "../lib/storage";
+// ✅ TITLES: use the dedicated storageTitles helpers
+import { getTitleState, updateTitleState } from "../lib/storageTitles";
 import { TITLES, getTitleDef, type TitleDef } from "../data/titles";
 
 // Tabs
@@ -50,6 +50,7 @@ export default function ProfilePage({
   // Right side nav
   const [activeTab, setActiveTab] = useState<TabKey>("stats");
 
+  // ---- PROFILE LOAD (name / country / uid / avatar) ----
   useEffect(() => {
     const p = getProfile();
 
@@ -62,23 +63,19 @@ export default function ProfilePage({
     try {
       const raw = localStorage.getItem("mm_tg_debug");
       if (raw) {
-        try {
-          const dbg = JSON.parse(raw);
+        const dbg = JSON.parse(raw);
 
-          if (dbg.finalUid) nextUid = String(dbg.finalUid);
-          if (dbg.finalName) nextName = String(dbg.finalName);
-          if (dbg.finalCountry) nextCountry = String(dbg.finalCountry);
+        if (dbg.finalUid) nextUid = String(dbg.finalUid);
+        if (dbg.finalName) nextName = String(dbg.finalName);
+        if (dbg.finalCountry) nextCountry = String(dbg.finalCountry);
 
-          if (!nextAvatar && dbg.userJson) {
-            try {
-              const u = JSON.parse(dbg.userJson);
-              if (u.photo_url) nextAvatar = u.photo_url;
-            } catch {
-              // ignore
-            }
+        if (!nextAvatar && dbg.userJson) {
+          try {
+            const u = JSON.parse(dbg.userJson);
+            if (u.photo_url) nextAvatar = u.photo_url;
+          } catch {
+            // ignore
           }
-        } catch {
-          // ignore
         }
       }
     } catch {
@@ -89,17 +86,31 @@ export default function ProfilePage({
     setCountry(nextCountry);
     setUid(nextUid);
     setAvatarUrl(nextAvatar);
+  }, []);
 
-    // Load title state from save
-    try {
-      const ts = getTitleState();
-      const eqId = ts.equippedTitleId ?? null;
-      setUnlockedTitleIds(ts.unlockedTitleIds ?? []);
-      setEquippedTitleId(eqId ?? "");
-      setEquippedTitle(eqId ? getTitleDef(eqId) ?? null : null);
-    } catch {
-      // ignore if titles not ready
-    }
+  // ---- TITLES LOAD + LIVE SYNC ----
+  useEffect(() => {
+    const syncTitles = () => {
+      try {
+        const ts = getTitleState();
+        const eqId = ts.equippedTitleId ?? null;
+        setUnlockedTitleIds(ts.unlockedTitleIds ?? []);
+        setEquippedTitleId(eqId ?? "");
+        setEquippedTitle(eqId ? getTitleDef(eqId) ?? null : null);
+      } catch {
+        // ignore
+      }
+    };
+
+    // initial read
+    syncTitles();
+
+    // whenever saveSave() runs (including after claiming achievements),
+    // this event is dispatched from storageCore and we refresh titles
+    window.addEventListener("mm:save", syncTitles as EventListener);
+    return () => {
+      window.removeEventListener("mm:save", syncTitles as EventListener);
+    };
   }, []);
 
   function handleSaveProfile() {
@@ -135,7 +146,7 @@ export default function ProfilePage({
       .slice(0, 2)
       .toUpperCase() as string) || "P";
 
-  // Titles lists
+  // Titles lists for settings tab
   const unlockedTitles: TitleDef[] = TITLES.filter((t) =>
     unlockedTitleIds.includes(t.id)
   );
