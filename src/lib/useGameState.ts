@@ -372,6 +372,31 @@ export function useGameState(): GameStateReturn {
     });
   }, [cloudReady, countriesOwned]);
 
+  // 🔥 sync achievement-based titles (for achievements claimed before titles existed)
+  useEffect(() => {
+    if (!cloudReady) return;
+
+    updateTitleState((prev) => {
+      const unlocked = new Set(prev.unlockedTitleIds);
+      let changed = false;
+
+      for (const a of achievements) {
+        if (!a.unlockTitleId) continue;
+        const st = achState[a.id];
+        if (st?.claimed && !unlocked.has(a.unlockTitleId)) {
+          unlocked.add(a.unlockTitleId);
+          changed = true;
+        }
+      }
+
+      if (!changed) return prev;
+      return {
+        ...prev,
+        unlockedTitleIds: Array.from(unlocked),
+      };
+    });
+  }, [cloudReady, achState]);
+
   // Multipliers
   const suitMult = useMemo(
     () => computeSuitMult(equippedSuitId),
