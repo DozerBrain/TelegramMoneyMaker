@@ -2,8 +2,6 @@
 import React from "react";
 import { achievements } from "../../data/achievements";
 import { getTitleDef } from "../../data/titles";
-import { updateTitleState } from "../../lib/storage";
-import { unlockTitle } from "../../lib/titleLogic";
 
 type Props = {
   achievementsState: Record<string, { done: boolean; claimed: boolean }>;
@@ -30,18 +28,6 @@ export default function ProfileAchievementsTab({
           const titleReward = a.unlockTitleId
             ? getTitleDef(a.unlockTitleId)
             : undefined;
-
-          function handleClaim() {
-            if (!canClaim) return;
-
-            // 💰 Money bonus (small, optional)
-            onClaim(a.id, a.reward || 0);
-
-            // 🏷 Title reward
-            if (a.unlockTitleId) {
-              updateTitleState((prev) => unlockTitle(prev, a.unlockTitleId!));
-            }
-          }
 
           return (
             <div
@@ -74,7 +60,7 @@ export default function ProfileAchievementsTab({
 
               <button
                 disabled={!canClaim}
-                onClick={handleClaim}
+                onClick={() => onClaim(a.id, a.reward || 0)}
                 className={`text-[11px] px-2.5 py-1 rounded-full font-semibold ${
                   canClaim
                     ? "bg-emerald-600 hover:bg-emerald-500 text-black"
