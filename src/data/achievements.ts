@@ -12,7 +12,11 @@ export type Achievement = {
     balance: number;
     totalEarnings: number;
     bestSuitName: string;
-    countriesOwned: number; // 🔥 NEW: for world / conquest achievements
+    countriesOwned: number; // 🔥 for world / conquest achievements
+
+    // 🔥 optional extras for special achievements
+    couponsSpent?: number; // total coupons spent on chests
+    cardsOwned?: number; // total card instances owned
   }) => boolean;
 };
 
@@ -203,6 +207,24 @@ export const achievements: Achievement[] = [
     reward: 20_000_000,
     check: (c) => c.countriesOwned >= 197,
     unlockTitleId: "world_multiversal_overlord",
+  },
+
+  // 🔹 SPECIAL – COUPONS & CARDS
+  {
+    id: "coupon_hoarder",
+    name: "Coupon Hoarder",
+    desc: "Spend 100 coupons on card chests.",
+    reward: 100_000,
+    check: (c) => (c.couponsSpent ?? 0) >= 100,
+    unlockTitleId: "coupon_hoarder",
+  },
+  {
+    id: "card_collector",
+    name: "Card Collector",
+    desc: "Own 50 cards in your collection.",
+    reward: 250_000,
+    check: (c) => (c.cardsOwned ?? 0) >= 50,
+    unlockTitleId: "card_collector",
   },
 ];
 
