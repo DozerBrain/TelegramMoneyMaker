@@ -10,6 +10,8 @@ type Props = {
   setCards: (
     v: CardInstance[] | ((prev: CardInstance[]) => CardInstance[])
   ) => void;
+  // This is still in the type so other code compiles,
+  // but we won't trust it anymore – we'll compute our own.
   couponsAvailable: number;
   couponsSpent: number;
   setCouponsSpent: (v: number | ((p: number) => number)) => void;
@@ -23,17 +25,24 @@ export default function CardChest({
   taps,
   cards,
   setCards,
-  couponsAvailable,
-  couponsSpent, // kept for future use / clarity
+  couponsAvailable: couponsAvailableProp, // we ignore this value now
+  couponsSpent,
   setCouponsSpent,
   tapsPerCoupon,
   bulkDiscountLevel,
 }: Props) {
   const [lastPulled, setLastPulled] = useState<CardInstance[]>([]);
 
+  // How many coupons you SHOULD have earned total from taps
   const couponsEarned = useMemo(
     () => Math.floor(taps / tapsPerCoupon),
     [taps, tapsPerCoupon]
+  );
+
+  // ✅ Real available coupons = earned - spent (never below 0)
+  const couponsAvailable = useMemo(
+    () => Math.max(0, couponsEarned - couponsSpent),
+    [couponsEarned, couponsSpent]
   );
 
   const tapsTowardNext = taps % tapsPerCoupon;
@@ -48,6 +57,7 @@ export default function CardChest({
   ); // 10 -> 5
 
   function openCards(costCoupons: number, count: number) {
+    // Use our computed couponsAvailable, NOT the prop
     if (couponsAvailable < costCoupons) return;
 
     const pulled: CardInstance[] = [];
