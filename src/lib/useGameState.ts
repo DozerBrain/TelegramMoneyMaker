@@ -21,6 +21,8 @@ import { useGameAutosave } from "./useGameAutosave";
 
 // 🔥 titles – so we can unlock titles from achievements
 import { updateTitleState } from "./storageTitles";
+// 🔥 world titles list (for auto-unlock based on countriesOwned)
+import { getWorldTitles } from "../data/titles";
 
 type AchState = Record<string, { done: boolean; claimed: boolean }>;
 
@@ -338,12 +340,36 @@ export function useGameState(): GameStateReturn {
   useEffect(() => {
     if (!cloudReady) return;
     try {
-      // saveSave is typed as Partial<SaveData>, which doesn't know about countriesOwned,
-      // so we cast to any here to keep TS happy but still persist the field.
       (saveSave as any)({ countriesOwned });
     } catch {
       // ignore
     }
+  }, [cloudReady, countriesOwned]);
+
+  // 🔥 auto-unlock WORLD TITLES based on countriesOwned
+  useEffect(() => {
+    if (!cloudReady) return;
+    if (countriesOwned <= 0) return;
+
+    updateTitleState((prev) => {
+      const worldTitles = getWorldTitles();
+      const unlocked = new Set(prev.unlockedTitleIds);
+      let changed = false;
+
+      for (const t of worldTitles) {
+        const need = t.worldMinOwned ?? Infinity;
+        if (countriesOwned >= need && !unlocked.has(t.id)) {
+          unlocked.add(t.id);
+          changed = true;
+        }
+      }
+
+      if (!changed) return prev;
+      return {
+        ...prev,
+        unlockedTitleIds: Array.from(unlocked),
+      };
+    });
   }, [cloudReady, countriesOwned]);
 
   // Multipliers
