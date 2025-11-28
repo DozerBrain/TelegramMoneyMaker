@@ -19,9 +19,8 @@ import type { Tab } from "../types";
 import type { CardInstance } from "../types/cards";
 import { useGameAutosave } from "./useGameAutosave";
 
-// 🔥 titles – so we can unlock titles from achievements
+// titles – unlock from achievements / world
 import { updateTitleState } from "./storageTitles";
-// 🔥 world titles list (for auto-unlock based on countriesOwned)
 import { getWorldTitles } from "../data/titles";
 
 type AchState = Record<string, { done: boolean; claimed: boolean }>;
@@ -111,9 +110,7 @@ function buildCollectionFromCards(cards: CardInstance[]) {
     ultimate: 0,
   };
 
-  for (const c of cards) {
-    counts[c.rarity]++;
-  }
+  for (const c of cards) counts[c.rarity]++;
   return counts;
 }
 
@@ -186,7 +183,7 @@ export function useGameState(): GameStateReturn {
   const [mapApsBonus, setMapApsBonus] = useState<number>(0);
   const [mapCouponBonus, setMapCouponBonus] = useState<number>(0);
 
-  // 🔥 how many countries you own (for world achievements / titles)
+  // countries owned (for world achievements / titles)
   const [countriesOwned, setCountriesOwned] = useState<number>(
     initial.countriesOwned ?? 0
   );
@@ -248,14 +245,13 @@ export function useGameState(): GameStateReturn {
 
         setEquippedSuitId(cloud.equippedSuit ?? null);
         setEquippedPetId(cloud.equippedPet ?? null);
-        setBestSuitName(cloud.bestSuitName ?? "Starter";
+        setBestSuitName(cloud.bestSuitName ?? "Starter");
 
         setAchState(cloud.achievements ?? {});
         setCards(Array.isArray(cloud.cards) ? cloud.cards : []);
         setCouponsSpent(cloud.couponsSpent ?? 0);
         setSpinCooldownEndsAt(cloud.spinCooldownEndsAt ?? null);
 
-        // NEW: countries owned from cloud
         setCountriesOwned(cloud.countriesOwned ?? 0);
 
         setBestScore((prev) => Math.max(prev, cloudBest));
@@ -295,7 +291,6 @@ export function useGameState(): GameStateReturn {
           if (suit) setBestSuitName(suit.name);
         }
 
-        // 🔥 also refresh countriesOwned from save
         const s = loadSave() as any;
         if (typeof s.countriesOwned === "number") {
           setCountriesOwned(s.countriesOwned);
@@ -336,7 +331,7 @@ export function useGameState(): GameStateReturn {
       window.removeEventListener("MM_MAP_BONUS", handler as EventListener);
   }, []);
 
-  // 🔥 mirror countriesOwned into the unified save so it persists
+  // mirror countriesOwned into save
   useEffect(() => {
     if (!cloudReady) return;
     try {
@@ -346,7 +341,7 @@ export function useGameState(): GameStateReturn {
     }
   }, [cloudReady, countriesOwned]);
 
-  // 🔥 auto-unlock WORLD TITLES based on countriesOwned
+  // auto-unlock WORLD TITLES based on countriesOwned
   useEffect(() => {
     if (!cloudReady) return;
     if (countriesOwned <= 0) return;
@@ -372,7 +367,7 @@ export function useGameState(): GameStateReturn {
     });
   }, [cloudReady, countriesOwned]);
 
-  // 🔥 sync achievement-based titles (for achievements claimed before titles existed)
+  // sync achievement-based titles (for achievements claimed before titles existed)
   useEffect(() => {
     if (!cloudReady) return;
 
@@ -478,7 +473,7 @@ export function useGameState(): GameStateReturn {
     });
   }, [totalEarnings]);
 
-  // 🔥 Achievements checking (NOW includes countriesOwned + coupons/cards)
+  // Achievements checking (includes countriesOwned)
   useEffect(() => {
     const ctx = {
       taps,
@@ -486,8 +481,6 @@ export function useGameState(): GameStateReturn {
       totalEarnings,
       bestSuitName,
       countriesOwned,
-      couponsSpent,
-      cardsOwned: cards.length,
     };
     setAchState((prev) => {
       const next = { ...prev };
@@ -499,7 +492,7 @@ export function useGameState(): GameStateReturn {
       }
       return next;
     });
-  }, [taps, balance, totalEarnings, bestSuitName, countriesOwned, couponsSpent, cards.length]);
+  }, [taps, balance, totalEarnings, bestSuitName, countriesOwned]);
 
   // Autosave hook (local + cloud)
   useGameAutosave({
@@ -594,7 +587,7 @@ export function useGameState(): GameStateReturn {
     location.reload();
   }
 
-  // 🔥 when achievement is claimed, also unlock its title (if any)
+  // when achievement is claimed, also unlock its title (if any)
   function handleClaimAchievement(id: string, reward: number) {
     setAchState((prev) => {
       const st = prev[id];
