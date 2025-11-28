@@ -248,7 +248,7 @@ export function useGameState(): GameStateReturn {
 
         setEquippedSuitId(cloud.equippedSuit ?? null);
         setEquippedPetId(cloud.equippedPet ?? null);
-        setBestSuitName(cloud.bestSuitName ?? "Starter");
+        setBestSuitName(cloud.bestSuitName ?? "Starter";
 
         setAchState(cloud.achievements ?? {});
         setCards(Array.isArray(cloud.cards) ? cloud.cards : []);
@@ -478,7 +478,7 @@ export function useGameState(): GameStateReturn {
     });
   }, [totalEarnings]);
 
-  // 🔥 Achievements checking (NOW includes countriesOwned)
+  // 🔥 Achievements checking (NOW includes countriesOwned + coupons/cards)
   useEffect(() => {
     const ctx = {
       taps,
@@ -486,6 +486,8 @@ export function useGameState(): GameStateReturn {
       totalEarnings,
       bestSuitName,
       countriesOwned,
+      couponsSpent,
+      cardsOwned: cards.length,
     };
     setAchState((prev) => {
       const next = { ...prev };
@@ -497,7 +499,7 @@ export function useGameState(): GameStateReturn {
       }
       return next;
     });
-  }, [taps, balance, totalEarnings, bestSuitName, countriesOwned]);
+  }, [taps, balance, totalEarnings, bestSuitName, countriesOwned, couponsSpent, cards.length]);
 
   // Autosave hook (local + cloud)
   useGameAutosave({
