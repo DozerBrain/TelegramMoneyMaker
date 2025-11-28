@@ -334,6 +334,18 @@ export function useGameState(): GameStateReturn {
       window.removeEventListener("MM_MAP_BONUS", handler as EventListener);
   }, []);
 
+  // 🔥 mirror countriesOwned into the unified save so it persists
+  useEffect(() => {
+    if (!cloudReady) return;
+    try {
+      // saveSave is typed as Partial<SaveData>, which doesn't know about countriesOwned,
+      // so we cast to any here to keep TS happy but still persist the field.
+      (saveSave as any)({ countriesOwned });
+    } catch {
+      // ignore
+    }
+  }, [cloudReady, countriesOwned]);
+
   // Multipliers
   const suitMult = useMemo(
     () => computeSuitMult(equippedSuitId),
@@ -417,7 +429,13 @@ export function useGameState(): GameStateReturn {
 
   // 🔥 Achievements checking (NOW includes countriesOwned)
   useEffect(() => {
-    const ctx = { taps, balance, totalEarnings, bestSuitName, countriesOwned };
+    const ctx = {
+      taps,
+      balance,
+      totalEarnings,
+      bestSuitName,
+      countriesOwned,
+    };
     setAchState((prev) => {
       const next = { ...prev };
       for (const a of achievements) {
@@ -453,8 +471,7 @@ export function useGameState(): GameStateReturn {
     couponsSpent,
     spinCooldownEndsAt,
     chips,
-    // 👀 countriesOwned is already included in save object elsewhere (via loadSave/saveSave),
-    // but we can add it into that hook later if needed.
+    // countriesOwned is persisted separately above
   });
 
   // Hash navigation
