@@ -413,6 +413,13 @@ export function useGameState(): GameStateReturn {
     [taps, effectiveTapsPerCoupon]
   );
   const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
+  // 🔒 Safety clamp for old saves: if couponsSpent is higher than couponsEarned,
+  // pull it back so new coupons can appear again.
+  useEffect(() => {
+    if (couponsSpent > couponsEarned) {
+      setCouponsSpent(couponsEarned);
+    }
+  }, [couponsSpent, couponsEarned]);
 
   // Collection
   const collection = useMemo(
