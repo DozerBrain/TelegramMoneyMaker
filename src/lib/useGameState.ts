@@ -408,13 +408,20 @@ export function useGameState(): GameStateReturn {
     () => TAPS_PER_COUPON / (1 + couponBoostLevel * 0.1 + mapCouponBonus),
     [couponBoostLevel, mapCouponBonus]
   );
+
+  // How many coupons this player *should* have earned from taps
   const couponsEarned = useMemo(
     () => Math.floor(taps / effectiveTapsPerCoupon),
     [taps, effectiveTapsPerCoupon]
   );
-  const couponsAvailable = Math.max(0, couponsEarned - couponsSpent);
-  // 🔒 Safety clamp for old saves: if couponsSpent is higher than couponsEarned,
-  // pull it back so new coupons can appear again.
+
+  // Clamp old broken saves: you can never have spent more than you've earned
+  const couponsSpentClamped = Math.min(couponsSpent, couponsEarned);
+
+  // Final number shown in UI
+  const couponsAvailable = Math.max(0, couponsEarned - couponsSpentClamped);
+
+  // Also gradually fix the saved value so cloud/local save become sane
   useEffect(() => {
     if (couponsSpent > couponsEarned) {
       setCouponsSpent(couponsEarned);
