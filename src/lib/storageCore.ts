@@ -85,6 +85,9 @@ export type SaveData = {
   // Spin / misc
   spinCooldownEndsAt: number | null;
 
+  // 🌍 World / Conquer the World
+  countriesOwned: number;
+
   // 🔥 Titles (equipped + unlocked)
   titleState: TitleState;
 };
@@ -140,6 +143,9 @@ export const defaultSave: SaveData = {
 
   // Spin
   spinCooldownEndsAt: null,
+
+  // World / Conquer the World
+  countriesOwned: 0,
 
   // Titles
   titleState: DEFAULT_TITLE_STATE,
