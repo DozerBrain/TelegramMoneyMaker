@@ -283,11 +283,38 @@ export function setTap(v: number) {
 
 // CARDS / COLLECTION
 export function getCollection(): Collection {
-  return loadSave().collection ?? defaultSave.collection;
+  const s = loadSave();
+
+  // 🧠 NEW: if we have card instances, rebuild collection from them
+  if (Array.isArray(s.cards) && s.cards.length > 0) {
+    const counts: Collection = {
+      common: 0,
+      uncommon: 0,
+      rare: 0,
+      epic: 0,
+      legendary: 0,
+      mythic: 0,
+      ultimate: 0,
+    };
+
+    for (const card of s.cards as any[]) {
+      const r = card?.rarity;
+      if (r && Object.prototype.hasOwnProperty.call(counts, r)) {
+        counts[r] += 1;
+      }
+    }
+
+    return counts;
+  }
+
+  // fallback to stored collection (legacy)
+  return s.collection ?? defaultSave.collection;
 }
+
 export function setCollection(c: Collection) {
   saveSave({ collection: c });
 }
+
 export function setLastDrop(card: any | null) {
   saveSave({ lastDrop: card });
 }
