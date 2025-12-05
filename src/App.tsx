@@ -3,9 +3,6 @@ import React from "react";
 
 import TopBar from "./components/TopBar";
 import Tabs from "./components/Tabs";
-// ❌ old background (remove this)
-// import AppBackground from "./components/AppBackground";
-// ✅ new dynamic background
 import BackgroundManager from "./components/layout/BackgroundManager";
 
 import AppRoutes from "./AppRoutes";
@@ -15,10 +12,12 @@ export default function App() {
   const game = useGameState();
 
   return (
-    <div className="min-h-screen flex flex-col relative overflow-hidden bg-black">
+    // ❌ remove bg-black here
+    <div className="min-h-screen flex flex-col relative overflow-hidden">
       {/* 🔥 Global dynamic background (day/night + home/secondary) */}
       <BackgroundManager activeTab={game.tab} />
 
+      {/* Content sits above background */}
       <div className="relative z-10 flex flex-col min-h-screen">
         <TopBar
           taps={game.taps}
