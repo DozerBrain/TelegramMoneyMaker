@@ -14,12 +14,18 @@ export default function BackgroundManager({ activeTab }: Props) {
 
     let image = "";
 
+    // ✔ Correct folder path
     if (isHome) {
-      image = isNight ? "/bg/home_night.jpg" : "/bg/home_day.jpg";
+      image = isNight
+        ? "/background/home_night.png"
+        : "/background/home_day.png";
     } else {
-      image = isNight ? "/bg/secondary_night.jpg" : "/bg/secondary_day.jpg";
+      image = isNight
+        ? "/background/secondary_night.png"
+        : "/background/secondary_day.png";
     }
 
+    // ✔ Overlay tuned for readability
     const overlayClass = isNight ? "bg-black/55" : "bg-black/20";
 
     return { image, overlayClass };
@@ -30,6 +36,7 @@ export default function BackgroundManager({ activeTab }: Props) {
       <img
         src={image}
         className="w-full h-full object-cover transition-opacity duration-500"
+        draggable={false}
       />
 
       <div className={`absolute inset-0 ${overlayClass}`} />
