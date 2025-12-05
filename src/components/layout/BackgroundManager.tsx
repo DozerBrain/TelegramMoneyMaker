@@ -1,54 +1,38 @@
 // src/components/layout/BackgroundManager.tsx
 import React, { useMemo } from "react";
+import type { Tab } from "../../types";
 
-type BackgroundVariant = "home" | "secondary";
-
-type BackgroundManagerProps = {
-  variant: BackgroundVariant; // "home" for main tap screen, "secondary" for all other tabs
-  children: React.ReactNode;
+type Props = {
+  activeTab: Tab;
 };
 
-/**
- * Wraps the whole page and picks the correct background image based on:
- * - player local time (day vs night)
- * - which part of the app ("home" vs "secondary")
- */
-export function BackgroundManager({
-  variant,
-  children,
-}: BackgroundManagerProps) {
-  // Player local time – we only need hour 0–23
-  const isNight = useMemo(() => {
-    const hour = new Date().getHours(); // player's local timezone
-    // Night: 20:00–07:59, Day: 08:00–19:59
-    return hour < 8 || hour >= 20;
-  }, []);
+export default function BackgroundManager({ activeTab }: Props) {
+  const { image, overlayClass } = useMemo(() => {
+    const hour = new Date().getHours();
+    const isNight = hour >= 20 || hour < 8; // Night mode
+    const isHome = activeTab === "home";
 
-  const bgUrl = useMemo(() => {
-    if (variant === "home") {
-      return isNight ? "/bg/home_night.png" : "/bg/home_day.png";
+    let image = "";
+
+    if (isHome) {
+      image = isNight ? "/bg/home_night.jpg" : "/bg/home_day.jpg";
     } else {
-      return isNight ? "/bg/secondary_night.png" : "/bg/secondary_day.png";
+      image = isNight ? "/bg/secondary_night.jpg" : "/bg/secondary_day.jpg";
     }
-  }, [variant, isNight]);
+
+    const overlayClass = isNight ? "bg-black/55" : "bg-black/20";
+
+    return { image, overlayClass };
+  }, [activeTab]);
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Background image layer */}
-      <div
-        className="absolute inset-0 -z-10 bg-black bg-cover bg-center"
-        style={{ backgroundImage: `url(${bgUrl})` }}
+    <div className="pointer-events-none fixed inset-0 -z-10">
+      <img
+        src={image}
+        className="w-full h-full object-cover transition-opacity duration-500"
       />
 
-      {/* Optional dark overlay tweak if you want UI to pop more at night */}
-      {isNight && (
-        <div className="absolute inset-0 -z-0 bg-black/40 pointer-events-none" />
-      )}
-
-      {/* Foreground content */}
-      <div className="relative w-full h-full">
-        {children}
-      </div>
+      <div className={`absolute inset-0 ${overlayClass}`} />
     </div>
   );
 }
