@@ -9,7 +9,6 @@ type Props = {
 export default function BackgroundManager({ activeTab }: Props) {
   const { image, overlayClass } = useMemo(() => {
     const hour = new Date().getHours();
-
     const isNight = hour >= 20 || hour < 8; // 20:00–07:59
     const isHome = activeTab === "home";
 
@@ -25,17 +24,17 @@ export default function BackgroundManager({ activeTab }: Props) {
         : "/background/secondary_day.png";
     }
 
-    const overlayClass = isNight ? "bg-black/55" : "bg-black/20";
+    const overlayClass = isNight ? "bg-black/60" : "bg-black/20";
 
     return { image, overlayClass };
   }, [activeTab]);
 
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10">
+    <div className="pointer-events-none fixed inset-0 z-0">
       <img
         src={image}
         alt=""
-        className="w-full h-full object-cover transition-opacity duration-500"
+        className="w-full h-full object-cover"
       />
       <div className={`absolute inset-0 ${overlayClass}`} />
     </div>
