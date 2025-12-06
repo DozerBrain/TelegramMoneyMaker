@@ -17,6 +17,9 @@ import SuitsPage from "./pages/Suits";
 import CardsPage from "./pages/Cards";
 import GamesPage from "./pages/Games";
 
+// Layout
+import ScreenContainer from "./components/layout/ScreenContainer";
+
 // Income math constant
 import { TAPS_PER_COUPON } from "./incomeMath";
 
@@ -60,7 +63,9 @@ type Props = {
 
   // Spin / missions
   spinCooldownEndsAt: number | null;
-  setSpinCooldownEndsAt: (v: number | null | ((p: number | null) => number | null)) => void;
+  setSpinCooldownEndsAt: (
+    v: number | null | ((p: number | null) => number | null)
+  ) => void;
 
   // Achievements
   achState: Record<string, { done: boolean; claimed: boolean }>;
@@ -138,124 +143,150 @@ export default function AppRoutes(props: Props) {
   return (
     <>
       {tab === "home" && (
-        <Home
-          balance={balance}
-          setBalance={setBalance}
-          totalEarnings={totalEarnings}
-          setTotalEarnings={setTotalEarnings}
-          taps={taps}
-          setTaps={setTaps}
-          tapValue={tapValue}
-          multi={multi}
-          currentSuitName={bestSuitName}
-          setCurrentSuitName={setBestSuitName}
-          suitMult={suitMult}
-          petTapMult={petTapMult}
-          cardMultAll={cardMultAll}
-          globalMult={globalMult}
-          equippedPetId={equippedPetId}
-          critChance={critChance}
-          critMult={critMult}
-        />
+        <ScreenContainer tab={tab}>
+          <Home
+            balance={balance}
+            setBalance={setBalance}
+            totalEarnings={totalEarnings}
+            setTotalEarnings={setTotalEarnings}
+            taps={taps}
+            setTaps={setTaps}
+            tapValue={tapValue}
+            multi={multi}
+            currentSuitName={bestSuitName}
+            setCurrentSuitName={setBestSuitName}
+            suitMult={suitMult}
+            petTapMult={petTapMult}
+            cardMultAll={cardMultAll}
+            globalMult={globalMult}
+            equippedPetId={equippedPetId}
+            critChance={critChance}
+            critMult={critMult}
+          />
+        </ScreenContainer>
       )}
 
       {tab === "missions" && (
-        <Spin
-          balance={balance}
-          setBalance={setBalance}
-          tapValue={tapValue}
-          setTapValue={setTapValue}
-          autoPerSec={autoPerSec}
-          setAutoPerSec={setAutoPerSec}
-          multi={multi}
-          setMulti={setMulti}
-          spinCooldownEndsAt={spinCooldownEndsAt}
-          setSpinCooldownEndsAt={setSpinCooldownEndsAt}
-        />
+        <ScreenContainer tab={tab}>
+          <Spin
+            balance={balance}
+            setBalance={setBalance}
+            tapValue={tapValue}
+            setTapValue={setTapValue}
+            autoPerSec={autoPerSec}
+            setAutoPerSec={setAutoPerSec}
+            multi={multi}
+            setMulti={setMulti}
+            spinCooldownEndsAt={spinCooldownEndsAt}
+            setSpinCooldownEndsAt={setSpinCooldownEndsAt}
+          />
+        </ScreenContainer>
       )}
 
       {tab === "games" && (
-        <GamesPage
-          balance={balance}
-          setBalance={setBalance}
-          chips={chips}
-          setChips={setChips}
-        />
+        <ScreenContainer tab={tab}>
+          <GamesPage
+            balance={balance}
+            setBalance={setBalance}
+            chips={chips}
+            setChips={setChips}
+          />
+        </ScreenContainer>
       )}
 
       {tab === "shop" && (
-        <Shop
-          balance={balance}
-          setBalance={setBalance}
-          tapValue={tapValue}
-          setTapValue={setTapValue}
-          autoPerSec={autoPerSec}
-          setAutoPerSec={setAutoPerSec}
-          multi={multi}
-          setMulti={setMulti}
-          critChance={critChance}
-          setCritChance={setCritChance}
-          critMult={critMult}
-          setCritMult={setCritMult}
-          autoBonusMult={autoBonusMult}
-          setAutoBonusMult={setAutoBonusMult}
-          couponBoostLevel={couponBoostLevel}
-          setCouponBoostLevel={setCouponBoostLevel}
-          bulkDiscountLevel={bulkDiscountLevel}
-          setBulkDiscountLevel={setBulkDiscountLevel}
-        />
+        <ScreenContainer tab={tab}>
+          <Shop
+            balance={balance}
+            setBalance={setBalance}
+            tapValue={tapValue}
+            setTapValue={setTapValue}
+            autoPerSec={autoPerSec}
+            setAutoPerSec={setAutoPerSec}
+            multi={multi}
+            setMulti={setMulti}
+            critChance={critChance}
+            setCritChance={setCritChance}
+            critMult={critMult}
+            setCritMult={setCritMult}
+            autoBonusMult={autoBonusMult}
+            setAutoBonusMult={setAutoBonusMult}
+            couponBoostLevel={couponBoostLevel}
+            setCouponBoostLevel={setCouponBoostLevel}
+            bulkDiscountLevel={bulkDiscountLevel}
+            setBulkDiscountLevel={setBulkDiscountLevel}
+          />
+        </ScreenContainer>
       )}
 
       {tab === "inventory" && (
-        <InventoryPage
-          balance={balance}
-          totalEarnings={totalEarnings}
-          taps={taps}
-          tapValue={tapValue}
-          autoPerSec={autoPerSec}
-          multi={multi}
-          cards={cards}
-          setCards={setCards}
-          couponsAvailable={couponsAvailable}
-          couponsSpent={couponsSpent}
-          setCouponsSpent={setCouponsSpent}
-          bulkDiscountLevel={bulkDiscountLevel}
-          onExport={onExport}
-          onImport={onImport}
-          onReset={onReset}
-        />
+        <ScreenContainer tab={tab}>
+          <InventoryPage
+            balance={balance}
+            totalEarnings={totalEarnings}
+            taps={taps}
+            tapValue={tapValue}
+            autoPerSec={autoPerSec}
+            multi={multi}
+            cards={cards}
+            setCards={setCards}
+            couponsAvailable={couponsAvailable}
+            couponsSpent={couponsSpent}
+            setCouponsSpent={setCouponsSpent}
+            bulkDiscountLevel={bulkDiscountLevel}
+            onExport={onExport}
+            onImport={onImport}
+            onReset={onReset}
+          />
+        </ScreenContainer>
       )}
 
-      {tab === "leaderboard" && <LeaderboardPage />}
+      {tab === "leaderboard" && (
+        <ScreenContainer tab={tab}>
+          <LeaderboardPage />
+        </ScreenContainer>
+      )}
 
       {tab === "profile" && (
-        <ProfilePage
-          balance={balance}
-          totalEarnings={totalEarnings}
-          taps={taps}
-          tapValue={tapValue}
-          autoPerSec={autoPerSec}
-          multi={multi}
-          achievementsState={achState}
-          onClaim={onClaimAchievement}
-        />
+        <ScreenContainer tab={tab}>
+          <ProfilePage
+            balance={balance}
+            totalEarnings={totalEarnings}
+            taps={taps}
+            tapValue={tapValue}
+            autoPerSec={autoPerSec}
+            multi={multi}
+            achievementsState={achState}
+            onClaim={onClaimAchievement}
+          />
+        </ScreenContainer>
       )}
 
-      {tab === "suits" && <SuitsPage balance={balance} />}
+      {tab === "suits" && (
+        <ScreenContainer tab={tab}>
+          <SuitsPage balance={balance} />
+        </ScreenContainer>
+      )}
 
-      {tab === "pets" && <PetsPage />}
+      {tab === "pets" && (
+        <ScreenContainer tab={tab}>
+          <PetsPage />
+        </ScreenContainer>
+      )}
 
       {tab === "cards" && (
-        <CardsPage
-          taps={taps}
-          cards={cards}
-          setCards={setCards}
-          couponsAvailable={couponsAvailable}
-          couponsSpent={couponsSpent}
-          setCouponsSpent={setCouponsSpent}
-          tapsPerCoupon={TAPS_PER_COUPON}
-          bulkDiscountLevel={bulkDiscountLevel}
-        />
+        <ScreenContainer tab={tab}>
+          <CardsPage
+            taps={taps}
+            cards={cards}
+            setCards={setCards}
+            couponsAvailable={couponsAvailable}
+            couponsSpent={couponsSpent}
+            setCouponsSpent={setCouponsSpent}
+            tapsPerCoupon={TAPS_PER_COUPON}
+            bulkDiscountLevel={bulkDiscountLevel}
+          />
+        </ScreenContainer>
       )}
     </>
   );
