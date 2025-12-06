@@ -1,42 +1,56 @@
-import React from "react";
-import { getTheme } from "../../theme/dayNightTheme";
+// src/components/layout/ScreenContainer.tsx
+import React, { useMemo } from "react";
+import type { Tab } from "../../types";
 
-type ScreenContainerProps = {
+type Props = {
+  tab: Tab;
   children: React.ReactNode;
-  variant?: "home" | "secondary"; // just in case we want subtle differences later
-  scroll?: boolean;
 };
 
-export default function ScreenContainer({
-  children,
-  variant = "secondary",
-  scroll = true,
-}: ScreenContainerProps) {
-  const theme = getTheme(); // make sure your dayNightTheme returns at least { mode: "day" | "night" }
+export default function ScreenContainer({ tab, children }: Props) {
+  const { isHome, wrapperClass, cardClass } = useMemo(() => {
+    const hour = new Date().getHours();
+    const isNight = hour >= 20 || hour < 8;
+    const isHome = tab === "home";
 
-  const isDay = theme.mode === "day";
+    const wrapperBase =
+      "relative mx-auto w-full h-full max-w-md px-3 pb-24 pt-4";
 
-  // Main panel style (matches your backgrounds: clean / glassy / premium)
-  const basePanelClass =
-    "w-full max-w-md mx-auto rounded-3xl border backdrop-blur-xl transition-colors duration-300";
+    if (isHome) {
+      // Home screen = no card, just spacing, background shows fully
+      return {
+        isHome: true,
+        wrapperClass: "relative mx-auto w-full h-full max-w-md pb-24 pt-2 px-0",
+        cardClass: "",
+      };
+    }
 
-  const panelTone =
-    variant === "home"
-      ? isDay
-        ? "bg-white/70 border-emerald-200 shadow-[0_18px_60px_rgba(16,185,129,0.35)]"
-        : "bg-slate-950/70 border-emerald-500/40 shadow-[0_22px_70px_rgba(16,185,129,0.7)]"
-      : isDay
-      ? "bg-white/80 border-slate-200 shadow-[0_16px_50px_rgba(15,23,42,0.25)]"
-      : "bg-slate-950/80 border-slate-700/70 shadow-[0_18px_60px_rgba(15,23,42,0.7)]";
+    const cardBase =
+      "w-full h-full rounded-3xl border backdrop-blur-xl overflow-hidden";
+
+    const dayCard =
+      "bg-white/10 border-white/30 shadow-[0_0_40px_rgba(34,197,94,0.35)]";
+    const nightCard =
+      "bg-slate-950/70 border-emerald-400/25 shadow-[0_0_50px_rgba(6,182,212,0.6)]";
+
+    const cardClass = `${cardBase} ${
+      isNight ? nightCard : dayCard
+    }`;
+
+    return {
+      isHome: false,
+      wrapperClass: wrapperBase,
+      cardClass,
+    };
+  }, [tab]);
+
+  if (isHome) {
+    return <div className={wrapperClass}>{children}</div>;
+  }
 
   return (
-    <div
-      className={
-        "px-3 pt-2 pb-24 w-full h-full flex " +
-        (scroll ? "overflow-y-auto" : "")
-      }
-    >
-      <div className={basePanelClass + " " + panelTone}>{children}</div>
+    <div className={wrapperClass}>
+      <div className={cardClass}>{children}</div>
     </div>
   );
 }
